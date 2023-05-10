@@ -359,3 +359,17 @@ ul.list-striped > li {
 #eval-progress {
   padding: 20px;
 }
+
+#share-game-dropup {
+  position: static;
+}
+
+#share-game-dropup .dropdown-menu {
+  transform: translate(0, -60%) !important;
+  position: absolute !important;
+  padding: 10px;
+}
+
+#share-game-caption {
+  margin-bottom: 5px
+}
