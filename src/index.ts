@@ -402,7 +402,7 @@ export function parseMovelist(movelist: string) {
     game.history.display();
 }
 
-function getGameURL(gameUser: string, gameNumber: number = 0, showShareButton: boolean = true) {
+function getGameURL(gameUser: string, gameNumber: number = 0, showShareButton: boolean = true, useGoServer: boolean = false) {
   if(showShareButton) {
     $('#share-game').prop('disabled', true);
     $('#share-game').show();
@@ -415,20 +415,19 @@ function getGameURL(gameUser: string, gameNumber: number = 0, showShareButton: b
   if(gameUser)
     gameURLUser = gameUser;
 
-  _getGameURL(gameUser, gameNumber, showShareButton);
+  _getGameURL(gameUser, gameNumber, showShareButton, useGoServer);
 }
 
-function _getGameURL(gameUser: string, gameNumber: number = 0, showShareButton: boolean = true) {
+function _getGameURL(gameUser: string, gameNumber: number = 0, showShareButton: boolean = true, useGoServer: boolean = false) {
   var checkGameURL = function(data) {
+    console.log(data);
+
     gameURL = data;
   
-    if(gameURL.startsWith('<?php')) 
-      return;
-
     if(gameURL === "FAILED" || (!gameUser && gameURL === prevGameURL)) {
       gameURLRetryCounter--;
       if(gameURLRetryCounter > 0) {
-        _getGameURL(gameUser, gameNumber, showShareButton);
+        _getGameURL(gameUser, gameNumber, showShareButton, useGoServer);
         return;
       }
       else 
@@ -468,15 +467,32 @@ function _getGameURL(gameUser: string, gameNumber: number = 0, showShareButton: 
             console.log("Error retrieving game URL from ficsgames.");
         });
     }
-    // Fetch game URL using PHP proxy to get around same-origin policy
-    else {
-      fetch('assets/php/fetch_game_url.php', {
+    else if(useGoServer) {
+      fetch(window.location.protocol + '//' + window.location.hostname + ':9090/fetch_game_url', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({username: (gameUser ? gameUser : gameURLUser), game_number: gameNumber})
       }).then(function(response) {
         return response.text();
       }).then(checkGameURL).catch(function() { 
+        console.log('Error retrieving game URL from ficsgames.');
+      });
+    }
+    // Fetch game URL using PHP proxy to get around same-origin policy
+    else {
+      fetch('scripts/fetch_game_url.php', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({username: (gameUser ? gameUser : gameURLUser), game_number: gameNumber})
+      }).then(function(response) {
+        return response.text();
+      }).then(function(data) {
+        if(data.startsWith('<?php')) {
+          _getGameURL(gameUser, gameNumber, showShareButton, true);
+          return;
+        }
+        checkGameURL(data);
+      }).catch(function() { 
         console.log('Error retrieving game URL from ficsgames.');
       });
     }
