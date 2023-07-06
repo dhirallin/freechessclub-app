@@ -3,10 +3,12 @@
 // license that can be found in the LICENSE file.
 
 import { Chessground } from 'chessground';
-import Chess from 'chess.js';
+import { Chess } from 'chess.js';
 import History from './history';
 import { gotoMove } from './index';
 import * as d3 from 'd3';
+
+var SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'wild/fr'];
 
 export class EvalEngine {
   private stockfish: any;
@@ -16,7 +18,7 @@ export class EvalEngine {
   private _redraw: boolean;
   private numGraphMoves: number;
 
-  constructor(history: any) {
+  constructor(history: any, category: string = 'untimed') {
     this.history = history;
     this.currMove = undefined;
     this._redraw = true;
@@ -34,8 +36,15 @@ export class EvalEngine {
     this.uci('ucinewgame');
     this.uci('isready');
 
+    if(category === 'wild/fr')  
+      this.uci('setoption name UCI_Chess960 value true');
+
     const that = this;
     this.stockfish.onmessage = function(response: any) { that.evaluate(response); }
+  }
+
+  public static categorySupported(category: string) {
+    return SupportedCategories.indexOf(category) === -1;
   }
 
   private uci(cmd: string, ports?: any) {
@@ -385,7 +394,7 @@ export class Engine {
   private numPVs: number;
   private fen: string;
 
-  constructor(board: any, numPVs = 1) {
+  constructor(board: any, category: string = 'untimed', numPVs = 1) {
     this.numPVs = numPVs;
     this.board = board;
     this.fen = '';
@@ -396,7 +405,6 @@ export class Engine {
     }
     else
       this.stockfish = new Worker(new URL('stockfish.js/stockfish.js', import.meta.url));
-
 
     this.stockfish.onmessage = (response) => {
       if (response.data.startsWith('info')) {
@@ -483,8 +491,16 @@ export class Engine {
     };
     this.uci('uci');
     this.uci('setoption name MultiPV value ' + this.numPVs);
+
+    if(category === 'wild/fr')  
+      this.uci('setoption name UCI_Chess960 value true');
+
     this.uci('ucinewgame');
     this.uci('isready');
+  }
+
+  public static categorySupported(category: string) {
+    return SupportedCategories.indexOf(category) === -1;
   }
 
   public terminate() {

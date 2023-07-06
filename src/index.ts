@@ -29,9 +29,9 @@ let autoPromoteToggle: boolean = (Cookies.get('autopromote') === 'true');
 
 let historyRequested = 0;
 let obsRequested = 0;
-let gameInfoRequested = false;
 let gamesRequested = false;
-let movelistRequested = 0;
+let movelistRequested = false;
+let copygameRequested = false;
 let lobbyRequested = false;
 let channelListRequested = false;
 let modalCounter = 0;
@@ -53,9 +53,9 @@ let promoteIsPremove;
 export function cleanup() {
   historyRequested = 0;
   obsRequested = 0;
-  gameInfoRequested = false;
   gamesRequested = false;
-  movelistRequested = 0;
+  movelistRequested = false;
+  copygameRequested = false;
   lobbyRequested = false;
   channelListRequested = false;
   gameChangePending = false;
@@ -447,59 +447,325 @@ function showModal(type: string, title: string, msg: string, btnFailure: string[
   $('#' + modalId).toast('show');
 }
 
-function parseNonStandardMove(chess: any, san: string) {
-  if(san.includes('@')) {
-    // Parse crazyhouse piece placement
-    var piece = san.charAt(0).toLowerCase();
-    var to = san.substring(2).replace('+', '');
+function getOppositeColor(color: string) : string {
+  return color === 'w' ? 'b' : 'w';
+}
 
-    var beforeColor = chess.fen().includes(' w ') ? 'w' : 'b';
-    var afterColor = (beforeColor === 'w' ? 'b' : 'w');
+function parseMove(fen: string, move: any, category: string) {
+  var san = move;
+  var chess = new Chess(fen);
 
-    var move = {color: beforeColor, flags: 'x', type: piece, piece: piece, to: to, san: san}
-    if(!chess.put(move, to)) 
-      return null;
-    
-    var splitStr = chess.fen().split(/\s+/);
-    var moveNo = +splitStr[5];
-
-    chess.load(splitStr[0] + ' ' + afterColor + ' ' + splitStr[2] + ' ' + splitStr[3] + ' 0 ' + (afterColor === 'w' ? moveNo + 1 : moveNo));
-    return move;
+  // Pre-processing of FEN before chess.move() for variants
+  if(category === 'atomic') { // The code below would be a lot less hacky if chess.js had a public API option to accept illegal moves. Might ask the author to add it. 
+    var thisKingSquare, opposingKingSquare, tempKingSquare, removedKing;
+    for(const s of chess.SQUARES) {
+      var piece = chess.get(s);
+      if(piece && piece.type === 'k') {
+        if(piece.color === chess.turn()) {
+          thisKingSquare = s;
+          if(san[0].toUpperCase() !== 'K') {
+            // Temporarily remove this move's king and put an opposite colored pawn in its place (pawn acts as placeholder that blocks checks like the king did), so chess() isn't confused by touching kings
+            removedKing = piece;
+            chess.remove(s);
+            chess.put({type: 'p', color: getOppositeColor(chess.turn())}, s);
+            for(const t of chess.SQUARES) {
+              if(!chess.get(t)) {
+                chess.put(removedKing, t);
+                if(chess.move(san)) {
+                  chess.undo();
+                  tempKingSquare = t;
+                  break;
+                }
+                else  
+                  chess.remove(t);
+              }
+            }
+          }
+        }
+        else 
+          opposingKingSquare = s;
+      }
+    }
   }
-  return null;
+
+  // Make standard move
+  var outMove = chess.move(san);
+  var outFen = chess.fen();
+
+  // Manually update FEN for non-standard moves
+  if(!outMove 
+      || (category.startsWith('wild') && san.toUpperCase().startsWith('O-O'))) {
+    san = san.replace(/[+#]/, ''); // remove check and checkmate, we'll add it back at the end
+    chess = new Chess(fen);
+    outMove = {color: color, san: san};
+
+    var splitFen = fen.split(/\s+/);
+    var board = splitFen[0];
+    var color = splitFen[1];
+    var castlingRights = splitFen[2];
+    var enPassant = splitFen[3];
+    var plyClock = splitFen[4];
+    var moveNo = splitFen[5];
+    
+    var boardAfter = board;
+    var colorAfter = (color === 'w' ? 'b' : 'w');
+    var castlingRightsAfter = castlingRights;
+    var enPassantAfter = '-';
+    var plyClockAfter = +plyClock + 1;
+    var moveNoAfter = (colorAfter === 'w' ? +moveNo + 1 : moveNo);
+
+    if(san.includes('@')) {
+      // Parse crazyhouse or bughouse piece placement
+      outMove.piece = san.charAt(0).toLowerCase();
+      outMove.to = san.substring(2);
+      outMove.flags = 'z';
+      chess.put({type: outMove.piece, color: color}, outMove.to);
+      plyClockAfter = 0;
+    }
+    else if(san.toUpperCase() === 'O-O' || san.toUpperCase() === 'O-O-O') {
+      // Parse irregular castling moves for fischer random and wild variants
+      var kingFrom = '';
+      var rank = (color === 'w' ? '1' : '8');
+      var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+      for(const file of files) {
+        var piece = chess.get(file + rank);
+        if(piece && piece.color === color) {
+          if(piece.type === 'r') {
+            if(!kingFrom)
+              var leftRook = file + rank;
+            else
+              var rightRook = file + rank;
+          }          
+          else if(piece.type === 'k')
+            kingFrom = file + rank;
+        }
+      }
+
+      if(san.toUpperCase() === 'O-O') {
+        outMove.flags = 'k';
+        if(category === 'wild/fr') {
+          // fischer random
+          var kingTo = 'g' + rank;
+          var rookFrom = rightRook;
+          var rookTo = 'f' + rank;
+        }
+        else {
+          // wild/0, wild/1 etc
+          if(kingFrom[0] === 'e') {
+            var kingTo = 'g' + rank;
+            var rookFrom = rightRook;
+            var rookTo = 'f' + rank;
+          }
+          else {
+            var kingTo = 'b' + rank;
+            var rookFrom = leftRook;
+            var rookTo = 'c' + rank;
+          }
+        }
+      }
+      else if(san.toUpperCase() === 'O-O-O') {
+        outMove.flags = 'q';
+        if(category === 'wild/fr') {
+          var kingTo = 'c' + rank;
+          var rookFrom = leftRook;
+          var rookTo = 'd' + rank;
+        }
+        else {
+          // wild/0, wild/1
+          if(kingFrom[0] === 'e') {
+            var kingTo = 'c' + rank;
+            var rookFrom = leftRook;
+            var rookTo = 'd' + rank;
+          }
+          else {
+            var kingTo = 'f' + rank;
+            var rookFrom = rightRook;
+            var rookTo = 'e' + rank;
+          }
+        }
+      }
+
+      chess.remove(kingFrom);
+      chess.remove(rookFrom);
+      chess.put({type: 'k', color: color}, kingTo);
+      chess.put({type: 'r', color: color}, rookTo);
+    
+      plyClockAfter = 0;
+      if(color === 'w')
+        castlingRightsAfter = castlingRights.replace(/[KQ]/g, '');
+      else
+        castlingRightsAfter = castlingRights.replace(/[kq]/g, '');
+      if(castlingRightsAfter === '')
+        castlingRightsAfter = '-';
+
+      outMove.piece = 'k';
+      outMove.from = kingFrom;
+      outMove.to = kingTo;
+    }
+    else if(category === 'atomic' && san[0].toUpperCase() === 'K') { 
+      // Parse irregular king moves in atomic variant
+      outMove.piece = 'k';
+      outMove.from = thisKingSquare;
+      outMove.to = san.substring(1);
+      
+      if(chess.get(outMove.to)) {
+        outMove.flags = 'c';
+        chess.remove(outMove.to);
+      }
+      else
+        outMove.flags = 'n';
+      chess.remove(outMove.from);
+      chess.put({type: 'k', color: chess.turn()}, outMove.to);
+    }
+
+    boardAfter = chess.fen().split(/\s+/)[0];
+    outFen = boardAfter + ' ' + colorAfter + ' ' + castlingRightsAfter + ' ' + enPassantAfter + ' ' + plyClockAfter + ' ' + moveNoAfter;
+  
+    chess.load(outFen);
+    if(chess.in_checkmate())
+      outMove.san += '#';
+    else if(chess.in_check())
+      outMove.san += '+';
+  }
+
+  // Post-processing on FEN after chess.move() for variants 
+  if(category === 'crazyhouse' || category === 'bughouse') 
+    outFen = outFen.replace(/ \d+ /, ' 0 '); // FICS doesn't use the 'irreversable moves count' for crazyhouse/bughouse, so set it to 0
+  else if(category === 'atomic') {
+    // Put king back in its original spot
+    if(removedKing) {
+      chess.remove(tempKingSquare);
+      chess.remove(thisKingSquare);
+      chess.put(removedKing, thisKingSquare);
+    }
+    else 
+      thisKingSquare = outMove.to;
+    
+    // Remove false checks and checkmates, we'll have to add the real ones back ourselves
+    outMove.san = outMove.san.replace(/[#\+]/, ''); 
+
+    // Explode piece
+    if(/[ec]/.test(outMove.flags)) {
+      var adjacent = getAdjacentSquares(outMove.to);
+      chess.remove(outMove.to);
+      adjacent.forEach((square) => {
+        var piece = chess.get(square);
+        if(piece && piece.type !== 'p')
+          chess.remove(square); 
+      });
+    }
+
+    var checkmate = false;
+    // Check if kings are touching
+    adjacent = getAdjacentSquares(opposingKingSquare);
+    if(adjacent.indexOf(thisKingSquare) > -1)
+      outMove.flags += 'x'; // Set flag to indicate not to highlight checks for this move
+    else if(chess.in_checkmate()) {
+      checkmate = true;
+      // See if this is a real checkmate
+      // Find checking piece by removing each candidate and replacing it with a placeholder
+      for(const s of chess.SQUARES) {
+        var piece = chess.get(s);
+        if(piece && piece.color === getOppositeColor(chess.turn())) {
+          chess.remove(s);
+          chess.put({type: 'p', color: chess.turn()}, s);
+          if(!chess.in_check()) 
+            var checkingPieceSquare = s;
+          chess.remove(s);
+          chess.put(piece, s);
+        }
+      }
+      // See if it's possible to explode the piece delivering checkmate (via an adjacent piece)
+      if(chess.get(checkingPieceSquare).type !== 'p') { // Can't explode a pawn delivering checkmate
+        // More messy hacks!! Determine if each square is under attack by placing our king on it and then
+        // seeing if it is in check. If we upgrade chess.js to latest version this code could be replaced 
+        // with chess.js's isAttacked() function.
+        adjacent = getAdjacentSquares(checkingPieceSquare);
+        chess.load(chess.fen().replace(' ' + chess.turn() + ' ', ' ' + getOppositeColor(chess.turn()) + " ")); // Swap turn color
+        chess.remove(thisKingSquare);
+        for(const adj of adjacent) {
+          var adjPiece = chess.get(adj);
+          if(adjPiece && adjPiece.color === chess.turn() && getAdjacentSquares(adj).indexOf(opposingKingSquare) === -1) { // Check that we can explode piece without safely, without exploding our own king
+            chess.remove(adj);
+            chess.put({type: 'k', color: chess.turn()}, adj);
+            if(chess.in_check())
+              checkmate = false;
+            chess.remove(adj);
+            chess.put(adjPiece, adj);
+            if(!checkmate)
+              break;
+          }
+        }
+        chess.put({type: 'k', color: chess.turn()}, thisKingSquare);
+        chess.load(chess.fen().replace(' ' + chess.turn() + ' ', ' ' + getOppositeColor(chess.turn()) + ' ')); // Swap turn color back
+      }
+    }
+    if(checkmate)
+      outMove.san += '#';
+    else if(chess.in_check()) 
+      outMove.san += '+'; // If kings aren't touching add check to SAN
+    outFen = chess.fen();
+  }
+
+  return {fen: outFen, move: outMove};
+}
+
+// Helper function which returns an array of square coordinates which are adjacent (including diagonally) to the given square
+function getAdjacentSquares(square: string) : string[] {
+  var adjacent = [];
+  var file = square[0];
+  var rank = square[1];
+  if(rank !== '1') 
+    adjacent.push(file + (+rank - 1));
+  if(rank !== '8')
+    adjacent.push(file + (+rank + 1));
+  if(file !== 'a') {
+    var prevFile = String.fromCharCode(file.charCodeAt(0) - 1);
+    adjacent.push(prevFile + rank);
+    if(rank !== '1') 
+      adjacent.push(prevFile + (+rank - 1));
+    if(rank !== '8')
+      adjacent.push(prevFile + (+rank + 1));
+  }
+  if(file !== 'h') {
+    var nextFile = String.fromCharCode(file.charCodeAt(0) + 1);
+    adjacent.push(nextFile + rank);
+    if(rank !== '1') 
+      adjacent.push(nextFile + (+rank - 1));
+    if(rank !== '8')
+      adjacent.push(nextFile + (+rank + 1));
+  }
+  return adjacent;
 }
 
 export function parseMovelist(movelist: string) {
   const moves = [];
   let found : string[] & { index?: number } = [''];
   let n = 1;
-  const chess = Chess();
   var wtime = game.time * 60;
   var btime = game.time * 60;
-  game.history.reset(chess.fen(), wtime, btime);
+  game.history.reset(game.history.get(0).fen, wtime, btime);
+  const chess = Chess(game.history.get(0).fen);
   while (found !== null) {
     found = movelist.match(new RegExp(n + '\\.\\s*(\\S*)\\s*\\((\\d+):(\\d+)\\)\\s*(?:(\\S*)\\s*\\((\\d+):(\\d+)\\))?.*', 'm'));
     if (found !== null && found.length > 3) {
       const m1 = found[1].trim();
       wtime += (n === 1 ? 0 : game.inc) - (+found[2] * 60 + +found[3]);
-      var move = chess.move(m1);
-      if(!move) 
-        move = parseNonStandardMove(chess, m1);
-      if(!move)
+      var parsedMove = parseMove(chess.fen(), m1, game.category);
+      if(!parsedMove)
         break;
-      game.history.add(move, chess.fen(), false, wtime, btime);
+      chess.load(parsedMove.fen);
+      game.history.add(parsedMove.move, parsedMove.fen, false, wtime, btime);
       if (found.length > 4 && found[4]) {
         const m2 = found[4].trim();
         btime += (n === 1 ? 0 : game.inc) - (+found[5] * 60 + +found[6]);
-        move = chess.move(m2);
-        if(!move) 
-          move = parseNonStandardMove(chess, m2);
-        if(!move)
+        parsedMove = parseMove(chess.fen(), m2, game.category);
+        if(!parsedMove)
           break;
-        game.history.add(move, chess.fen(), false, wtime, btime);
+        chess.load(parsedMove.fen);
+        game.history.add(parsedMove.move, parsedMove.fen, false, wtime, btime);
       }
       n++;
-      movelist += movelist[found.index];
     }
   }
   if(game.isExamining())
@@ -553,8 +819,15 @@ function messageHandler(data) {
       if((game.isExamining() || game.isObserving()) && game.id !== data.id) {
         if(game.isExamining())
           session.send('unex');
-        else if(game.isObserving())
-          session.send('unobs ' + game.id);
+        else if(game.isObserving()) {
+          if(copygameRequested && data.role === Role.EXAMINING) { // 'copygame' command was issued in order to retrieve the starting setup
+            if(getPlyFromFEN(data.fen) === 1) 
+              game.history.reset(data.fen, data.wtime, data.btime);
+            break;
+          }
+          else
+            session.send('unobs ' + game.id);
+        }
         gameChangePending = true;
         break;
       }
@@ -619,26 +892,36 @@ function messageHandler(data) {
         game.history = new History(game.fen, board, game.time * 60, game.time * 60);
 
         evalEngine.terminate();
-        evalEngine = new EvalEngine(game.history);
+        evalEngine = null;
+        if(EvalEngine.categorySupported(game.category))
+          evalEngine = new EvalEngine(game.history, game.category);
         updateBoard();
 
         if (game.role === Role.NONE || game.isObserving() || game.isExamining()) {
-          if(!isSmallWindow())
-            showCloseGamePanel();
-          if (game.isExamining()) {
-            $('#stop-examining').show();
-            session.send('games ' + game.id);
-            gameInfoRequested = true;
-            if(game.wname === game.bname)
-              game.history.scratch(true);
-            else {
-              if(getPlyFromFEN(game.fen) !== 1)
-                session.send('back 999');
-              session.send('for 999');
+          if(game.isExamining() || game.isObserving()) {      
+            if(!isSmallWindow())
+              showCloseGamePanel();
+            
+            if(game.isExamining()) {
+              $('#stop-examining').show();
+              if(game.wname === game.bname)
+                game.history.scratch(true);
+              else {
+                if(getPlyFromFEN(game.fen) !== 1)
+                  session.send('back 999');
+                session.send('for 999');
+              }
             }
+            else if(game.isObserving()) {
+              session.send('copygame o');
+              session.send('back 999');
+              session.send('unex');
+              copygameRequested = true;
+              $('#stop-observing').show();
+            }
+            movelistRequested = true;
+            session.send('moves ' + game.id);
           }
-          else
-            $('#stop-observing').show();
 
           $('#playing-game').hide();
           $('#pills-game-tab').tab('show');
@@ -656,14 +939,9 @@ function messageHandler(data) {
         const thisPly = getPlyFromFEN(data.fen);
 
         if (data.move !== 'none' && thisPly === lastPly + 1) { // make sure the move no is right
-          var move = game.chess.move(data.move);
-          if(!move)
-            move = parseNonStandardMove(game.chess, data.move);
-          if(!move) {
-            move = {san: data.move};
-            game.chess.load(data.fen);
-          }
-          movePieceAfter(move);
+          var parsedMove = parseMove(game.chess.fen(), data.move, game.category);
+          game.chess.load(data.fen);
+          movePieceAfter((parsedMove ? parsedMove.move : {san: data.move}));
         }
         else {
           game.chess.load(data.fen);
@@ -770,55 +1048,6 @@ function messageHandler(data) {
           showModal('Takeback Request', match[1], 'would like to take back ' + match[2] + ' half move(s).',
             ['decline', 'Decline'], ['accept', 'Accept']);
         }
-        return;
-      }
-
-      // Parse results of 'games <game #> to get game info when examining
-      match = msg.match(/\d+\s+\(\s*Exam\.\s+(\d+)\s+(\w+)\s+(\d+)\s+(\w+)\s*\)\s+\[\s*p?(\w)(\w)\s+(\d+)\s+(\d+)\s*\]/);
-      if(match && match.length > 8 && gameInfoRequested) {
-        gameInfoRequested = false;
-
-        let wrating = game.wrating = match[1];
-        const wname = match[2];
-        let brating = game.brating = match[3];
-        const bname = match[4];
-        const style = match[5];
-        const rated = (match[6] === 'r' ? 'rated' : 'unrated');
-        const initialTime = match[7];
-        const increment = match[8];
-
-        const styleNames = new Map([
-          ['b', 'blitz'], ['l', 'lightning'], ['u', 'untimed'], ['e', 'examined'],
-          ['s', 'standard'], ['w', 'wild'], ['x', 'atomic'], ['z', 'crazyhouse'],
-          ['B', 'Bughouse'], ['L', 'losers'], ['S', 'Suicide'], ['n', 'nonstandard']
-        ]);
-
-        if(wrating === '0') wrating = '';
-        if(brating === '0') brating = '';
-        $('#player-rating').text(bname === session.getUser() ? brating : wrating);
-        $('#opponent-rating').text(bname === session.getUser() ? wrating : brating);
-
-        if(wrating === '') {
-          match = wname.match(/Guest[A-Z]{4}/);
-          if(match)
-            wrating = '++++';
-          else wrating = '----';
-        }
-        if(brating === '') {
-          match = bname.match(/Guest[A-Z]{4}/);
-          if(match)
-            brating = '++++';
-          else brating = '----';
-        }
-
-        let time = ' ' + initialTime + ' ' + increment;
-        if(style === 'u')
-          time = '';
-
-        const statusMsg = wname + ' (' + wrating + ') ' + bname + ' (' + brating + ') '
-          + rated + ' ' + styleNames.get(style) + time;
-
-        showStatusMsg(statusMsg);
         return;
       }
 
@@ -972,19 +1201,61 @@ function messageHandler(data) {
         return;
       }
 
-      match = msg.match(/^Movelist for game (\d+):.*/m);
-      if (match != null && match.length > 1) {
-        if (+match[1] === game.id) {
-          if (movelistRequested === 0) {
-            chat.newMessage('console', data);
-          } else {
-            movelistRequested--;
-            if(movelistRequested === 0)
-              parseMovelist(msg);
+      match = msg.match(/(?:^|\n)\s*Movelist for game (\d+):\s+(\w+) \((\d+|UNR)\) vs\. (\w+) \((\d+|UNR)\)[^\n]+\s+(\w+) (\S+) match, initial time: (\d+) minutes, increment: (\d+) seconds\./);
+      if (match != null && match.length > 9) {
+        if (+match[1] === game.id && movelistRequested) {
+          if(game.isExamining()) {
+            movelistRequested = false;
+            var wname = match[2];
+            var wrating = game.wrating = match[3];
+            var bname = match[4];
+            var brating = game.brating = match[5];
+            var rated = match[6].toLowerCase();
+            game.category = match[7];
+            var initialTime = match[8];
+            var increment = match[9];
+    
+            if(wrating === 'UNR') {
+              game.wrating = '';
+              match = wname.match(/Guest[A-Z]{4}/);
+              if(match)
+                wrating = '++++';
+              else wrating = '----';
+            }
+            if(brating === 'UNR') {
+              game.brating = '';
+              match = bname.match(/Guest[A-Z]{4}/);
+              if(match)
+                brating = '++++';
+              else brating = '----';
+            }
+
+            $('#player-rating').text(bname === session.getUser() ? game.brating : game.wrating);
+            $('#opponent-rating').text(bname === session.getUser() ? game.wrating : game.brating);
+    
+            let time = ' ' + initialTime + ' ' + increment;
+            if(initialTime === '0' && increment === '0')
+              time = '';
+    
+            const statusMsg = wname + ' (' + wrating + ') ' + bname + ' (' + brating + ') '
+              + rated + ' ' + game.category + time;
+
+            showStatusMsg(statusMsg);
           }
+
+          parseMovelist(msg);
+          return;          
         }
-        return;
+        else
+          chat.newMessage('console', data);
       }
+  
+      // Suppress 'copygame' output when retrieving starting setup while observing a game
+      match = msg.match(/^Game \d+ is now a copy, for analysis, of game \d+\./m);
+      if(!match) 
+        match = msg.match(/^Game \d+: Still in progress \*/m);
+      if(match && copygameRequested)
+        return;
 
       // Moving backwards and forwards is now handled more generally by updateHistory()
       match = msg.match(/Game\s\d+: \w+ backs up (\d+) moves?\./);
@@ -994,36 +1265,21 @@ function messageHandler(data) {
       if (match != null && match.length > 1)
         return;
 
-      match = msg.match(/(Creating|Game\s(\d+)): (\w+) \(([\d\+\-\s]+)\) (\w+) \(([\d\-\+\s]+)\).+/);
-      if (match != null && match.length > 4) {
-        game.wrating = match[4];
-        game.brating = match[6];
+      match = msg.match(/(Creating|Game\s(\d+)): (\w+) \(([\d\+\-\s]+)\) (\w+) \(([\d\-\+\s]+)\) \S+ (\S+).+/);
+      if (match != null && match.length > 7) {
+        game.wrating = (isNaN(match[4]) || match[4] === '0') ? '' : match[4];
+        game.brating = (isNaN(match[6]) || match[6] === '0') ? '' : match[6];
+        game.category = match[7];
         showStatusMsg(match[0].substring(match[0].indexOf(':')+1));
         if (match[3] === session.getUser() || match[1].startsWith('Game')) {
           if (game.id === 0) {
             game.id = +match[2];
           }
-          if (!isNaN(match[4])) {
-            $('#player-rating').text(match[4]);
-          } else {
-            $('#player-rating').text('');
-          }
-          if (!isNaN(match[6])) {
-            $('#opponent-rating').text(match[6]);
-          } else {
-            $('#opponent-rating').text('');
-          }
+          $('#player-rating').text(game.wrating);
+          $('#opponent-rating').text(game.brating);
         } else if (match[5] === session.getUser()) {
-          if (!isNaN(match[4])) {
-            $('#opponent-rating').text(match[4]);
-          } else {
-            $('#opponent-rating').text('');
-          }
-          if (!isNaN(match[6])) {
-            $('#player-rating').text(match[6]);
-          } else {
-            $('#player-rating').text('');
-          }
+          $('#opponent-rating').text(game.wrating);
+          $('#player-rating').text(game.brating);
         }
         return;
       }
@@ -1068,9 +1324,13 @@ function messageHandler(data) {
 
       match = msg.match(/You are no longer examining game (\d+)./);
       if (match != null && match.length > 1) {
+        if(copygameRequested) {
+          copygameRequested = false;
+          return;
+        }
+
         if(gameChangePending)
           session.send('refresh');
-
         stopEngine();
         cleanup();
         return;
@@ -1242,11 +1502,11 @@ function updateHistory(move?: any, fen?: string) {
   }
   else {
     // move is beyond the end of the move list
-    if(getPlyFromFEN(fen) - 1 > game.history.length()) {
-      movelistRequested++;
+    if(getPlyFromFEN(fen) - 1 > game.history.length() && !movelistRequested) {
+      movelistRequested = true;
       session.send('moves ' + game.id);
     }
-
+    
     if(!movelistRequested && game.role !== Role.NONE) 
       game.history.setClockTimes(index, game.wtime, game.btime);
 
@@ -1369,21 +1629,24 @@ export function updateBoard(playSound = false) {
     stopEngine();
     startEngine();
   }
-  evalEngine.evaluate();
+  if(evalEngine)
+    evalEngine.evaluate();
 }
 
 function startEngine() {
-  $('#start-engine').text('Stop');
+  if(Engine.categorySupported(game.category)) {
+    $('#start-engine').text('Stop');
 
-  $('#engine-pvs').empty();
-  for(let i = 0; i < numPVs; i++)
-    $('#engine-pvs').append('<li>&nbsp;</li>');
+    $('#engine-pvs').empty();
+    for(let i = 0; i < numPVs; i++)
+      $('#engine-pvs').append('<li>&nbsp;</li>');
 
-  engine = new Engine(board, numPVs);
-  if(movelistRequested == 0)
-    engine.move(game.history.get().fen);
-  else
-    engine.move(game.fen);
+    engine = new Engine(board, game.category, numPVs);
+    if(!movelistRequested)
+      engine.move(game.history.get().fen);
+    else
+      engine.move(game.fen);
+  }
 }
 
 function stopEngine() {
@@ -1413,7 +1676,8 @@ function showAnalysis() {
     $('#engine-pvs').append('<li>&nbsp;</li>');
   $('#engine-pvs').css('white-space', (numPVs === 1 ? 'normal' : 'nowrap'));
   scrollToLeftPanelBottom();
-  evalEngine.evaluate();
+  if(evalEngine)
+    evalEngine.evaluate();
 }
 
 function closeLeftBottomTab(tab: any) {
@@ -1598,6 +1862,7 @@ function onDeviceReady() {
 
   // Wait for panels to resize
   game.role = Role.NONE;
+  game.category = 'untimed';
   game.history = new History(new Chess().fen(), board);
 
   const user = Cookies.get('user');
@@ -2264,7 +2529,8 @@ $('#puzzlebot').on('click', (event) => {
 });
 
 $(document).on('shown.bs.tab', 'button[href="#eval-graph-panel"]', (e) => {
-  evalEngine.redraw();
+  if(evalEngine)
+    evalEngine.redraw();
 });
 
 $('#left-bottom-tabs .closeTab').on('click', (event) => {
