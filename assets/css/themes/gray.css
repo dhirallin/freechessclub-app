@@ -44,9 +44,13 @@ cg-board {
 .form-control::placeholder {
   color: #7A8D98;
 }
+input {
+  color-scheme: dark;
+}
 .input-group-text {
   background-color: #777777;
   border-color: #888888;
+  color-scheme: dark;
 }
 
 /*
