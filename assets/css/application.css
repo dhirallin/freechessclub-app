@@ -101,7 +101,7 @@ html, body {
 }
 
 .toggle-btn-selected.btn-outline-secondary {
-  background-color: #BBBBBB !important;
+  --bs-btn-bg: #BBBBBB;
 }
 
 .btn-toolbar .btn {
@@ -230,14 +230,17 @@ html, body {
   font-weight: bold;
 }
 
-#left-bottom-tabs .nav-link.active {
-  background-color: #f7f7f7;
-  border-bottom-color: #f7f7f7;
+.nav-tabs {
+  --bs-nav-tabs-link-active-bg: rgba(255, 255, 255, 0.5);
 }
 
-.nav-pills .nav-link.active {
-  color: #6c757d;
-  background-color: #f7f7f7;
+.nav-pills {
+  --bs-nav-pills-link-active-color: #6c757d;
+  --bs-nav-pills-link-active-bg: #f7f7f7;
+}
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
   border: 1px solid rgba(0,0,0,.125);
 }
 

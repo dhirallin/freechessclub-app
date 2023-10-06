@@ -7,8 +7,9 @@ cg-board {
 }
 .btn-outline-secondary {
   --bs-btn-color: lightgray; /* Override bs variable rather than style directly so we can refer to it in sub-stles like :hover */
+  --bs-btn-disabled-color: #8E9DA5;
 }
-.chat-text,.nav-link,.card-header,.card-footer {
+.chat-text,.card-header,.card-footer {
   color: lightgray;
 }
 .top-panel,.bottom-panel {
@@ -20,3 +21,66 @@ cg-board {
 #game-status,#game-watchers,.chat-text strong.mine {
   color: rgba(240, 159, 67, 0.95);
 }
+
+.toggle-btn-selected.btn-outline-secondary {
+  --bs-btn-bg: #555555;
+}
+.btn-default {
+  --bs-btn-color: lightgray;
+}
+.form-control,
+.form-control:active,
+.form-control:focus {
+  background-color: #555555; 
+  border-color: #888888;
+  color: lightgray;
+}
+.form-control:disabled {
+  background-color: #777777;
+}
+.form-control::selection {
+  background: #052078;
+}
+.form-control::placeholder {
+  color: #7A8D98;
+}
+.input-group-text {
+  background-color: #777777;
+  border-color: #888888;
+}
+
+/*
+  --bs-toast-color: ;
+  --bs-toast-bg: rgba(255, 255, 255, 0.85);
+
+  --bs-tooltip-color: #fff;
+  --bs-tooltip-bg: #000;
+
+  --bs-popover-bg: #fff;
+  --bs-popover-header-color: ;
+  --bs-popover-header-bg: #f0f0f0;
+  --bs-popover-body-color: #212529;
+*/
+
+.nav {
+  --bs-nav-link-color: lightgray;
+}
+.nav-tabs {
+  --bs-nav-tabs-border-color: #888888;
+  --bs-nav-tabs-link-hover-border-color: #888888 #888888 #666666;
+  --bs-nav-tabs-link-active-border-color: #888888 #888888 #666666;
+  --bs-nav-tabs-link-active-color: lightgray;
+  --bs-nav-tabs-link-active-bg: #555555;
+}
+.nav-pills {
+  --bs-nav-pills-link-active-color: lightgray;
+  --bs-nav-pills-link-active-bg: #555555;
+}
+
+.separator {
+  --bs-border-color: #555555;
+}
+.card {
+  --bs-card-border-color: #555555;
+}
+
