@@ -88,3 +88,35 @@ input {
   --bs-card-border-color: #555555;
 }
 
+.history th {
+  color: rgba(255, 255, 255, 0.4);
+}
+.history tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+.history .selectable:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+.history .selected {
+  background-color: #606060; 
+}
+.history .subvariation:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+.history .subvariation .selected {
+  background-color: #777777; 
+}
+.history .subvariation td {
+  background: #606060;
+}
+.history .subvariation th {
+  background: #606060;
+}
+.history .subvariation a {
+  color: #DDDDDD
+}
+
+#engine-pvs > li:nth-of-type(even) {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+

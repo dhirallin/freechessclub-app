@@ -277,16 +277,16 @@ html, body {
   padding-left: 5px;
 }
 
-ul.list-striped {
+#engine-pvs {
   list-style-type: none;
   margin: 0;
   padding: 0;
   overflow: auto;
 }
-ul.list-striped > li:nth-of-type(even) {
-  background-color: #e9e9f9;
+#engine-pvs > li:nth-of-type(even) {
+  background-color: rgba(0, 0, 0, 0.075);
 }
-ul.list-striped > li {
+#engine-pvs > li {
   padding: 6px;
 }
 
