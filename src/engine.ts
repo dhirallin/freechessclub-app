@@ -349,6 +349,7 @@ export class EvalEngine {
 
       const hoverLine = svg.append('g')
         .append('rect')
+        .attr('class', 'eval-hover-line')
         .attr('stroke-width', '1px')
         .attr('width', '.5px')
         .attr('height', height)
