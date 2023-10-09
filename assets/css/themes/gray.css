@@ -1,6 +1,11 @@
+:root {
+  --bg-color: #424242;
+  --fg-color: whitesmoke;
+}
+
 .feature3 {
-  background-color: #424242;
-  color: whitesmoke;
+  background-color: var(--bg-color);
+  color: var(--fg-color);
 }
 cg-board {
   background-image: url('../images/board/gray.svg');
@@ -90,6 +95,10 @@ input {
 .card {
   --bs-card-border-color: #555555;
   --bs-card-cap-bg: rgba(0, 0, 0, 0.06);
+}
+
+.modal {
+  --bs-modal-bg: var(--bg-color);
 }
 
 .history th {

@@ -481,3 +481,10 @@ html, body {
   color: red; 
 }
 
+.close {
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
