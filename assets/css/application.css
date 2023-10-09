@@ -471,3 +471,13 @@ html, body {
   padding-bottom: 4px;
 }
 
+.status {
+  --game-tie-color: #fcddae;
+  --game-win-color: #d4f9d9;
+  --game-lose-color: #f9d4d4;
+}
+
+.clock.low-time {
+  color: red; 
+}
+

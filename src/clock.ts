@@ -39,12 +39,11 @@ export function startBlackClock(game) {
 
     game.btime = game.btime - 1;
     const clock = game.color === 'w' ? $('#opponent-time') : $('#player-time');
-    if (game.btime < 20 && clock.css('color') !== 'red') {
-      clock.css('color', 'red');
+    if (game.btime < 20 && !clock.hasClass('low-time')) {
+      clock.addClass('low-time');
     }
-
-    if (game.btime > 20) {
-      clock.css('color', '');
+    if (game.btime >= 20 && clock.hasClass('low-time')) {
+      clock.removeClass('low-time');
     }
 
     clock.text(SToHHMMSS(game.btime));
@@ -59,12 +58,12 @@ export function startWhiteClock(game) {
 
     game.wtime = game.wtime - 1;
     const clock = game.color === 'w' ? $('#player-time') : $('#opponent-time');
-    if (game.wtime < 20 && clock.css('color') !== 'red') {
-      clock.css('color', 'red');
+    if (game.wtime < 20 && !clock.hasClass('low-time')) {
+      clock.addClass('low-time');
     }
 
-    if (game.wtime > 20) {
-      clock.css('color', '');
+    if (game.wtime >= 20 && clock.hasClass('low-time')) {
+      clock.removeClass('low-time');
     }
 
     clock.text(SToHHMMSS(game.wtime));
