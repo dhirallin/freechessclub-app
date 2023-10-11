@@ -4,6 +4,7 @@
   --fg-color: whitesmoke;
   --bs-body-color: var(--fg-color);
   --bs-body-bg: var(--bg-color);
+  --bs-border-color-translucent: rgba(255, 255, 255, 0.175);
 }
 
 cg-board {
@@ -191,10 +192,26 @@ input {
   --bs-toast-bg: rgba(var(--bg-color-rgb), 0.95);
   --bs-toast-header-bg: var(--bg-color);
   --bs-toast-header-color: #B4C9D2;
-  --bs-border-color-translucent: rgba(255, 255, 255, 0.175);
 }
 .toast .btn-close {
   filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.popover {
+  --bs-popover-bg: var(--bg-color);
+  --bs-popover-body-color: var(--fg-color);
+}
+
+.dropdown-menu {
+  --bs-dropdown-bg: var(--bg-color);
+  --bs-dropdown-color: var(--fg-color);
+  --bs-dropdown-link-color: var(--fg-color);
+  --bs-dropdown-link-hover-color: white;
+  --bs-dropdown-link-hover-bg: #666666;
+  --bs-dropdown-link-active-color: black;
+  --bs-dropdown-link-active-bg: lightgray;
+  --bs-dropdown-link-disabled-color: #adb5bd;
+  --bs-dropdown-header-color: #8c959d;
 }
 
 .notification-panel {
