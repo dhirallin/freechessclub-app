@@ -1,18 +1,18 @@
 :root {
   --bg-color: #424242;
+  --bg-color-rgb: 66, 66, 66;
   --fg-color: whitesmoke;
+  --bs-body-color: var(--fg-color);
+  --bs-body-bg: var(--bg-color);
+}
+
+cg-board {
+  background-image: url('../images/board/gray.svg');
 }
 
 .feature3 {
   background-color: var(--bg-color);
   color: var(--fg-color);
-}
-cg-board {
-  background-image: url('../images/board/gray.svg');
-}
-.btn-outline-secondary {
-  --bs-btn-color: lightgray; /* Override bs variable rather than style directly so we can refer to it in sub-stles like :hover */
-  --bs-btn-disabled-color: #8E9DA5;
 }
 .chat-text,.card-header,.card-footer {
   color: lightgray;
@@ -30,12 +30,41 @@ cg-board {
 .text-danger {
   --bs-danger-rgb: 250, 128, 114;
 }
+.btn-outline-secondary {
+  --bs-btn-color: lightgray; /* Override bs variable rather than style directly so we can refer to it in sub-stles like :hover */
+  --bs-btn-disabled-color: #8E9DA5;
+}
 .toggle-btn-selected.btn-outline-secondary {
   --bs-btn-bg: #555555;
 }
 .btn-default {
   --bs-btn-color: lightgray;
 }
+.btn-outline-success {
+  --bs-btn-color: #4ac080;
+  --bs-btn-border-color: var(--bs-btn-color);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--bs-btn-color);
+  --bs-btn-hover-border-color: var(--bs-btn-color);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--bs-btn-color);
+  --bs-btn-active-border-color: var(--bs-btn-color);
+  --bs-btn-disabled-color: var(--bs-btn-color);
+  --bs-btn-disabled-border-color: var(--bs-btn-color);
+}
+.btn-outline-danger {
+  --bs-btn-color: #f68699;
+  --bs-btn-border-color: var(--bs-btn-color);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--bs-btn-color);
+  --bs-btn-hover-border-color: var(--bs-btn-color);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--bs-btn-color);
+  --bs-btn-active-border-color: var(--bs-btn-color);
+  --bs-btn-disabled-color: var(--bs-btn-color);
+  --bs-btn-disabled-border-color: var(--bs-btn-color);
+}
+
 .form-control,
 .form-control:active,
 .form-control:focus {
@@ -60,19 +89,6 @@ input {
   border-color: #888888;
   color-scheme: dark;
 }
-
-/*
-  --bs-toast-color: ;
-  --bs-toast-bg: rgba(255, 255, 255, 0.85);
-
-  --bs-tooltip-color: #fff;
-  --bs-tooltip-bg: #000;
-
-  --bs-popover-bg: #fff;
-  --bs-popover-header-color: ;
-  --bs-popover-header-bg: #f0f0f0;
-  --bs-popover-body-color: #212529;
-*/
 
 .nav {
   --bs-nav-link-color: lightgray;
@@ -170,3 +186,23 @@ input {
 .clock.low-time {
   color: red;
 }
+
+.toast {
+  --bs-toast-bg: rgba(var(--bg-color-rgb), 0.95);
+  --bs-toast-header-bg: var(--bg-color);
+  --bs-toast-header-color: #B4C9D2;
+  --bs-border-color-translucent: rgba(255, 255, 255, 0.175);
+}
+.toast .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.notification-panel {
+  --bs-toast-bg: var(--bg-color);
+  --bs-toast-border-color: #404040;
+}
+#notifications-header {
+  --bs-toast-bg: #484848;
+} 
+
+
