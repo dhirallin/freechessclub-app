@@ -5,6 +5,7 @@
   --bs-body-color: var(--fg-color);
   --bs-body-bg: var(--bg-color);
   --bs-border-color-translucent: rgba(255, 255, 255, 0.175);
+  color-scheme: dark;
 }
 
 cg-board {
@@ -42,7 +43,7 @@ cg-board {
   --bs-btn-color: lightgray;
 }
 .btn-outline-success {
-  --bs-btn-color: #4ac080;
+  --bs-btn-color: #61cb9a;
   --bs-btn-border-color: var(--bs-btn-color);
   --bs-btn-hover-color: #fff;
   --bs-btn-hover-bg: var(--bs-btn-color);
@@ -82,13 +83,9 @@ cg-board {
 .form-control::placeholder {
   color: #7A8D98;
 }
-input {
-  color-scheme: dark;
-}
 .input-group-text {
   background-color: #777777;
   border-color: #888888;
-  color-scheme: dark;
 }
 
 .nav {
@@ -189,13 +186,21 @@ input {
 }
 
 .toast {
-  --bs-toast-bg: rgba(var(--bg-color-rgb), 0.95);
-  --bs-toast-header-bg: var(--bg-color);
+  --bs-toast-bg: rgba(51, 51, 51, 0.95);
+  --bs-toast-header-bg: #333333;
   --bs-toast-header-color: #B4C9D2;
 }
 .toast .btn-close {
   filter: invert(1) grayscale(100%) brightness(200%);
 }
+
+.notification-panel {
+  --bs-toast-bg: #333333;
+  --bs-toast-border-color: #303030;
+}
+#notifications-header {
+  --bs-toast-bg: #383838;
+} 
 
 .popover {
   --bs-popover-bg: var(--bg-color);
@@ -213,13 +218,5 @@ input {
   --bs-dropdown-link-disabled-color: #adb5bd;
   --bs-dropdown-header-color: #8c959d;
 }
-
-.notification-panel {
-  --bs-toast-bg: var(--bg-color);
-  --bs-toast-border-color: #404040;
-}
-#notifications-header {
-  --bs-toast-bg: #484848;
-} 
 
 
