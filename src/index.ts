@@ -529,8 +529,8 @@ function createModal(type: string, title: string, msg: string, btnFailure: strin
   }
   req += '</div>';
 
-  if(btnSuccess || btnFailure) {
-    req += '<div class="mt-2 pt-2 separator border-top center">';
+  if((btnSuccess && btnSuccess.length === 2) || (btnFailure && btnFailure.length === 2)) {
+    req += '<div class="mt-2 pt-2 border-top center">';
     if (btnSuccess && btnSuccess.length === 2) {
       let successCmd = btnSuccess[0];
       if(useSessionSend) 
