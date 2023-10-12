@@ -440,12 +440,12 @@ html, body {
   transition: opacity 0.8s ease, margin-top 0.8s ease;  
 }
 
-.notification .toast-header {
+.notifications-panel.notification .toast-header {
   padding-top: 6px;
   padding-bottom: 6px;
 }
 
-.notification .toast-body {
+.notifications-panel.notification .toast-body {
   padding-top: 10px;
   padding-bottom: 10px;
 }
