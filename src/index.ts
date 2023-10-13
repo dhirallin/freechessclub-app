@@ -2960,8 +2960,11 @@ async function getOpening() {
   var opening = null;
   if(['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category)) {
     console.time('ZOBRIST');
+    console.time('NEW CHESS');
+    var chess = new Chess(historyItem.fen);
+    console.timeEnd('NEW CHESS');
     console.time('CREATE HASH');
-    var hash = zobristHash(new Chess(historyItem.fen));
+    var hash = zobristHash(chess);
     console.timeEnd('CREATE HASH');
     console.time('LOOKUP');
     var opening = openings.get(hash);
