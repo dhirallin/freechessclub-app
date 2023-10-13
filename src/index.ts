@@ -2957,13 +2957,16 @@ async function getOpening() {
   }
   await fetchOpeningsPromise;
 
-  var fen = historyItem.fen.split(' ').slice(0, -2).join(' '); // Remove ply counts
   var opening = null;
   if(['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category)) {
+    console.time('ZOBRIST');
+    console.time('CREATE HASH');
     var hash = zobristHash(new Chess(historyItem.fen));
-    console.log('hash: ' + hash);
+    console.timeEnd('CREATE HASH');
+    console.time('LOOKUP');
     var opening = openings.get(hash);
-    console.log('opening: ' + opening.name);
+    console.timeEnd('LOOKUP');
+    console.timeEnd('ZOBRIST');
   }
   
   historyItem.opening = opening;
