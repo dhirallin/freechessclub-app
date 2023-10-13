@@ -15,6 +15,7 @@ import History from './history';
 import { GetMessageType, MessageType, Session } from './session';
 import * as Sounds from './sounds';
 import './ui';
+import { zobristHash } from './zobrist';
 
 export const enum Layout {
   Desktop = 0,
@@ -2941,9 +2942,8 @@ async function getOpening() {
           var eco = cols[0];
           var name = cols[1];
           var moves = cols[2];
-          var fen = cols[3];
-          var fenNoPlyCounts = fen.split(' ').slice(0, -2).join(' ');
-          openings.set(fenNoPlyCounts, {eco, name, moves}); 
+          var hash = +cols[3];
+          openings.set(hash, {eco, name, moves}); 
         }
       }
     })
@@ -2959,8 +2959,12 @@ async function getOpening() {
 
   var fen = historyItem.fen.split(' ').slice(0, -2).join(' '); // Remove ply counts
   var opening = null;
-  if(['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category)) 
-    var opening = openings.get(fen);
+  if(['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category)) {
+    var hash = zobristHash(new Chess(historyItem.fen));
+    console.log('hash: ' + hash);
+    var opening = openings.get(hash);
+    console.log('opening: ' + opening.name);
+  }
   
   historyItem.opening = opening;
 }

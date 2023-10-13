@@ -5,6 +5,7 @@
 const fs = require('fs');
 const chess_js = require('chess.js');
 const request = require('sync-request');
+const zobrist = require('./src/zobrist');
 
 var chess = new chess_js.Chess();
 
@@ -34,7 +35,7 @@ for(const file of inputFiles) {
         var cols = line.split('\t');
         if(cols.length === 3 && cols[2].startsWith('1.')) {
             chess.load_pgn(cols[2]);
-            return line + '\t' + chess.fen();
+            return line + '\t' + zobrist.zobristHash(chess);
         }
     });
     modifiedData.push(modifiedLines.filter((element) => element).join('\n'));
