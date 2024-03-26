@@ -6,6 +6,8 @@ import * as Chess from 'chess.js';
 import Cookies from 'js-cookie';
 import { Chessground } from 'chessground';
 import { Color, Key } from 'chessground/types';
+import { OpeningBooks } from 'chess-tools';
+import { Readable } from 'stream-browserify';
 import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
 import Chat from './chat';
 import { Clock } from './clock';
@@ -77,8 +79,10 @@ let lobbyEntries = new Map();
 let lobbyScrolledToBottom;
 let scrollBarWidth; // Used for sizing the layout
 let noSleep = new NoSleep(); // Prevent screen dimming
-let openings;
-let fetchOpeningsPromise = null;
+let openings; // Opening names with corresponding moves
+let fetchOpeningsPromise = null; 
+let book; // Opening book used in 'Play Computer' mode
+let fetchBookPromise = null; 
 let isRegistered = false;
 let lastComputerGame = null; // Attributes of the last game played against the Computer. Used for Rematch and alternating colors each game.
 let lastComputerMoveEval = null; // Keeps track of the current eval for a game against the Computer. Used for draw offers
@@ -543,12 +547,30 @@ export function movePiece(source: any, target: any, metadata: any) {
   if (move !== null)
     movePieceAfter(move, fen);
 
-  if(game.role === Role.PLAYING_COMPUTER) // Send move to engine in Play Computer mode
-    playEngine.move(game.history.last());
+  if(game.role === Role.PLAYING_COMPUTER) { // Send move to engine in Play Computer mode
+    getComputerMove();
+  } 
 
   showTab($('#pills-game-tab'));
   // Show 'Analyze' button once any moves have been made on the board
   showAnalyzeButton();
+}
+
+async function getComputerMove() {
+  var bookMoves = await getBookMoves(game.history.get(game.history.last()).fen);
+  var totalWeight = bookMoves.reduce((acc, curr) => acc + curr.weight, 0);
+  var probability = 0;
+  var rValue = Math.random();
+  var randomBookMove = '';
+  for(let bm of bookMoves) {
+    probability += bm.weight / totalWeight; // polyglot moves are weighted based on number of wins and draws
+    if(rValue <= probability) {
+      randomBookMove = bm.algebraic_move;
+      break;
+    }
+  }
+  console.log(randomBookMove);
+  playEngine.move(game.history.last());  
 }
 
 function preMovePiece(source: any, target: any, metadata: any) {
@@ -1603,7 +1625,7 @@ function messageHandler(data) {
 
               playEngine = new Engine(game.history, playComputerBestMove, null, getPlayComputerEngineOptions(), getPlayComputerMoveParams());
               if(amIblack) 
-                playEngine.move(0); 
+                getComputerMove();
             } 
             else {            
               $('#play-computer').prop('disabled', true);              
@@ -3183,6 +3205,55 @@ $('#input-form').on('submit', (event) => {
   session.send(text);
   $('#input-text').val('');
 });
+
+async function getBookMoves(fen: string): Promise<any[]> {
+  var fetchBook = async () => {
+    var inputFilePath = 'assets/data/gm2600.bin';
+    await fetch(inputFilePath)
+    .then(async response => {
+      book = new OpeningBooks.Polyglot();
+      const reader = response.body.getReader();
+      // Convert response.body to Readable stream
+      const bookStream = new Readable({
+        read() {
+          reader.read().then(async ({ value, done }) => {
+            while (!done) {
+              this.push(value); 
+              ({ done, value } = await reader.read());
+            }
+            this.push(null);
+          });
+        }
+      });
+      book.load_book(bookStream);
+      
+      async function waitForBookLoad() {
+        return new Promise(resolve => {
+          book.on('loaded', (event) => {
+            resolve(event);
+          });
+        });
+      }
+
+      try {
+        await waitForBookLoad();
+      } catch (error) {
+        console.error('Couldn\'t load opening book:', error);
+      }
+    })
+    .catch(error => {
+      console.error('Couldn\'t fetch opening book:', error);
+    });
+  };
+
+  if(!book && !fetchBookPromise) {
+    fetchBookPromise = fetchBook();
+  }
+  await fetchBookPromise;
+
+  let entries = book.find(fen);
+  return entries ? entries.map(entry => entry.toJSON()) : [];
+}
 
 function onDeviceReady() {
   disableOnlineInputs(true);

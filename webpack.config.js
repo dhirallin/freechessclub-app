@@ -1,4 +1,5 @@
 const webpack = require('webpack');
+const path = require('path');
 
 module.exports = {
     entry: "./src/index.ts",
@@ -12,7 +13,7 @@ module.exports = {
     },
     resolve: {
         // Add '.ts' and '.tsx' as a resolvable extension.
-        fallback: { 'crypto': false, 'fs': false, 'path': require.resolve('path-browserify') },
+        fallback: { 'child_process': false, 'stream': require.resolve("stream-browserify"), 'crypto': false, 'fs': false, 'path': require.resolve('path-browserify') },
         extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"]
     },
     module: {
@@ -27,7 +28,22 @@ module.exports = {
             { test: /\.html$/, use: 'raw', exclude: /node_modules/},
             { test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9=&.]+)?$/, use: 'file-loader' },
             { test: /\.m?js/, resolve: { fullySpecified: false } },
-            { test: /\.wasm$/, use: "file-loader?name=[name].[ext]" }
+            { test: /\.wasm$/, use: "file-loader?name=[name].[ext]" },
+            { test: /\.js$/, 
+                include: path.resolve(__dirname, 'node_modules/chess-tools'),
+                use: [{
+                    loader: 'string-replace-loader',
+                    options: { search: 'peice', replace: 'piece', flags: 'g'  },
+                },
+                {
+                    loader: 'string-replace-loader',
+                    options: { search: 'aglebraic', replace: 'algebraic', flags: 'g'  },
+                },
+                {
+                    loader: 'string-replace-loader',
+                    options: { search: 'typeof define', replace: "'undefined'", flags: 'g'  },         
+                }],
+            },
         ]
     },
     plugins: [
@@ -36,6 +52,9 @@ module.exports = {
             'process.env': {
                 'NODE_ENV': JSON.stringify('production')
             }
+        }),
+        new webpack.ProvidePlugin({
+            process: 'process/browser',
         }),
     ],
     optimization: {
@@ -63,3 +82,4 @@ module.exports = {
         port: 8080,
     },
 }
+
