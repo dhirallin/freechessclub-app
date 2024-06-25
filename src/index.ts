@@ -7,6 +7,7 @@ import Cookies from 'js-cookie';
 import { Chessground } from 'chessground';
 import { Color, Key } from 'chessground/types';
 import { Polyglot } from 'cm-polyglot/src/Polyglot.js';
+import { Pgn } from 'cm-pgn/src/Pgn.js';
 import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
 import Chat from './chat';
 import { Clock } from './clock';

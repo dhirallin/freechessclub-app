@@ -377,6 +377,13 @@ html, body {
 #game-toolbar .btn {
   --bs-btn-active-color: rgba(159, 184, 228, 0.75);
 }
+#game-tools-open-pgn .dropdown-icon {
+  margin-left: -0.25rem;
+  padding-right: 0.25rem;
+}
+#game-tools-save-pgn .dropdown-icon {
+  padding-right: 0.25rem;
+}
 #game-tools-close .dropdown-icon {
   padding-left: 0.125rem; 
   padding-right: 0.25rem;
