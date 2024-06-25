@@ -184,13 +184,26 @@ export class Chat {
   public updateGameDescription(tab: any): boolean {
     var game = this.getGameFromTab(tab);
     if(game) {
-      var statusMsg = game.statusElement.find('.game-status').text();
-      var match = statusMsg.match(/\S+ \(\S+\) \S+ \(\S+\)/);
-      if(match) 
-        $(tab.attr('href')).find('.chat-game-description').text(match[0]);
-      else
-        tab.find('.chat-game-description').text('');
-        return true;
+      var tags = game.history.metatags;
+      var wname = tags.White;
+      var bname = tags.Black;
+      var wrating = tags.WhiteElo || '?';
+      var brating = tags.BlackElo || '?';
+      var match = wname.match(/Guest[A-Z]{4}/);
+      if(match)
+        wrating = '++++';
+      else if(wrating === '-')
+        wrating = '----';
+
+      var match = bname.match(/Guest[A-Z]{4}/);
+      if(match)
+        brating = '++++';
+      else if(brating === '-')
+        brating = '----';
+      var description = (wname || game.wname) + ' (' + wrating + ') ' + (bname || game.bname) + ' (' + brating + ')';
+
+      $(tab.attr('href')).find('.chat-game-description').text(description);
+      return true;
     }
     return false;
   }
@@ -293,7 +306,8 @@ export class Chat {
         if(match && match.length > 1) {
           var game = findGame(+match[1]);
           if(game) {
-            var gameDescription = game.wname + ' vs. ' + game.bname;
+            var tags = game.history.metatags;
+            var gameDescription = (tags.White || game.wname) + ' vs. ' + (tags.Black || game.bname);
             tooltip = `data-bs-toggle="tooltip" data-tooltip-hover-only title="` + gameDescription + `" `;
 
             // Show Game chat room info bar

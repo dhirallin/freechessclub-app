@@ -7,17 +7,20 @@ import Cookies from 'js-cookie';
 import { Chessground } from 'chessground';
 import { Color, Key } from 'chessground/types';
 import { Polyglot } from 'cm-polyglot/src/Polyglot.js';
+import PgnParser from '@mliebelt/pgn-parser';
 import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
 import Chat from './chat';
 import { Clock } from './clock';
 import { Engine, EvalEngine } from './engine';
-import { Game, GameData, Role } from './game';
+import { Game, GameData, Role, NewVariationMode } from './game';
 import { History, HEntry } from './history';
 import { GetMessageType, MessageType, Session } from './session';
 import * as Sounds from './sounds';
 import { Reason } from './parser';
 import './ui';
 import packageInfo from '../package.json';
+import { createPopper, Placement } from '@popperjs/core';
+import { move } from 'chessground/drag';
 
 export const enum Layout {
   Desktop = 0,
@@ -60,7 +63,7 @@ let computerListRequested = false;
 let gameExitPending = 0;
 let examineModeRequested: Game | null = null;
 let computerList = [];
-let modalCounter = 0;
+let dialogCounter = 0;
 let numPVs = 1;
 let matchRequested = 0;
 let prevWindowWidth = 0;
@@ -82,8 +85,80 @@ let lastComputerGame = null; // Attributes of the last game played against the C
 let gameWithFocus: Game = null;
 let games: Game[] = []; 
 let partnerGameId = null;
-
+let lastClickCoords = {x: 0, y: 0};
 const mainBoard: any = createBoard($('#main-board-area').children().first().find('.board'));
+
+$(document).ready(() => {
+  if ((window as any).cordova !== undefined) {
+    document.addEventListener('deviceready', onDeviceReady, false);
+  } else {
+    onDeviceReady();
+  }
+});
+
+function onDeviceReady() {
+  var game = createGame();
+  game.role = Role.NONE;
+  game.category = 'untimed';
+  game.history = new History(game, new Chess().fen());
+  setGameWithFocus(game);
+
+  disableOnlineInputs(true);
+
+  if(isSmallWindow()) {
+    $('#collapse-chat').collapse('hide');
+    $('#collapse-history').collapse('hide');
+    setViewModeList(); 
+  }
+  else {
+    createTooltips();
+    $('#pills-play-tab').tab('show');
+    $('#collapse-history').removeClass('collapse-init');
+    $('#collapse-chat').removeClass('collapse-init');
+    $('#chat-toggle-btn').toggleClass('toggle-btn-selected');
+  }
+
+  $('input').each(function() {
+    selectOnFocus($(this));
+  });
+  
+  prevWindowWidth = NaN;
+  // Here we create a temporary hidden element in order to measure its scrollbar width.
+  $('body').append(`<div id="scrollbar-measure" style="position: absolute; top: -9999px; overflow: scroll"></div>`);
+  
+  // Change layout for mobile or desktop and resize panels 
+  // Split it off into a timeout so that onDeviceReady doesn't take too long.
+  setTimeout(() => { $(window).trigger('resize'); }, 0);
+
+  const user = Cookies.get('user');
+  const pass = Cookies.get('pass');
+  if (user !== undefined && pass !== undefined) {
+    session = new Session(messageHandler, user, atob(pass));
+  } else {
+    session = new Session(messageHandler);
+  }
+
+  initDropdownSubmenus();
+}
+
+$(window).on('load', function() {
+  $('#left-panel-header').css('visibility', 'visible');
+  $('#right-panel-header').css('visibility', 'visible');
+});
+
+/** Prompt before unloading page if in a game */
+$(window).on('beforeunload', () => {
+  var game = getPlayingExaminingGame();
+  if(game && game.isPlaying()) 
+    return true;
+});
+
+// Prevent screen dimming, must be enabled in a user input event handler
+$(document).one('click', (event) => {
+  if (wakelockToggle) {
+    noSleep.enable();
+  }
+});
 
 function cleanupGame(game: Game) {
   if(playEngine && game.role === Role.PLAYING_COMPUTER) {
@@ -126,6 +201,7 @@ function cleanupGame(game: Game) {
   game.partnerGameId = null;
   game.commitingMovelist = false;
   game.movelistRequested = 0;
+  game.gameStatusRequested = false;
   game.board.cancelMove();
   updateBoard(game);
   initStatusPanel();
@@ -136,7 +212,16 @@ function cleanupGame(game: Game) {
 
   game.bufferedHistoryEntry = null;
   game.bufferedHistoryCount = 0;
-  game.removeSubvariationRequested = false;
+  game.removeMoveRequested = null;
+}
+
+/** 
+ * Close any open context menu associated with a Game 
+ */
+function closeContextMenu(game: Game) {
+  game.element.find('.context-menu').remove();
+  game.moveTableElement.find('.context-menu').remove();
+  game.moveListElement.find('.context-menu').remove();
 }
 
 export function cleanup() {
@@ -245,10 +330,11 @@ function initStatusPanel() {
   }
 }
 
-function showPromotionPanel(source: string, target: string, premove: boolean = false) {
-  var game = gameWithFocus;
-  game.promoteSource = source;
-  game.promoteTarget = target;
+function showPromotionPanel(game: Game, premove: boolean = false) {
+  var source = game.movePieceSource;
+  var target = game.movePieceTarget;
+  var metadata = game.movePieceMetadata;
+
   game.promoteIsPremove = premove;
   var orientation = game.board.state.orientation;
   var color = (target.charAt(1) === '8' ? 'white' : 'black');
@@ -286,7 +372,7 @@ function showPromotionPanel(source: string, target: string, premove: boolean = f
     hidePromotionPanel();
     gameWithFocus.promotePiece = $(event.target).attr('id').slice(-1);
     if(!premove)
-      movePiece(source, target, null);
+      movePiece(source, target, metadata);
   });
 
   promotionPanel.show();
@@ -326,60 +412,72 @@ $('#move-table').on('click', '.selectable', function() {
 });
 
 $('#movelists').on('click', '.move', function() {
-  gotoMove($(this).data('hEntry'));
+  gotoMove($(this).parent().data('hEntry'));
 });
 
-export function gotoMove(entry: HEntry) {
+$('#movelists').on('click', '.comment', function() {
+  if($(this).hasClass('comment-before'))
+    gotoMove($(this).next().data('hEntry'));
+  else
+    gotoMove($(this).prev().data('hEntry'));
+});
+
+export function gotoMove(to: HEntry, playSound = false) {
+  if(!to)
+    return;
+
   var game = gameWithFocus;
   if(game.isExamining()) {
-    var prevEntry = (game.bufferedHistoryCount ? game.bufferedHistoryEntry : game.history.current());
-
-    let mainlineEntry = entry;
-    let firstSubvarEntry = entry;
-    if(!prevEntry.isSubvariation() && entry.isSubvariation()) {
-      firstSubvarEntry = entry.first;
-      mainlineEntry = firstSubvarEntry.prev;
+    var from = bufferedCurrentMove(game);
+    var curr = from;
+    let i = 0;
+    while(curr) {
+      curr.visited = i;
+      curr = curr.prev;
+      i++;
     }
+    var path = [];
+    curr = to;
+    while(curr && curr.visited === undefined) {
+      path.push(curr);
+      curr = curr.prev;
+    }    
     
-    let backNum = 0;
-    let i = prevEntry
-    let mainlinePly = mainlineEntry.ply;
-    while(i.ply > mainlinePly || (!entry.isSubvariation() && i.isSubvariation())) {     
-      i = i.prev;
-      backNum++;
-    }
+    var backNum = curr.visited;
     if(backNum > 0) {
       session.send('back ' + backNum);
-      game.bufferedHistoryEntry = i;
+      game.bufferedHistoryEntry = curr;
       game.bufferedHistoryCount++;
     }
 
-    let forwardNum = 0;
-    while(i !== mainlineEntry && !game.history.scratch() && (!prevEntry.isSubvariation() || !entry.isSubvariation())) {     
-      i = i.next;
-      forwardNum++;
-    }
-    if(forwardNum > 0) {
-      session.send('for ' + forwardNum);
-      game.bufferedHistoryEntry = i;
-      game.bufferedHistoryCount++;
+    while(from) {
+      from.visited = undefined;
+      from = from.prev;
     }
 
-    if(!prevEntry.isSubvariation() && entry.isSubvariation()) {
-      i = firstSubvarEntry;
-      sendMove(i.move);
-      game.bufferedHistoryEntry = i;
-      game.bufferedHistoryCount++;
+    var forwardNum = 0;
+    if(!game.history.scratch()) {
+      for(let i = path.length - 1; i >= 0; i--) {
+        if(path[i].isSubvariation()) 
+          break;
+        curr = path[i];
+        forwardNum++;
+      }
+      if(forwardNum > 0) {
+        session.send('for ' + forwardNum);
+        game.bufferedHistoryEntry = curr;
+        game.bufferedHistoryCount++;
+      }
     }
-    while(i !== entry) {
-      i = i.next;
-      sendMove(i.move);
-      game.bufferedHistoryEntry = i;
+
+    for(let i = path.length - forwardNum - 1; i >= 0; i--) {
+      sendMove(path[i].move);
+      game.bufferedHistoryEntry = path[i];
       game.bufferedHistoryCount++;
     }
   }
   else
-    game.history.display(entry);
+    game.history.display(to, playSound);
 }
 
 function sendMove(move: any) {
@@ -545,11 +643,27 @@ export function movePiece(source: any, target: any, metadata: any) {
 
     fen = parsedMove.fen;
     move = parsedMove.move;
+    game.movePieceSource = source;
+    game.movePieceTarget = target;
+    game.movePieceMetadata = metadata;
+    var nextMove = game.history.next();
 
     if(!game.promotePiece && !autoPromoteToggle && move && move.flags.includes('p')) {
-      showPromotionPanel(source, target, false);
+      showPromotionPanel(game, false);
       game.board.set({ movable: { color: undefined } });
       return;
+    }
+
+    if(game.editMode && game.newVariationMode === NewVariationMode.ASK && nextMove) {
+      var subFound = false;
+      for(let i = 0; i < nextMove.subvariations.length; i++) {
+        if(nextMove.subvariations[i].fen === fen)
+          var subFound = true;
+      }
+      if(nextMove.fen !== fen && !subFound) {
+        createNewVariationMenu(game);
+        return;      
+      }
     }
 
     chess.load(fen);
@@ -558,7 +672,6 @@ export function movePiece(source: any, target: any, metadata: any) {
       sendMove(move);
   
     if(game.isExamining()) {
-      var nextMove = game.history.next();
       if(nextMove && !nextMove.isSubvariation() && !game.history.scratch() && fen === nextMove.fen) 
         session.send('for');
       else
@@ -582,6 +695,38 @@ export function movePiece(source: any, target: any, metadata: any) {
   showTab($('#pills-game-tab'));
   // Show 'Analyze' button once any moves have been made on the board
   showAnalyzeButton();
+}
+
+/**
+ * When in Edit Mode, if a move is made on the board, display a menu asking if the user wishes to
+ * create a new variation or overwrite the existing variation.
+ */
+function createNewVariationMenu(game: Game) {
+  var menu = $(`
+    <ul class="context-menu dropdown-menu">
+      <li><a class="dropdown-item noselect" data-action="overwrite">Overwrite variation</a></li>
+      <li><a class="dropdown-item noselect" data-action="new">New variation</a></li>
+    </ul>`);
+
+  var closeMenuCallback = (event: any) => {
+    updateBoard(game);
+  }
+
+  var itemSelectedCallback = (event: any) => {
+    var action = $(event.target).data('action');
+    if(action === 'new') 
+      game.newVariationMode = NewVariationMode.NEW_VARIATION;
+    else 
+      game.newVariationMode = NewVariationMode.OVERWRITE_VARIATION;
+    movePiece(game.movePieceSource, game.movePieceTarget, game.movePieceMetadata);
+  }
+
+  game.element.append(menu);
+
+  var x = lastClickCoords.x;
+  var y = (isSmallWindow() ? lastClickCoords.y : lastClickCoords.y + 15);
+
+  createContextMenu(menu, x, y, null, itemSelectedCallback, closeMenuCallback, 'top', ['top-start', 'top-end', 'bottom-start', 'bottom-end']);
 }
 
 // Get Computer's next move either from the opening book or engine
@@ -634,76 +779,111 @@ function preMovePiece(source: any, target: any, metadata: any) {
   var game = gameWithFocus;
   var chess = new Chess(game.board.getFen() + ' w KQkq - 0 1'); 
   if(!game.promotePiece && chess.get(source).type === 'p' && (target.charAt(1) === '1' || target.charAt(1) === '8')) {
-    showPromotionPanel(source, target, true);
+    showPromotionPanel(game, true);
   }
 }
 
 function showStatusMsg(game: Game, msg: string) {
   if(game === gameWithFocus)
     showStatusPanel();
-  game.statusElement.find('.game-status').html(msg + '<br/>');
+  if(msg)
+    game.statusElement.find('.game-status').html(msg);
 }
 
-function showBoardModal(type: string, title: string, msg: string, btnFailure: string[], btnSuccess: string[], useSessionSend = true, icons = true, progress = false): any {
-  var modalHtml = createModal(type, title, msg, btnFailure, btnSuccess, useSessionSend, icons, progress);
-  var modal = $(modalHtml).appendTo($('#game-requests'));
-  modal.addClass('board-modal');
-  modal.toast('show');
+function showBoardDialog(params: DialogParams): any {
+  var dialog = createDialog(params);
+  dialog.appendTo($('#game-requests'));
+  dialog.addClass('board-dialog');
+  dialog.toast('show');
 
-  modal.on('hidden.bs.toast', function () {
+  dialog.on('hidden.bs.toast', function () {
     $(this).remove();
   });
 
-  return modal;
+  return dialog;
 }
 
-function showFixedModal(type: string, title: string, msg: string, btnFailure: string[], btnSuccess: string[], useSessionSend = true, icons = true, progress = false): any {
-  var modalHtml = createModal(type, title, msg, btnFailure, btnSuccess, useSessionSend, icons, progress);
+function showFixedDialog(params: DialogParams): any {
+  var dialog = createDialog(params);
   var container = $('<div class="toast-container position-fixed top-50 start-50 translate-middle" style="z-index: 101">');
   container.appendTo('body');
-  var modal = $(modalHtml).appendTo(container);
-  modal.toast('show');
+  dialog.appendTo(container);
+  dialog.toast('show');
 
-  modal.on('hidden.bs.toast', function () {
+  dialog.on('hidden.bs.toast', function () {
     $(this).parent().remove();
   });
 
-  return modal;
+  return dialog;
 }
 
-function createModal(type: string, title: string, msg: string, btnFailure: string[], btnSuccess: string[], useSessionSend = true, icons = true, progress = false) { 
-  const modalId = 'modal' + modalCounter++;
+interface DialogParams {
+  type?: string;
+  title?: string;
+  msg?: string;
+  btnFailure?: (string | ((event: any) => void))[];
+  btnSuccess?: (string | ((event: any) => void))[];
+  useSessionSend?: boolean; 
+  icons?: boolean;        
+  progress?: boolean;      
+  htmlMsg?: boolean;       
+}
+
+function createDialog({type = '', title = '', msg = '', btnFailure, btnSuccess, useSessionSend = false, icons = true, progress = false, htmlMsg = false}: DialogParams): JQuery<HTMLElement> { 
+  const dialogId = 'dialog' + dialogCounter++;
   let req = `
-  <div id="` + modalId + `" class="toast" data-bs-autohide="false" role="status" aria-live="polite" aria-atomic="true">
+  <div id="` + dialogId + `" class="toast" data-bs-autohide="false" role="status" aria-live="polite" aria-atomic="true">
     <div class="toast-header">
       <strong class="header-text me-auto">` + type + `</strong>
       <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
-    <div class="toast-body">
-      <div class="d-flex align-items-center">
-        <strong class="body-text text-primary my-auto">` + title + ' ' + msg + '</strong>';
-  
-  if (progress) {
-    req += '<div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>';
+    <div class="toast-body">`;
+
+  if(htmlMsg)
+    req += msg;
+  else {
+    req += `<div class="d-flex align-items-center">
+          <strong class="body-text text-primary my-auto">` + title + ' ' + msg + '</strong>';
+    if (progress) {
+      req += '<div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>';
+    }
+    req += '</div>';
   }
-  req += '</div>';
 
   if((btnSuccess && btnSuccess.length === 2) || (btnFailure && btnFailure.length === 2)) {
-    req += '<div class="mt-2 pt-2 border-top center">';
+    req += `<div class="mt-2 pt-2 border-top center">`;
     if (btnSuccess && btnSuccess.length === 2) {
-      let successCmd = btnSuccess[0];
-      if(useSessionSend) 
-        successCmd = "sessionSend('" + btnSuccess[0] + "');";
-      req += '<button type="button" onclick="' + successCmd + `" class="button-success btn btn-sm btn-outline-success` 
+      var successCmd = '';
+      if(typeof btnSuccess[0] === 'function') 
+        var btnSuccessHandler = btnSuccess[0];
+      if(typeof btnSuccess[0] === 'string') {
+        var successCmd = `onclick="`;
+        if(useSessionSend) 
+          successCmd += `sessionSend('` + btnSuccess[0] + `');`;
+        else
+          successCmd += btnSuccess[0];
+        successCmd += `" `;
+      }
+
+      req += `<button type="button" ` + successCmd + `class="button-success btn btn-sm btn-outline-success` 
           + (btnFailure && btnFailure.length === 2 ? ` me-4` : ``) + `" data-bs-dismiss="toast">`
           + (icons ? `<span class="fa fa-check-circle-o" aria-hidden="false"></span> ` : ``) 
           + btnSuccess[1] + '</button>';
     }
     if (btnFailure && btnFailure.length === 2) {
-      let failureCmd = btnFailure[0];
-      if(useSessionSend) 
-        failureCmd = "sessionSend('" + btnFailure[0] + "');";  
-      req += '<button type="button" onclick="' + failureCmd + `" class="button-failure btn btn-sm btn-outline-danger" data-bs-dismiss="toast">` 
+      var failureCmd = '';
+      if(typeof btnFailure[0] === 'function') 
+        var btnFailureHandler = btnFailure[0];
+      if(typeof btnFailure[0] === 'string') {
+        var failureCmd = `onclick="`;
+        if(useSessionSend) 
+          failureCmd += `sessionSend('` + btnFailure[0] + `');`;
+        else
+          failureCmd += btnFailure[0];
+        failureCmd += `" `;
+      }
+
+      req += `<button type="button" ` + failureCmd + `" class="button-failure btn btn-sm btn-outline-danger" data-bs-dismiss="toast">` 
           + (icons ? `<span class="fa fa-times-circle-o" aria-hidden="false"></span> ` : ``)
           + btnFailure[1] + '</button>';
     }
@@ -712,18 +892,25 @@ function createModal(type: string, title: string, msg: string, btnFailure: strin
 
   req += '</div></div>';
 
-  return req;
+  var dialog = $(req);
+
+  if(btnSuccessHandler)
+    dialog.find('.button-success').on('click', btnSuccessHandler);
+  if(btnFailureHandler)
+    dialog.find('.button-failure').on('click', btnFailureHandler);
+
+  return dialog;
 }
 
-function createNotification(type: string, title: string, msg: string, btnFailure: string[], btnSuccess: string[], useSessionSend = true, icons = true, progress = false): any {
-  var modalHtml = createModal(type, title, msg, btnFailure, btnSuccess, useSessionSend, icons, progress);
-  var modal = $(modalHtml).insertBefore($('#notifications-footer')); 
-  modal.find('[data-bs-dismiss="toast"]').removeAttr('data-bs-dismiss');  
-  modal.on('click', 'button', (event) => {
-    removeNotification(modal);
+function createNotification(params: DialogParams): any {
+  var dialog = createDialog(params);
+  dialog.insertBefore($('#notifications-footer')); 
+  dialog.find('[data-bs-dismiss="toast"]').removeAttr('data-bs-dismiss');  
+  dialog.on('click', 'button', (event) => {
+    removeNotification(dialog);
   });
-  modal.addClass('notification'); 
-  modal.addClass('notification-panel');
+  dialog.addClass('notification'); 
+  dialog.addClass('notification-panel');
   $('#notifications-btn').prop('disabled', false); 
   $('#notifications-btn').parent().prop('title', 'Notifications');
   createTooltip($('#notifications-btn').parent());
@@ -734,9 +921,9 @@ function createNotification(type: string, title: string, msg: string, btnFailure
   var game = getPlayingExaminingGame();
   var playingGame = (game && game.isPlayingOnline() ? true : false); // Don't show notifications if playing a game
   if((notificationsToggle && !playingGame) || $('#notifications-header').attr('data-show'))
-    showNotifications(modal);
+    showNotifications(dialog);
 
-  return modal;
+  return dialog;
 }
 
 function removeNotification(element: any) {
@@ -774,14 +961,14 @@ function removeNotification(element: any) {
   slideNotification(element, (x < 0 ? 'left' : 'right'));
 }
 
-function showNotifications(modals: any) {
-  if(!modals.length)
+function showNotifications(dialogs: any) {
+  if(!dialogs.length)
     return;
   
   // If not all notifications are displayed, add a 'Show All' button to the footer
   var allShown = true;
   $('.notification').each((index, element) => {
-    if(!$(element).attr('data-show') && !$(element).attr('data-remove') && modals.index($(element)) === -1) 
+    if(!$(element).attr('data-show') && !$(element).attr('data-remove') && dialogs.index($(element)) === -1) 
       allShown = false;
   });
   if(allShown) 
@@ -795,7 +982,7 @@ function showNotifications(modals: any) {
     slideNotification($('#notifications-header'), 'down');
   }
 
-  modals.each((index, element) => {
+  dialogs.each((index, element) => {
     if(!$(element).attr('data-show')) {
       $(element).attr('data-show', 'true');
       $(element).toast('show');
@@ -911,8 +1098,8 @@ function notificationMouseDown(e) {
   $('#notifications').css('--opacityY', 1);   
   $('#notifications').css('--opacityX', 1);   
 
-  var modal = $(e.target).closest('.toast');
-  modal.css('transition', 'none');
+  var dialog = $(e.target).closest('.toast');
+  dialog.css('transition', 'none');
 
   // Prevent mouse pointer events on webpage while dragging panel
   jQuery('<div/>', {
@@ -948,12 +1135,12 @@ function notificationMouseDown(e) {
         $('#notifications').css('transform', 'translateY(var(--dragY))');
         $('#notifications').css('opacity', 'var(--opacityY)');
       }
-      else if(modal.hasClass('notification') && Math.abs(swipeStart.x - mouse.x) > 20 && Math.abs(swipeStart.x - mouse.x) > Math.abs(swipeStart.y - mouse.y)) {
+      else if(dialog.hasClass('notification') && Math.abs(swipeStart.x - mouse.x) > 20 && Math.abs(swipeStart.x - mouse.x) > Math.abs(swipeStart.y - mouse.y)) {
         // Perform horizontal swipe
         swipeStart = mouse;
         swipeLocked = 'horizontal';
-        modal.css('transform', 'translateX(var(--dragX))');
-        modal.css('opacity', 'var(--opacityX)');
+        dialog.css('transform', 'translateX(var(--dragX))');
+        dialog.css('opacity', 'var(--opacityX)');
       }
     }
   };
@@ -973,29 +1160,30 @@ function notificationMouseDown(e) {
     }
     else if(swipeLocked === 'horizontal') {
       if(Math.abs(mouse.x - swipeStart.x) > 50 && e.type !== 'touchcancel')
-        removeNotification(modal);
+        removeNotification(dialog);
       else {
-        modal.css('transform', '');
-        modal.css('opacity', '');
+        dialog.css('transform', '');
+        dialog.css('opacity', '');
       }
     }
     swipeLocked = '';
     swipeStart = null;
-    modal.css('transition', '');
+    dialog.css('transition', '');
   });
 
   e.preventDefault();
 }
 
-function getTouchClickCoordinates(event: any) {
+function getTouchClickCoordinates(event: any, relativeToPage: boolean = false) {
   event = (event.originalEvent || event);
   if(event.type == 'touchstart' || event.type == 'touchmove' || event.type == 'touchend' || event.type == 'touchcancel') {
-      var touch = event.touches[0] || event.changedTouches[0];
-      var x = touch.pageX;
-      var y = touch.pageY;
-  } else if (event.type == 'mousedown' || event.type == 'mouseup' || event.type == 'mousemove' || event.type == 'mouseover' || event.type=='mouseout' || event.type=='mouseenter' || event.type=='mouseleave') {
-      var x = event.clientX;
-      var y = event.clientY;
+    var touch = event.touches[0] || event.changedTouches[0];
+    var x = relativeToPage ? touch.pageX : touch.clientX;
+    var y = relativeToPage ? touch.pageY : touch.clientY;
+  } 
+  else if (event.type == 'mousedown' || event.type == 'mouseup' || event.type == 'mousemove' || event.type == 'mouseover' || event.type=='mouseout' || event.type=='mouseenter' || event.type=='mouseleave' || event.type == 'contextmenu') {
+    var x = relativeToPage ? event.pageX : event.clientX;
+    var y = relativeToPage ? event.pageY : event.clientY;
   }
   return {x, y};
 }
@@ -1506,6 +1694,7 @@ export function parseMovelist(game: Game, movelist: string) {
     let s = match[0].replace(/(<12> (\S+\s){18})([-\d]+)/, '$1-3');         
     let startpos = session.getParser().parse(s);
     var chess = Chess(startpos.fen);  
+    game.history.setMetatags({SetUp: '1', FEN: startpos.fen});
   }
   else
     var chess = Chess(); 
@@ -1554,9 +1743,10 @@ function gameStart(game: Game) {
   }
 
   hidePromotionPanel(game);
+  closeContextMenu(game);
   game.board.cancelMove();
-  if(game === gameWithFocus)
-    hideExitSubvariationButton();
+  if(game === gameWithFocus && (!game.history || !game.history.hasSubvariation()))
+    $('#exit-subvariation').hide();
 
   // for bughouse set game.color of partner to opposite of us
   var mainGame = getPlayingExaminingGame();
@@ -1576,8 +1766,8 @@ function gameStart(game: Game) {
   // Set game board text
   var whiteStatus = game.element.find(game.color === 'w' ? '.player-status' : '.opponent-status');
   var blackStatus = game.element.find(game.color === 'b' ? '.player-status' : '.opponent-status');
-  whiteStatus.find('.name').text(game.wname);
-  blackStatus.find('.name').text(game.bname);
+  whiteStatus.find('.name').text(game.wname.replace(/_/g, ' '));
+  blackStatus.find('.name').text(game.bname.replace(/_/g, ' '));
   if(!game.wrating)
     whiteStatus.find('.rating').text('');
   if(!game.brating)
@@ -1591,7 +1781,9 @@ function gameStart(game: Game) {
     else if(game.isObserving())
       var gameType = 'Observing';
     game.element.find('.title-bar-text').text('Game ' + game.id + ' (' + gameType + ')');
-    game.statusElement.find('.game-status > span').prepend('<span class="game-id">Game ' + game.id + ': </span>');
+    var gameStatus = game.statusElement.find('.game-status');
+    if(gameStatus.text())
+      gameStatus.prepend('<span class="game-id">Game ' + game.id + ': </span>');
   }
   else if(game.role === Role.PLAYING_COMPUTER)
     game.element.find('.title-bar-text').text('Computer (Playing)');
@@ -1656,8 +1848,14 @@ function gameStart(game: Game) {
     evalEngine = null;
   }
 
-  if(!examineModeRequested) 
+  if(!examineModeRequested) {
+    game.historyList.length = 0;
+    game.gameListFilter = '';
+    $('#game-list-button').hide();
     game.history = new History(game, game.fen, game.time * 60000, game.time * 60000);
+    game.editMode = false;
+    updateEditMode(game);
+  }
   
   if(game.isPlayingOnline())
     game.element.find($('[title="Close"]')).hide();
@@ -1672,12 +1870,14 @@ function gameStart(game: Game) {
   }
   if(!focusSet) {
     if(game === gameWithFocus)
-      initGameRole(game);
+      initGameControls(game);
     updateBoard(game);
   }
 
   // Close old unused private chat tabs
-  chat.closeUnusedPrivateTabs();
+  if(chat)
+    chat.closeUnusedPrivateTabs();
+
   // Open chat tabs
   if(game.isPlayingOnline()) {
     if(game.category === 'bughouse' && partnerGameId !== null) 
@@ -1727,7 +1927,7 @@ function gameStart(game: Game) {
   } 
   else {
     if(game.isExamining()) {
-      if(game.wname === game.bname)
+      if(game.wname === game.bname) 
         game.history.scratch(true);
       else {
         if(game.move !== 'none')
@@ -1742,6 +1942,8 @@ function gameStart(game: Game) {
       session.send('moves ' + game.id);
       session.send('iset startpos 0');
     }
+
+    game.history.initMetatags();
   }
 
   if(game === gameWithFocus) {
@@ -1847,6 +2049,10 @@ function messageHandler(data) {
         if(game.role !== Role.NONE && multiboardToggle)
           game = cloneGame(game);
         game.id = data.id;    
+        if(!game.wname)
+          game.wname = data.wname;
+        if(!game.bname)
+          game.bname = data.bname;
         game.role = Role.EXAMINING;
       }
       else {
@@ -1893,7 +2099,7 @@ function messageHandler(data) {
       // Set clock time to the time that the player resigns/aborts etc.
       game.history.updateClockTimes(game.history.last(), game.clock.getWhiteTime(), game.clock.getBlackTime());
 
-      if (data.reason <= 4 && game.element.find('.player-status .name').text() === data.winner) {
+      if(data.reason <= 4 && game.element.find('.player-status .name').text() === data.winner) {
         // player won
         game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-win-color)');
         game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-lose-color)');
@@ -1913,7 +2119,8 @@ function messageHandler(data) {
         game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-tie-color)');
       }
 
-      showStatusMsg(game, data.message);
+      var status = data.message.replace(/Game \d+ /, '');
+      showStatusMsg(game, status);
       
       if(game.isPlaying()) {
         let rematch = [], analyze = [];
@@ -1929,8 +2136,10 @@ function messageHandler(data) {
         if(data.reason !== Reason.Adjourn && data.reason !== Reason.Abort && game.history.length()) {
           analyze = ['analyze();', 'Analyze'];
         }
-        showBoardModal('Match Result', '', data.message, rematch, analyze, false, false, false);
+        showBoardDialog({type: 'Match Result', msg: data.message, btnFailure: rematch, btnSuccess: analyze, icons: false});
       }
+      game.history.setMetatags({Result: data.score, Termination: data.reason});
+
       cleanupGame(game);
       break;
     case MessageType.GameHoldings:
@@ -2022,25 +2231,25 @@ function messageHandler(data) {
             bodyText = 'offers to be your bughouse partner.';
             break;
           case 'takeback':
-            displayType = 'modal';
+            displayType = 'dialog';
             headerTitle = 'Takeback Request';
             bodyTitle = item.toFrom;
             bodyText = 'would like to take back ' + item.parameters + ' half move(s).';
             break;
           case 'abort': 
-            displayType = 'modal';
+            displayType = 'dialog';
             headerTitle = 'Abort Request';
             bodyTitle = item.toFrom;
             bodyText = 'would like to abort the game.';
             break;
           case 'draw':
-            displayType = 'modal';
+            displayType = 'dialog';
             headerTitle = 'Draw Request';
             bodyTitle = item.toFrom;
             bodyText = 'offers you a draw.';
             break;
           case 'adjourn': 
-            displayType = 'modal';
+            displayType = 'dialog';
             headerTitle = 'Adjourn Request';
             bodyTitle = item.toFrom;
             bodyText = 'would like to adjourn the game.';
@@ -2049,10 +2258,10 @@ function messageHandler(data) {
         
         if(displayType) {
           if(displayType === 'notification')
-            var modal = createNotification(headerTitle, bodyTitle, bodyText, ['decline ' + item.id, 'Decline'], ['accept ' + item.id, 'Accept']);
-          else if(displayType === 'modal')
-            var modal = showBoardModal(headerTitle, bodyTitle, bodyText, ['decline ' + item.id, 'Decline'], ['accept ' + item.id, 'Accept']);
-          modal.attr('data-offer-id', item.id);
+            var dialog = createNotification({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: ['decline ' + item.id, 'Decline'], btnSuccess: ['accept ' + item.id, 'Accept'], useSessionSend: true});
+          else if(displayType === 'dialog')
+            var dialog = showBoardDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: ['decline ' + item.id, 'Decline'], btnSuccess: ['accept ' + item.id, 'Accept'], useSessionSend: true});
+          dialog.attr('data-offer-id', item.id);
         }
       });
 
@@ -2062,7 +2271,7 @@ function messageHandler(data) {
       removals.forEach((item) => {
         item.ids.forEach((id) => {
           removeNotification($('.notification[data-offer-id="' + id + '"]')); // If match request was not ours, remove the Notification
-          $('.board-modal[data-offer-id="' + id + '"]').toast('hide'); // if in-game request, hide the modal
+          $('.board-dialog[data-offer-id="' + id + '"]').toast('hide'); // if in-game request, hide the dialog
           $('.sent-offer[data-offer-id="' + id + '"]').remove(); // If offer, match request or seek was sent by us, remove it from the Play pane
           $('.lobby-entry[data-offer-id="' + id + '"]').remove(); // Remove seek from lobby
         });
@@ -2131,7 +2340,7 @@ function messageHandler(data) {
       match = msg.match(/^Game (\d+): (\S+) has lagged for 30 seconds\./m);
       if(match) {
         var bodyText = match[2] + ' has lagged for 30 seconds.<br>You may courtesy adjourn the game.<br><br>If you believe your opponent has intentionally disconnected, you can request adjudication of an adjourned game. Type \'help adjudication\' in the console for more info.';
-        showBoardModal('Opponent Lagging', '', bodyText, ['', 'Wait'], ['adjourn', 'Adjourn']);
+        showBoardDialog({type: 'Opponent Lagging', msg: bodyText, btnFailure: ['', 'Wait'], btnSuccess: ['adjourn', 'Adjourn'], useSessionSend: true});
         chat.newMessage('console', data);
         return;
       }
@@ -2234,7 +2443,7 @@ function messageHandler(data) {
       
       match = msg.match(/(?:^|\n)(\d+ players?, who (?:has|have) an adjourned game with you, (?:is|are) online:)\n(.*)/);
       if(match && match.length > 2) {
-        createNotification('Resume Game', match[1] + '<br>' + match[2], '', [], ['resume', 'Resume Game']);
+        createNotification({type: 'Resume Game', title: match[1] + '<br>' + match[2], btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
         chat.newMessage('console', data);
         return;
       }
@@ -2245,7 +2454,7 @@ function messageHandler(data) {
           return bodyTextElement.length && bodyTextElement.text().startsWith(match[1]);
         }).length;
         if(!alreadyExists)
-          createNotification('Resume Game', match[1], '', [], ['resume ' + match[2], 'Resume Game']);
+          createNotification({type: 'Resume Game', title: match[1], btnSuccess: ['resume ' + match[2], 'Resume Game'], useSessionSend: true});
         return;        
       }
       match = msg.match(/^\w+ is not logged in./m);
@@ -2275,13 +2484,13 @@ function messageHandler(data) {
       if(match && match.length > 1) {
         let headerTitle = 'Partnership Declined';
         let bodyTitle = match[1];
-        createNotification(headerTitle, bodyTitle, '', null, null);
+        createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
       }
       match = msg.match(/^(\w+ agrees to be your partner\.)/m);
       if(match && match.length > 1) {
         let headerTitle = 'Partnership Accepted';
         let bodyTitle = match[1];
-        createNotification(headerTitle, bodyTitle, '', null, null);
+        createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
       }
 
       match = msg.match(/^You are now observing game \d+\./m);
@@ -2326,12 +2535,10 @@ function messageHandler(data) {
         return;
       }
      
-      match = msg.match(/(?:^|\n)\s*Movelist for game (\d+):\s+(\w+) \((\d+|UNR)\) vs\. (\w+) \((\d+|UNR)\)[^\n]+\s+(\w+) (\S+) match, initial time: (\d+) minutes, increment: (\d+) seconds\./);
+      match = msg.match(/(?:^|\n)\s*Movelist for game (\d+):\s+(\S+) \((\d+|UNR)\) vs\. (\S+) \((\d+|UNR)\)[^\n]+\s+(\w+) (\S+) match, initial time: (\d+) minutes, increment: (\d+) seconds\./);
       if (match != null && match.length > 9) {
         var game = findGame(+match[1]);
-        if(game && game.movelistRequested) {
-          game.movelistRequested--;
-
+        if(game && (game.movelistRequested || game.gameStatusRequested)) {
           if(game.isExamining()) {
             var id = match[1];
             var wname = match[2];
@@ -2365,17 +2572,27 @@ function messageHandler(data) {
             if(initialTime === '0' && increment === '0')
               time = '';
     
-            const statusMsg = '<span><span class="game-id">Game ' + id + ': </span>' + wname + ' (' + wrating + ') ' + bname + ' (' + brating + ') '
-              + rated + ' ' + game.category + time + '</span>';
-
+            const statusMsg = '<span class="game-id">Game ' + id + ': </span>' + wname + ' (' + wrating + ') ' + bname + ' (' + brating + ') '
+              + rated + ' ' + game.category + time;
             showStatusMsg(game, statusMsg);
+
+            var tags = game.history.metatags;
+            game.history.setMetatags({
+              ...(!('WhiteElo' in tags) && { WhiteElo: game.wrating || '-' }), 
+              ...(!('BlackElo' in tags) && { BlackElo: game.brating || '-' }), 
+              ...(!('Variant' in tags) && { Variant: game.category })
+            });
             var chatTab = chat.getTabFromGameID(game.id);
             if(chatTab) 
               chat.updateGameDescription(chatTab);
             initAnalysis(game);
           }
 
-          parseMovelist(game, msg);
+          game.gameStatusRequested = false;
+          if(game.movelistRequested) {
+            game.movelistRequested--;
+            parseMovelist(game, msg);
+          }
           return;          
         }
         else {
@@ -2397,7 +2614,7 @@ function messageHandler(data) {
         }
       }
 
-      match = msg.match(/^(Creating|Game\s(\d+)): (\w+) \(([\d\+\-\s]+)\) (\w+) \(([\d\-\+\s]+)\) \S+ (\S+).+/m);
+      match = msg.match(/^(Creating|Game\s(\d+)): (\S+) \(([\d\+\-\s]+)\) (\S+) \(([\d\-\+\s]+)\) \S+ (\S+).+/m);
       if (match != null && match.length > 7) {
         if(!multiboardToggle) 
           var game = getMainGame();
@@ -2415,9 +2632,12 @@ function messageHandler(data) {
           game.category = match[7];
           
           var status = match[0].substring(match[0].indexOf(':')+1);
-          var statusHTML = '<span>' + status + '</span>';
+          if(game.id)
+            status = '<span class="game-id">Game ' + game.id + ': </span>' + status;
+          showStatusMsg(game, status);
 
-          showStatusMsg(game, statusHTML);
+          if(game.history)
+            game.history.initMetatags();
           if (match[3] === session.getUser() || match[1].startsWith('Game')) {
             game.element.find('.player-status .rating').text(game.wrating);
             game.element.find('.opponent-status .rating').text(game.brating);
@@ -2429,6 +2649,20 @@ function messageHandler(data) {
         data.message = msg = removeLine(msg, match[0]); // remove the matching line
         if(!msg)
           return;
+      }
+
+      /* Parse score and termination reason for examined games */
+      match = msg.match(/^Game (\d+): ([a-zA-Z]+)(?:' game|'s)?\s([^\d\*]+)\s([012/]+-[012/]+)/m);
+      if(match != null && match.length > 3) {
+        var game = findGame(+match[1]);
+        if(game && game.history) {
+          const who = match[2];
+          const action = match[3];
+          const score = match[4];
+          const [winner, loser, reason] = session.getParser().getGameResult(game.wname, game.bname, who, action);
+          game.history.setMetatags({Result: score, Termination: reason});
+          return;
+        }
       }
 
       match = msg.match(/^Removing game (\d+) from observation list./m);
@@ -2519,6 +2753,8 @@ function messageHandler(data) {
         match = msg.match(/^Entering setup mode\./m);
       if(!match)
         match = msg.match(/^Castling rights for (white|black) set to \w+\./m);
+      if(!match)
+        match = msg.match(/^It is now (white|black)'s turn to move\./m);
       if(!match)
         match = msg.match(/^Game is validated - entering examine mode\./m);
       if(!match)
@@ -2773,8 +3009,10 @@ function dragCapturedPiece(event: any) {
 function updateHistory(game: Game, move?: any, fen?: string) {
   // This is to allow multiple fast 'forward' or 'back' button presses in examine mode before the command reaches the server
   // bufferedHistoryEntry contains a temporary reference to the current move which is used for subsequent forward/back button presses
-  if(game.bufferedHistoryCount)
+  if(game.bufferedHistoryCount) 
     game.bufferedHistoryCount--;
+  if(!game.bufferedHistoryCount)
+    game.bufferedHistoryEntry = null;
   
   // If currently commiting a move list in examine mode. Don't display moves until we've finished
   // sending the move list and then navigated back to the current move.
@@ -2794,12 +3032,13 @@ function updateHistory(game: Game, move?: any, fen?: string) {
       var newSubvariation = false;
 
       if(game.role === Role.NONE || game.isExamining()) {
-        if(game.history.length() === 0)
+        if(game.history.length() === 0) 
           game.history.scratch(true);
-
-        var newSubvariation = !game.history.scratch() && !game.history.current().isSubvariation();
-        if(newSubvariation && game === gameWithFocus) 
-          showExitSubvariationButton();
+    
+        var newSubvariation = (game.newVariationMode === NewVariationMode.NEW_VARIATION) || 
+            (game.newVariationMode !== NewVariationMode.OVERWRITE_VARIATION && !game.history.scratch() && !game.history.current().isSubvariation());
+     
+        game.newVariationMode = NewVariationMode.ASK;
       }
 
       game.history.add(move, fen, newSubvariation, game.wtime, game.btime);
@@ -2838,11 +3077,11 @@ function updateHistory(game: Game, move?: any, fen?: string) {
 
   game.history.display(hEntry, move !== undefined);
 
-  if(game.removeSubvariationRequested && !hEntry.isSubvariation()) {
-    game.history.removeAllSubvariations();
-    if(game === gameWithFocus) 
-      hideExitSubvariationButton();
-    game.removeSubvariationRequested = false;
+  if(game.removeMoveRequested && game.removeMoveRequested.prev === hEntry) {
+    game.history.remove(game.removeMoveRequested);
+    game.removeMoveRequested = null;
+    if(game === gameWithFocus && !game.history.hasSubvariation())
+      $('#exit-subvariation').hide();
   }
 }
 
@@ -3049,7 +3288,7 @@ export function updateBoard(game: Game, playSound = false) {
         Sounds.checkSound.currentTime = 0;
         Sounds.checkSound.play();
       }
-      else if(entry.move.captured) {
+      else if(entry.move?.captured) {
         Sounds.captureSound.pause();
         Sounds.captureSound.currentTime = 0;
         Sounds.captureSound.play();
@@ -3062,8 +3301,15 @@ export function updateBoard(game: Game, playSound = false) {
     }, 50);
   }
 
-  // create new imstance of Stockfish for each move, since waiting for new position/go commands is very slow (with current SF build)
   if(game === gameWithFocus) {
+    if(game.history.current().isSubvariation()) {
+      $('#exit-subvariation').removeClass('disabled');  
+      $('#exit-subvariation').show();
+    }
+    else
+      $('#exit-subvariation').addClass('disabled');
+    
+    // create new imstance of Stockfish for each move, since waiting for new position/go commands is very slow (with current SF build)
     if(engine) {
       stopEngine();
       startEngine();
@@ -3379,6 +3625,7 @@ function checkGameEnd(game: Game) {
       winner,
       loser,
       reason,
+      score: scoreStr,
       message: gameStr + ' ' + reasonStr + ' ' + scoreStr
     };
     messageHandler(gameEndData);  
@@ -3519,7 +3766,7 @@ function flipBoard(game: Game) {
 
   // If pawn promotion dialog is open, redraw it in the correct location
   if(game.element.find('.promotion-panel').is(':visible')) 
-    showPromotionPanel(game.promoteSource, game.promoteTarget, game.promoteIsPremove);
+    showPromotionPanel(game, game.promoteIsPremove);
 
   // Swap player and opponent status panels
   if(game.element.find('.player-status').parent().hasClass('top-panel')) {
@@ -3719,6 +3966,7 @@ function updateInputText() {
 
 function adjustInputTextHeight() {
   var inputElem = $('#input-text');
+  var oldLines = +inputElem.attr('rows');
   inputElem.attr('rows', 1);
   inputElem.css('overflow', 'hidden');
 
@@ -3733,6 +3981,9 @@ function adjustInputTextHeight() {
 
   var heightDiff = (numLines - 1) * lineHeight;
   $('#right-panel-footer').height($('#left-panel-footer').height() + heightDiff);
+  
+  if(numLines !== oldLines)
+    $('.tab-pane.active .chat-text').trigger('scroll');
 }
 
 function unicodeToHTMLEncoding(text) {
@@ -3805,7 +4056,6 @@ function createGame(): Game {
     $('#secondary-board-area')[0].scrollTop = $('#secondary-board-area')[0].scrollHeight; // Scroll secondary board area to the bottom
   
     $('#game-tools-close').parent().show();
-    $('#game-tools-close-divider').parent().show();
   }
 
   function gameTouchHandler(event) {
@@ -3817,7 +4067,7 @@ function createGame(): Game {
 
   game.element.on('click', '[title="Close"]', (event) => {
     var game = gameWithFocus;
-    if(game.preserved)
+    if(game.preserved || game.editMode)
       closeGameDialog(game);
     else
       closeGame(game);
@@ -3938,19 +4188,18 @@ function animateBoundingRects(fromElement: any, toElement: any, color: string = 
 }
 
 function closeGameDialog(game: Game) {
+  (window as any).closeGameClickHandler = (event) => {
+    if(game)
+      closeGame(game);
+  };
+
   var headerTitle = 'Close Game';
   var bodyText = 'Really close game?';
   var button1 = [`closeGameClickHandler(event)`, 'OK'];
   var button2 = ['', 'Cancel']; 
   var showIcons = true;
-  var modal = showFixedModal(headerTitle, '', bodyText, button2, button1, false, showIcons);
-  modal.data('game', game);
+  showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
 }
-
-(window as any).closeGameClickHandler = (event) => {
-  var game = $(event.target).closest('.toast').data('game');
-  closeGame(game);
-};
 
 function closeGame(game: Game) {
   if(!games.includes(game))
@@ -3976,10 +4225,10 @@ function getPlayingExaminingGame(): Game {
 
 function getFreeGame(): Game {
   var game = getMainGame();
-  if(game.role === Role.NONE && !game.preserved)
+  if(game.role === Role.NONE && !game.preserved && !game.editMode)
     return game;
 
-  return games.find(g => g.role === Role.NONE && !g.preserved);
+  return games.find(g => g.role === Role.NONE && !g.preserved && !g.editMode);
 }
 
 function getComputerGame(): Game {
@@ -4041,10 +4290,8 @@ function removeGame(game: Game) {
   }
   setRightColumnSizes();
 
-  if(games.length === 1) {
+  if(games.length === 1) 
     $('#game-tools-close').parent().hide();
-    $('#game-tools-close-divider').parent().hide();
-  }
 }
 
 export function findGame(id: number): Game {
@@ -4062,7 +4309,7 @@ export function setGameWithFocus(game: Game) {
     }
     
     game.moveTableElement.show();
-    game.moveListElement.css('display', 'flex');
+    game.moveListElement.show();
     game.statusElement.show();
 
     if(game.element.parent().attr('id') === 'secondary-board-area')
@@ -4070,25 +4317,29 @@ export function setGameWithFocus(game: Game) {
 
     gameWithFocus = game;
 
-    
     setMovelistViewMode();
-    initGameRole(game);
+    initGameControls(game);
   
     updateBoard(game);
   }
 }
 
-function initGameRole(game: Game) {
+function initGameControls(game: Game) {
   if(game !== gameWithFocus)
     return; 
 
   initAnalysis(game);
   initGameTools(game);
 
-  if(game.history && game.history.hasSubvariation()) 
-    showExitSubvariationButton();
+  if(game.historyList.length > 1) {
+    $('#game-list-button > .label').text(getGameListDescription(game.history, false));
+    $('#game-list-button').show();
+  }
   else
-    hideExitSubvariationButton();
+    $('#game-list-button').hide();
+
+  if(!game.history || !game.history.hasSubvariation())
+    $('#exit-subvariation').hide();
 
   if(game.isPlaying()) {
     $('#viewing-game-buttons').hide();
@@ -4122,66 +4373,19 @@ function initGameRole(game: Game) {
     initStatusPanel();
 }
 
-function showExitSubvariationButton() {
-  $('#exit-subvariation').show();
-  $('#navigation-toolbar [data-bs-toggle="tooltip"]').tooltip('update');
-}
-
-function hideExitSubvariationButton() {
-  $('#exit-subvariation').tooltip('hide');
-  $('#exit-subvariation').hide();
-}
-
-function onDeviceReady() {
-  var game = createGame();
-  game.role = Role.NONE;
-  game.category = 'untimed';
-  game.history = new History(game, new Chess().fen());
-  setGameWithFocus(game);
-
-  disableOnlineInputs(true);
-
-  if(isSmallWindow()) {
-    $('#collapse-chat').collapse('hide');
-    $('#collapse-history').collapse('hide');
-    setViewModeList(); 
-  }
-  else {
-    createTooltips();
-    $('#pills-play-tab').tab('show');
-    $('#collapse-history').removeClass('collapse-init');
-    $('#collapse-chat').removeClass('collapse-init');
-    $('#chat-toggle-btn').toggleClass('toggle-btn-selected');
-  }
-
-  $('input').each(function() {
-    selectOnFocus($(this));
-  });
-  
-  prevWindowWidth = NaN;
-  // Here we create a temporary hidden element in order to measure its scrollbar width.
-  $('body').append(`<div id="scrollbar-measure" style="position: absolute; top: -9999px; overflow: scroll"></div>`);
-  
-  // Change layout for mobile or desktop and resize panels 
-  // Split it off into a timeout so that onDeviceReady doesn't take too long.
-  setTimeout(() => { $(window).trigger('resize'); }, 0);
-
-  const user = Cookies.get('user');
-  const pass = Cookies.get('pass');
-  if (user !== undefined && pass !== undefined) {
-    session = new Session(messageHandler, user, atob(pass));
-  } else {
-    session = new Session(messageHandler);
-  }
-
-  initDropdownSubmenus();
-}
-
 // tooltip overlays are used for elements such as dropdowns and collapsables where we usually
 // want to hide the tooltip when the button is clicked
 $(document).on('click', '.tooltip-overlay', (event) => {
   $(event.target).tooltip('hide');
 });
+
+// Used to keep track of the mouse coordinates for displaying menus at the mouse
+$(document).on('mouseup mousedown touchend touchcancel', (event) => {
+  lastClickCoords = getTouchClickCoordinates(event);
+});
+document.addEventListener('touchstart', (event) => {
+  lastClickCoords = getTouchClickCoordinates(event);
+}, {passive: true});
 
 // If a tooltip is marked as 'hover only' then only show it on mouseover not on touch
 document.addEventListener('touchstart', (event) => {
@@ -4194,7 +4398,7 @@ document.addEventListener('touchstart', (event) => {
 // Specify fallback placements for tooltips.
 // Make tooltips stay after click/focus on mobile, but only when hovering on desktop.
 // Allow the creation of "descriptive" tooltips
-export function createTooltip(element: any) {
+export function createTooltip(element: JQuery<HTMLElement>) {
   var fallbacksStr = element.attr('data-fallback-placements');
   if(fallbacksStr)
     var fallbackPlacements = fallbacksStr.split(',').map(part => part.trim());
@@ -4427,9 +4631,9 @@ function setLeftColumnSizes() {
 
 function setRightColumnSizes() {
   const boardHeight = $('#main-board-area .board').innerHeight();
-   // Hide chat panel before resizing everything so as to remove scrollbar on window caused by chat overflowing
+   // Set chat panel height to 0 before resizing everything so as to remove scrollbar on window caused by chat overflowing
   if(isLargeWindow())
-    $('#chat-panel').hide();
+    $('#chat-panel').height(0);
 
   // Set width and height of game cards in the right board area
   var numCards = $('#secondary-board-area').children().length;
@@ -4478,9 +4682,6 @@ function setRightColumnSizes() {
   else 
     $('#chat-panel').height(boardHeight + $('#left-panel-footer').outerHeight() - chatBodyBorder - siblingsHeight);
     
-  if(isLargeWindow())
-    $('#chat-panel').css('display', 'flex'); 
-
   adjustInputTextHeight();
 }
 
@@ -4548,17 +4749,10 @@ async function getOpening(game: Game) {
   var opening = null;
   if(['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category)) 
     var opening = openings.get(fen);
-  
-  historyItem.opening = opening;
-}
 
-$(document).ready(() => {
-  if ((window as any).cordova !== undefined) {
-    document.addEventListener('deviceready', onDeviceReady, false);
-  } else {
-    onDeviceReady();
-  }
-});
+  historyItem.opening = opening;
+  game.history.updateOpeningMetatags();
+}
 
 function lockOverflow() {
   // Stop scrollbar appearing when an element (like a captured piece) is dragged below the bottom of the window,
@@ -4572,18 +4766,6 @@ function lockOverflow() {
     });
   }
 }
-
-// Prevent screen dimming, must be enabled in a user input event handler
-$(document).one('click', (event) => {
-  if (wakelockToggle) {
-    noSleep.enable();
-  }
-});
-
-$(window).on('load', function() {
-  $('#left-panel-header').css('visibility', 'visible');
-  $('#right-panel-header').css('visibility', 'visible');
-});
 
 $('#notifications-header .btn-close').on('click', (event) => {
   hideAllNotifications();
@@ -4623,6 +4805,7 @@ $('#resign').on('click', (event) => {
       winner,
       loser,
       reason: Reason.Resign,
+      score: scoreStr,
       message: gameStr + ' ' + reasonStr + ' ' + scoreStr
     };
     messageHandler(gameEndData);  
@@ -4647,7 +4830,8 @@ $('#abort').on('click', (event) => {
       winner: '',
       loser: '',
       reason: Reason.Abort,
-      message: gameStr + ' ' + reasonStr
+      score: '*',
+      message: gameStr + ' ' + reasonStr + ' *'
     };
     messageHandler(gameEndData);  
   }
@@ -4687,12 +4871,13 @@ $('#draw').on('click', (event) => {
           winner: '',
           loser: '',
           reason: Reason.Draw,
+          score: scoreStr,
           message: gameStr + ' ' + reasonStr + ' ' + scoreStr
         };
         messageHandler(gameEndData);  
       }
       else 
-        showBoardModal('Draw Offer Declined', '', 'Computer declines the draw offer', [], [], false, false);
+        showBoardDialog({type: 'Draw Offer Declined', msg: 'Computer declines the draw offer'});
     }
     else
       session.send('draw');
@@ -4798,19 +4983,12 @@ $('#fast-backward').on('click', () => {
   fastBackward();
 });
 
-function fastBackward() {
-  var game = gameWithFocus;
+function bufferedCurrentMove(game: Game) {
+  return game.bufferedHistoryEntry || game.history.current();
+}
 
-  if (game.isExamining()) {
-    var hEntry = (game.bufferedHistoryCount ? game.bufferedHistoryEntry : game.history.current());
-    if(hEntry !== game.history.first()) {
-      game.bufferedHistoryEntry = game.history.first();
-      game.bufferedHistoryCount++;
-      session.send('back 999');
-    }
-  }
-  else if(game.history)
-    game.history.beginning();
+function fastBackward() {
+  gotoMove(gameWithFocus.history.first());
   showTab($('#pills-game-tab'));
 }
 
@@ -4820,22 +4998,7 @@ $('#backward').on('click', () => {
 });
 
 function backward() {
-  var game = gameWithFocus;
-
-  if(game.history) {
-    if(game.isExamining()) {
-      var hEntry = (game.bufferedHistoryCount ? game.bufferedHistoryEntry : game.history.current());
-      var prev = hEntry.prev;
-
-      if(prev) {
-        game.bufferedHistoryEntry = prev;
-        game.bufferedHistoryCount++;
-        session.send('back');
-      }        
-    }
-    else
-      game.history.backward();
-  }
+  gotoMove(bufferedCurrentMove(gameWithFocus).prev)
   showTab($('#pills-game-tab'));
 }
 
@@ -4845,27 +5008,7 @@ $('#forward').on('click', () => {
 });
 
 function forward() {
-  var game = gameWithFocus;
-
-  if(game.history) {
-    if (game.isExamining()) {
-      var hEntry = (game.bufferedHistoryCount ? game.bufferedHistoryEntry : game.history.current());
-      var next = hEntry.next;
-
-      if(next) {
-        if(next.isSubvariation() || game.history.scratch()) {
-          sendMove(next.move);
-        }
-        else
-          session.send('for');
-
-        game.bufferedHistoryEntry = next;
-        game.bufferedHistoryCount++;
-      }
-    }
-    else
-      game.history.forward();
-  }
+  gotoMove(bufferedCurrentMove(gameWithFocus).next, true)
   showTab($('#pills-game-tab'));
 }
 
@@ -4875,70 +5018,22 @@ $('#fast-forward').on('click', () => {
 });
 
 function fastForward() {
-  var game = gameWithFocus;
-
-  if (game.isExamining()) {
-    if(!game.history.scratch()) {
-      fastBackward();
-      var hEntry = (game.bufferedHistoryCount ? game.bufferedHistoryEntry : game.history.current());
-      if(hEntry !== game.history.last()) {
-        session.send('for 999');
-        game.bufferedHistoryCount++;
-        game.bufferedHistoryEntry = game.history.last();
-      }
-    }
-    else {
-      var hEntry = (game.bufferedHistoryCount ? game.bufferedHistoryEntry : game.history.current());
-      while(hEntry = hEntry.next)
-        forward();
-    }
-  }
-  else if(game.history)
-    game.history.end();
+  gotoMove(gameWithFocus.history.last());
   showTab($('#pills-game-tab'));
 }
 
-
 $('#exit-subvariation').off('click');
 $('#exit-subvariation').on('click', () => {
-  var game = gameWithFocus;
+  exitSubvariation();
+});
 
-  if(game.isExamining()) {
-    var hEntry = (game.bufferedHistoryCount ? game.bufferedHistoryEntry : game.history.current());
-    let backNum = 0;
-    while(hEntry.isSubvariation()) {
-      backNum++;
-      hEntry = hEntry.prev;
-    }
-    if(backNum > 0) {
-      session.send('back ' + backNum);
-      game.removeSubvariationRequested = true;
-      game.bufferedHistoryCount++;
-      game.bufferedHistoryEntry = hEntry;
-    }
-    else {
-      game.history.removeAllSubvariations();
-      hideExitSubvariationButton();
-    }
-  }
-  else {
-    game.history.removeAllSubvariations();
-    hideExitSubvariationButton();
-  }
+function exitSubvariation() {
+  var curr = bufferedCurrentMove(gameWithFocus);
+
+  var prev = curr.first.prev;
+  gotoMove(prev);
   showTab($('#pills-game-tab'));
-});
-
-$(document).on('keydown', (e) => {
-  if ($(e.target).closest('input, textarea')[0]) {
-    return;
-  }
-
-  if(e.key === 'ArrowLeft')
-    backward();
-
-  else if(e.key === 'ArrowRight')
-    forward();
-});
+}
 
 updateDropdownSound();
 $('#sound-toggle').on('click', (event) => {
@@ -5181,11 +5276,136 @@ function setFontSizes() {
    });
 }
 
-// prompt before unloading page if in a game
-$(window).on('beforeunload', () => {
-  var game = getPlayingExaminingGame();
-  if(game && game.isPlaying()) 
-    return true;
+function initDropdownSubmenus() {
+  // stop dropdown disappearing when submenu opened
+  $('.dropdown-submenu').prev().on('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    $(e).next().show();
+  });
+}
+
+/**
+ * Displays a custom context menu (right-click menu)  
+ * @param menu dropdown-menu element to display
+ * @param x x-coordinate the menu appears at (often at the mouse pointer)
+ * @param y y-coordinate the menu appears at
+ * @param event The event that triggered the context menu ('contectmenu', 'touchdown' etc)
+ * @param itemSelectedCallback Function called when a menu item is selected
+ * @param menuClosedCallback Function called when the user hides the menu by clicking outside it etc
+ * @param placement Popper placement of the menu relative to x, y ('top-left', 'bottom-left' etc)
+ * @param fallbackPlacements Backup popper placements 
+ */
+function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: number, event?: any, itemSelectedCallback?: (event: any) => void, menuClosedCallback?: (event: any) => void, placement?: Placement, fallbackPlacements?: Placement[]) {
+  // Use Popper.js to position the context menu dynamically
+  menu.css({
+    'position': 'fixed',
+    'display': 'block',
+  });
+  
+  createPopper({
+    getBoundingClientRect: () => ({
+      x: x,
+      y: y,
+      width: 0,
+      height: 0,
+      top: y,
+      left: x,
+      right: x,
+      bottom: y,
+      toJSON: () => ({})
+    }),
+    contextElement: document.documentElement
+  }, menu[0], {
+    placement: placement || 'top-start',
+    modifiers: [
+      {
+        name: 'flip',
+        options: {
+          fallbackPlacements: fallbackPlacements || ['top-end', 'bottom-start', 'bottom-end']
+        }
+      },
+      {
+        name: 'preventOverflow',
+        options: {
+          boundary: 'viewport'
+        }
+      }
+    ]
+  });
+  
+  /** Triggered when menu item is selected */
+  menu.find('.dropdown-item').on('click contextmenu', function(event) {
+    // Allow native context menu to be displayed when right clicking with modifier key
+    if(event.type === 'contextmenu' && (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey))
+      return;
+
+    menu.find('[data-bs-toggle="tooltip"]').tooltip('dispose');
+    menu.remove();
+
+    // Remove all the listeners that were listening for the user to close the context menu, either by pressing
+    // escape, or clicking outside it, or scrolling the mouse wheel. 
+    $(document).off('wheel.closeMenu mousedown.closeMenu keydown.closeMenu');
+    if(itemSelectedCallback)
+      itemSelectedCallback(event);
+    event.stopPropagation();
+    event.preventDefault();
+  });
+
+  var closeMenuEventHandler = function(event) {
+    if(((event.type === 'touchstart' || event.type === 'mousedown') && !$(event.target).closest('.dropdown-menu').length)
+        || (event.type === 'keydown' && event.key === 'Escape')
+        || event.type === 'wheel' || event.type === 'touchmove') {
+      menu.find('[data-bs-toggle="tooltip"]').tooltip('dispose');
+      menu.remove();
+      $(this).off('wheel.closeMenu mousedown.closeMenu keydown.closeMenu'); 
+      this.removeEventListener('touchstart', closeMenuEventHandler);
+      if(menuClosedCallback)
+        menuClosedCallback(event);
+    }
+  }
+
+  if(event && event.type === 'touchstart') {
+    $(document).one('touchend touchcancel touchmove', function(event) {
+      if(event.type === 'touchmove')
+        closeMenuEventHandler(event);
+      else 
+        document.addEventListener('touchstart', closeMenuEventHandler, {passive: false});
+    });
+  }
+  else {
+    setTimeout(() => {
+      $(document).on('wheel.closeMenu mousedown.closeMenu keydown.closeMenu', closeMenuEventHandler);
+      document.addEventListener('touchstart', closeMenuEventHandler, {passive: false});
+    }, 0);
+  }
+}
+
+/**
+ * Breaks up a string at the specified maximum line lengths
+ */
+function breakAtMaxLength(input: string, maxLength: number) {
+  const regex = new RegExp(`(.{1,${maxLength}})(?:\\s|$)`, 'g');
+  return input.match(regex).join('\n');
+}
+
+/** 
+ * General purpose debounce function. E.g. If a function created by debounce() is called multiple times 
+ * in quick succession only the final call will be executed after the specified wait time (from the final call).
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+$('#collapse-history').on('hidden.bs.collapse', () => {
+  $('#history-toggle-icon').removeClass('fa-toggle-up').addClass('fa-toggle-down');
+});
+$('#collapse-history').on('shown.bs.collapse', () => {
+  $('#history-toggle-icon').removeClass('fa-toggle-down').addClass('fa-toggle-up');
 });
 
 function getHistory(user: string) {
@@ -5490,26 +5710,266 @@ function formatLobbyEntry(seek: any): string {
       + seek.ratedUnrated + ' ' + seek.category + color;
 }
 
-function initGameTools(game: Game) {
-  updateGamePreserved(game);
-  $('#game-tools-clone').parent().toggle(multiboardToggle);
-  $('#game-tools-clone').toggleClass('disabled', game.isPlaying());
-  var mainGame = getPlayingExaminingGame();
-  $('#game-tools-examine').toggleClass('disabled', (mainGame && mainGame.isPlayingOnline()) || game.isPlaying() || game.isExamining() 
-      || game.category === 'wild/fr' || game.category === 'wild/0' 
-      || game.category === 'wild/1' || game.category === 'bughouse');
+$(document).on('keydown', (e) => {
+  if(e.key === 'Enter') {
+    var blurElement = $(e.target).closest('.blur-on-enter');
+    if(blurElement.length) {
+      blurElement.trigger('blur');
+      e.preventDefault();
+      return;
+    } 
+  }
+  
+  if($(e.target).closest('input, textarea, [contenteditable]')[0]) 
+    return;
+  
+  if(e.key === 'ArrowLeft')
+    backward();
+
+  else if(e.key === 'ArrowRight')
+    forward();
+});
+
+/****************************
+ **  GAME PANEL FUNCTIONS  **  
+ ****************************/
+
+/** 
+ * Event handler to display context menu when right clicking on a move in the move list/move table 
+ * Note: We don't use 'contextmenu' for long press on touch devices. This is because for contextmenu
+ * events the user has to touch exactly on the move element, but for 'touchstart' the browsers are more tolerant
+ * and allow the user to press _near_ the element. The browser guesses which element you are trying to press.
+ */
+$('#movelist-container').on('contextmenu', function(event) {
+  var target = $(event.target);
+  var coords = getTouchClickCoordinates(event);
+  if((target.closest('.selectable').length || target.closest('.move').length || target.closest('.comment').length)
+      && !(event.ctrlKey || event.shiftKey || event.altKey || event.metaKey)) { // Still allow user to display native context menu if holding down a modifier key
+    event.preventDefault();
+    if(event.button === 2) // right mouse button only, no long press.
+      createMoveContextMenu(event);
+  }
+});
+
+/** 
+ * Event handler to display context menu when long-pressing a move in the move list/move table (on touch 
+ * devices). We use 'touchstart' instead of 'contextmenu' because it still triggers even if the user 
+ * slightly misses the element with their finger. 
+ */ 
+$('#movelist-container')[0].addEventListener('touchstart', function(event) {
+  var longPressTimeout = setTimeout(() => {
+    var target = $(event.target);
+    if(target.closest('.selectable').length || target.closest('.move').length) {
+      $(document).off('touchend.longPress touchcancel.longPress touchmove.longPress wheel.longPress');
+      createMoveContextMenu(event);
+    }
+  }, 500);
+
+  $(document).one('touchend.longPress touchcancel.longPress touchmove.longPress wheel.longPress', function(event) {
+    clearTimeout(longPressTimeout);
+  });
+}, {passive: false});
+
+/**
+ * Create context menu after a move (or associated comment) is right-clicked, with options for adding 
+ * comments / annotations, deleting the move (and all following moves in that variation), promoting the 
+ * variation etc.
+ */
+function createMoveContextMenu(event: any) {
+  var contextMenu = $(`<ul class="context-menu dropdown-menu"></ul>`);
+  if($(event.target).closest('.comment-before').length)
+    var moveElement = $(event.target).next();
+  else if($(event.target).closest('.comment-after').length)
+    var moveElement = $(event.target).prev();
+  else if($(event.target).closest('.outer-move').length)
+    var moveElement = $(event.target).closest('.outer-move');
+  else
+    var moveElement = $(event.target).closest('.selectable');
+
+  moveElement.find('.move').addClass('hovered'); // Show the :hovered style while menu is displayed
+
+  var hEntry = moveElement.data('hEntry');
+  var game = gameWithFocus;
+
+  if(hEntry === hEntry.first || (!hEntry.parent && hEntry.prev === hEntry.first)) {
+    // If this is the first move in a subvariation, allow user to add a comment both before and after the move.
+    // The 'before comment' allows the user to add a comment for the subvariation in general.
+    contextMenu.append(`<li><a class="dropdown-item noselect" data-action="edit-comment-before">Edit Comment Before</a></li>`);
+    contextMenu.append(`<li><a class="dropdown-item noselect" data-action="edit-comment-after">Edit Comment After</a></li>`);
+  }
+  else
+    contextMenu.append(`<li><a class="dropdown-item noselect" data-action="edit-comment-after">Edit Comment</a></li>`);
+  if(hEntry.nags.length)
+    contextMenu.append(`<li><a class="dropdown-item noselect" data-action="delete-annotation">Delete Annotation</a></li>`);
+  if(!game.isObserving() && !game.isPlaying()) {
+    contextMenu.append(`<li><a class="dropdown-item noselect" data-action="delete-move">Delete Move</a></li>`);
+    if(hEntry.parent)
+      contextMenu.append(`<li><a class="dropdown-item noselect" data-action="promote-variation">Promote Variation</a></li>`);
+    else if(hEntry.prev !== hEntry.first)
+      contextMenu.append(`<li><a class="dropdown-item noselect" data-action="make-continuation">Make Continuation</a></li>`);
+  }
+  contextMenu.append(`<li><a class="dropdown-item noselect" data-action="clear-all-analysis">Clear All Analysis</a></li>`);
+  contextMenu.append(`<li><hr class="dropdown-divider"></li>`);
+  var annotationsHtml = `<div class="annotations-menu annotation">`;
+  for(let a of History.annotations)
+    annotationsHtml += `<li><a class="dropdown-item noselect" data-bs-toggle="tooltip" data-nags="` + a.nags + `" title="` + a.description + `">` + a.symbol + `</a></li>`;
+  annotationsHtml += `</div>`;
+  contextMenu.append(annotationsHtml);
+  contextMenu.find('[data-bs-toggle="tooltip"]').each((index, element) => {
+    createTooltip($(element));
+  });
+
+  /** Called when menu item is selected */
+  var moveContextMenuItemSelected = (event: any) => {
+    moveElement.find('.move').removeClass('hovered');
+    var target = $(event.target);
+    var nags = target.attr('data-nags');
+    if(nags)
+      game.history.setAnnotation(hEntry, nags);
+    else {
+      var action = target.attr('data-action');
+      switch(action) {
+        case 'edit-comment-before': 
+          setViewModeList(); // Switch to List View so the user can edit the comment in-place. 
+          gotoMove(hEntry);
+          game.history.editCommentBefore(hEntry);
+          break;
+        case 'edit-comment-after':
+          setViewModeList();
+          gotoMove(hEntry);
+          game.history.editCommentAfter(hEntry);
+          break;
+        case 'delete-annotation':
+          game.history.removeAnnotation(hEntry);
+          break;
+        case 'delete-move':
+          deleteMove(game, hEntry);
+          break;
+        case 'promote-variation': 
+          if(game.isExamining() && !game.history.scratch() && hEntry.depth() === 1) {
+            // If we are promoting a subvariation to the mainline, we need to 'commit' the new mainline 
+            var current = game.history.current();
+            gotoMove(hEntry.last);
+            session.send('commit');
+          }
+          game.history.promoteSubvariation(hEntry);
+          if(current)
+            gotoMove(current);
+
+          game.editMode = true;
+          updateEditMode(game);
+          if(!game.history.hasSubvariation())
+            $('#exit-subvariation').hide(); 
+          break;
+        case 'make-continuation':
+          if(game.isExamining() && !game.history.scratch() && hEntry.depth() === 0) {
+            var current = game.history.current();
+            gotoMove(hEntry.prev);
+            session.send('truncate');
+          }
+          game.history.makeContinuation(hEntry);
+          if(current)
+            gotoMove(current);
+          game.editMode = true;
+          updateEditMode(game);
+          $('#exit-subvariation').show(); 
+          break;
+        case 'clear-all-analysis':
+          clearAnalysisDialog(game);
+          break;
+      }
+    }
+  };
+  
+  var moveContextMenuClose = (event: any) => {
+    moveElement.find('.move').removeClass('hovered');
+  }
+
+  var coords = getTouchClickCoordinates(event);
+  $(event.target).closest('.movelist, tbody').append(contextMenu);
+  createContextMenu(contextMenu, coords.x, coords.y, event, moveContextMenuItemSelected, moveContextMenuClose);
 }
 
+/** 
+ * Removes a move (and all following moves) from the move list / move table 
+ */
+function deleteMove(game: Game, entry: HEntry) {
+  if(game.isExamining() && game.history.current().isPredecessor(entry)) {
+    // If the current move is on the line we are just about to delete, we need to back out of it first
+    // before deleting the line. 
+    gotoMove(entry.prev);
+    game.removeMoveRequested = entry;
+  }
+  else {
+    game.history.remove(entry);
+    game.history.display();
+    if(!game.history.hasSubvariation())
+      $('#exit-subvariation').hide();
+  }
+}
+
+/**
+ * Removes all sub-variations, comments and annotations from the move-list / move-table
+ */
+function clearAnalysisDialog(game: Game) {
+  (window as any).clearAnalysisClickHandler = (event) => {
+    if(game) {
+      // Delete all subvariations from the main line
+      var hEntry = game.history.first();
+      while(hEntry) {
+        for(let i = hEntry.subvariations.length - 1; i >= 0; i--)
+          deleteMove(game, hEntry.subvariations[i]);
+        hEntry = hEntry.next;
+      }
+      game.history.removeAllAnnotations();
+      game.history.removeAllComments();
+    }
+  };
+
+  var headerTitle = 'Clear All Analysis';
+  var bodyText = 'Really clear all analysis?';
+  var button1 = [`clearAnalysisClickHandler(event)`, 'OK'];
+  var button2 = ['', 'Cancel']; 
+  var showIcons = true;
+  showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
+}
+
+/** GAME PANEL TOOLBAR AND TOOL MENU FUNCTIONS **/
+
+/** 
+ * Initializes the controls in the Game Panel toolbar and tool menu when a game gains the focus
+ * or when a game starts or ends
+ */
+function initGameTools(game: Game) {
+  if(game === gameWithFocus) {
+    updateGamePreserved(game);
+    updateEditMode(game);
+    $('#game-tools-clone').parent().toggle(multiboardToggle); // Only show 'Duplicate GAme' option in multiboard mode
+    $('#game-tools-clone').toggleClass('disabled', game.isPlaying()); // Don't allow cloning of a game while playing (could allow cheating)
+
+    var mainGame = getPlayingExaminingGame();
+    $('#game-tools-examine').toggleClass('disabled', (mainGame && mainGame.isPlayingOnline()) || game.isPlaying() || game.isExamining() 
+        || game.category === 'wild/fr' || game.category === 'wild/0' // Due to a bug in 'bsetup' it's not possible to convert some wild variants to examine mode
+        || game.category === 'wild/1' || game.category === 'bughouse');
+  }
+}
+
+/** Triggered when Table View button is toggled on/off */
 $('#game-table-view').on('change', function() {
   if($('#game-table-view').is(':checked')) 
     setViewModeTable();
 });
 
+/** Triggered when List View button is toggled on/off */
 $('#game-list-view').on('change', function() {
   if($('#game-list-view').is(':checked')) 
     setViewModeList();
 });
 
+/** 
+ * Stops the Table View / List View radio buttons from stealing left-arrow key / right-arrow key
+ * input from the move-list 
+ */
 $('#game-table-view, #game-list-view').on('keydown', function(event) {
   if(event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
     event.preventDefault();
@@ -5523,6 +5983,9 @@ $('#game-table-view, #game-list-view').on('keydown', function(event) {
   }
 });
 
+/**
+ * Set move list view mode to Table View
+ */
 function setViewModeTable() {
   $('#left-panel').removeClass('list-view-showing');
   $('#movelists').hide();
@@ -5531,6 +5994,9 @@ function setViewModeTable() {
   gameWithFocus.history.highlightMove();
 }
 
+/**
+ * Set move list view mode to List View
+ */
 function setViewModeList() {
   if($('#pills-game').is(':visible'))
     $('#left-panel').addClass('list-view-showing');
@@ -5540,6 +6006,9 @@ function setViewModeList() {
   gameWithFocus.history.highlightMove();
 }
 
+/**
+ * Sets the move list view mode based on which toggle button is currently selected 
+ */
 function setMovelistViewMode() {
   if($('#game-table-view').is(':checked')) 
     setViewModeTable();
@@ -5547,11 +6016,28 @@ function setMovelistViewMode() {
     setViewModeList();
 }
 
+/** Triggered when Edit Mode toggle button is toggled on/off */
+$('#game-edit-mode').on('change', function (e) {
+  gameWithFocus.editMode = $(this).is(':checked');
+  updateEditMode(gameWithFocus);
+});
+
+/**
+ * Updates Edit Mode toggle button based on game setting
+ */
+function updateEditMode(game: Game) {
+  $('#game-edit-mode').prop('checked', game.editMode);
+}
+
+/** Triggered when Game Preserved toggle button is toggled on/off */
 $('#game-preserved').on('change', function (e) {
   gameWithFocus.preserved = $(this).is(':checked');
   updateGamePreserved(gameWithFocus);
 });
 
+/**
+ * Updates Game Preserved toggle button based on game setting 
+ */
 function updateGamePreserved(game: Game) {
   var label = $('label[for="game-preserved"]');  
   if(multiboardToggle) {
@@ -5570,10 +6056,12 @@ function updateGamePreserved(game: Game) {
   }
 }
 
+/** New Game menu item selected */
 $('#game-tools-new').on('click', (event) => {
   newGameDialog();
 });
 
+/** New Variant Game menu item selected */
 $('#new-variant-game-submenu a').on('click', (event) => {
   var category = $(event.target).text();
   if(category === 'Chess960')
@@ -5583,47 +6071,67 @@ $('#new-variant-game-submenu a').on('click', (event) => {
   newGameDialog(category);
 });
 
+/**
+ * When creating a new (empty game), shows a dialog asking if the user wants to Overwrite the 
+ * current game or open a New Board. For Chess960, also lets select Chess960 starting position
+ */
 function newGameDialog(category: string = 'untimed') {
-  var chess960idn = 'null';
-  var categoryStr = `'` + category + `'`;
-  var fenStr = 'null';
   var bodyText = '';
 
   if(category === 'wild/fr') {
-    chess960idn = `document.getElementById('chess960idn').value`;
     var bodyText = 
       `<label for"chess960idn">Chess960 Starting Position ID</label>
-      <input type="number" min="0" max="959" placeholder="0-959" class="form-control text-center" id="chess960idn"><br>`;
+      <input type="number" min="0" max="959" placeholder="0-959" class="form-control text-center chess960idn"><br>`;
   }
 
-  if(gameWithFocus.role === Role.NONE || category === 'wild/fr') {
+  var overwriteHandler = function(event) {
+    if(category === 'wild/fr')
+      var chess960idn = this.closest('.toast').querySelector('.chess960idn').value;
+    newGame(false, category, null, chess960idn);
+  };
+
+  var newBoardHandler = function(event) {
+    if(category === 'wild/fr')
+      var chess960idn = this.closest('.toast').querySelector('.chess960idn').value;
+    newGame(true, category, null, chess960idn);
+  };
+
+  var button1: any, button2: any;
+  if(gameWithFocus.role === Role.NONE || (category === 'wild/fr' && multiboardToggle)) {
     var headerTitle = 'Create new game';
     var bodyTitle = '';
     if(gameWithFocus.role === Role.NONE && multiboardToggle) {
       var bodyText = bodyText + 'Overwrite existing game or open new board?';
-      var button1 = [`newGame(false, ` + categoryStr + `, ` + fenStr + `, ` + chess960idn + `)`, 'Overwrite'];
-      var button2 = [`newGame(true, ` + categoryStr + `, ` + fenStr + `, ` + chess960idn + `)`, 'New Board'];
+      button1 = [overwriteHandler, 'Overwrite'];
+      button2 = [newBoardHandler, 'New Board'];
       var showIcons = false;
     }
     else if(gameWithFocus.role === Role.NONE) {
       var bodyText = bodyText + 'This will clear the current game.';
-      var button1 = [`newGame(false, ` + categoryStr + `, ` + fenStr + `, ` + chess960idn + `)`, 'OK'];
-      var button2 = ['', 'Cancel']; 
+      button1 = [overwriteHandler, 'OK'];
+      button2 = ['', 'Cancel']; 
       var showIcons = true;
     }
-    else if(category === 'wild/fr') {
-      var button1 = [`newGame(true, ` + categoryStr + `, ` + fenStr + `, ` + chess960idn + `)`, 'OK'];
-      var button2 = ['', 'Cancel']; 
+    else if(category === 'wild/fr' && multiboardToggle) {
+      button1 = [newBoardHandler, 'OK'];
+      button2 = ['', 'Cancel']; 
       var showIcons = true;
     }
-    showFixedModal(headerTitle, bodyTitle, bodyText, button2, button1, false, showIcons);
+    showFixedDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
   }
   else if(multiboardToggle)
     newGame(true, category);
 }
 
-(window as any).newGame = newGame;
-function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: string, chess960idn?: string) {
+/**
+ * Creates a new (empty) game. 
+ * @param createNewBoard If false, will clear the move-list of the existing game and start over. If true
+ * will open a new board when in multiboard mode.
+ * @param category The category (variant) for the new game
+ * @param fen The starting position for the new game (used for Chess960)
+ * @param chess960idn Alternatively the starting IDN for Chess960
+ */
+function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: string, chess960idn?: string): Game {
   if(createNewBoard)
     var game = createGame();
   else {
@@ -5658,21 +6166,437 @@ function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: st
   Object.assign(game, data);
   game.statusElement.find('.game-status').html('');
   gameStart(game);
+
+  return game;
 };
 
-function initDropdownSubmenus() {
-  // stop dropdown disappearing when submenu opened
-  $('.dropdown-submenu').prev().on('click', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    $(e).next().show();
+/** 
+ * Triggered when 'Open Game PGN' menu option is selected 
+ * Displays an Open File(s) dialog. Then after user selects PGN file(s) to open, displays 
+ * a dialog asking if they want to overwrite current gmae or open new board. 
+ */
+$('#game-tools-open-pgn').on('click', (event) => {
+  var fileInput = $('<input type="file" style="display: none" multiple/>');
+  fileInput.appendTo('body');
+  fileInput.trigger('click');
+
+  fileInput.one('change', function(event) {
+    fileInput.remove();
+    const target = event.target as HTMLInputElement;
+    openPGNDialog(target.files);
   });
+});
+
+/**
+ * When opening PGN file(s), hows a dialog asking if the user wants to Overwrite the 
+ * current game or open a New Board. 
+ */
+function openPGNDialog(files: any) {
+  var bodyText = '';
+
+  var overwriteHandler = function(event) {
+    openPGNFiles(files, false);
+  };
+
+  var newBoardHandler = function(event) {
+    openPGNFiles(files, true);
+  };
+
+  var button1: any, button2: any;
+  if(gameWithFocus.role === Role.NONE) {
+    if(gameWithFocus.history.length()) {
+      var headerTitle = 'Open PGN';
+      var bodyTitle = '';
+      if(gameWithFocus.role === Role.NONE && multiboardToggle) {
+        var bodyText = bodyText + 'Overwrite existing game or open new board?';
+        button1 = [overwriteHandler, 'Overwrite'];
+        button2 = [newBoardHandler, 'New Board'];
+        var showIcons = false;
+      }
+      else if(gameWithFocus.role === Role.NONE) {
+        var bodyText = bodyText + 'This will clear the current game.';
+        button1 = [overwriteHandler, 'OK'];
+        button2 = ['', 'Cancel']; 
+        var showIcons = true;
+      }
+      showFixedDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
+    }
+    else
+      openPGNFiles(files, false);
+  }
+  else if(multiboardToggle)
+    openPGNFiles(files, true);
 }
 
+/**
+ * Creates a new Game object and loads the games from the given PGN file(s) into it.
+ * Each game from the PGN files is stored as a separate History object in game.historyList.
+ * For PGNs with multiple games, only the first game is fully parsed. The rest are lazy loaded, 
+ * i.e. only the PGN metatags are parsed whereas the moves are simply stored as a string in history.pgn 
+ * and parsed when the game is selected from the game list. PGN files are parsed using @mliebelt/pgn-parser
+ * @param files FileList object
+ * @param createNewBoard If false, overwrites existing game, otherwise opens new board when in multiboard mode
+ */
+async function openPGNFiles(files: any, createNewBoard: boolean = false) {
+  var game = newGame(createNewBoard);
+  var chess = new Chess();
+  game.editMode = true;
+  updateEditMode(game);
+
+  // Wait for all selected files to be read before displaying the first game
+  for(const file of Array.from<File>(files)) {
+    var readFile = async function(): Promise<void> { 
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          const fileContent = e.target?.result as string;
+          if(fileContent)
+            await parsePGNFile(game, fileContent);
+          resolve();
+        };
+        reader.onerror = function(e) {
+          const error = e.target?.error;
+          let errorMessage = 'An unknown error occurred';
+          if (error)
+            errorMessage = error.name + ' - ' + error.message;
+          showFixedDialog({type: 'Failed to open PGN file', msg: errorMessage, btnSuccess: ['', 'OK']}); 
+          reject(error);
+        };
+        reader.readAsText(file);
+      });
+    };
+    await readFile();
+  }
+  setCurrentHistory(game, 0); // Display the first game from the PGN file(s)
+}
+
+/**
+ * Takes a string containing one or more PGN games, splits up the games and creates a History 
+ * object for each one. Then parses the metatags for each game.
+ */
+async function parsePGNFile(game: Game, pgnStr: string) {
+  var regex = /((?:\[[^\]]+\]\s+)+)([^\[]+)/g; // Splits up the games in the PGN string
+  var match;
+  while((match = regex.exec(pgnStr)) !== null) {
+    var history = new History(game);
+    history.pgn = match[2];
+    var metatags = await parsePGNMetadata(match[1]);
+    if(!metatags) 
+      continue;
+    history.setMetatags(metatags, true);
+    game.historyList.push(history);
+  }
+}
+
+/**
+ * Parse a string of PGN metatags 
+ */
+ async function parsePGNMetadata(pgnStr: string) {
+  try {
+    var pgn = PgnParser.parse(pgnStr, {startRule: "tags"}) as PgnParser.ParseTree;
+  }
+  catch(err) {
+    showFixedDialog({type: 'Failed to parse PGN', msg: err.message, btnSuccess: ['', 'OK']});
+    return;
+  }
+  return pgn.tags;
+}
+
+/**
+ * Parse a string containing a PGN move list
+ */
+async function parsePGNMoves(game: Game, pgnStr: string) {
+  try {
+    var pgn = PgnParser.parse(pgnStr, {startRule: "pgn"}) as PgnParser.ParseTree;
+  }
+  catch(err) {
+    showFixedDialog({type: 'Failed to parse PGN', msg: err.message, btnSuccess: ['', 'OK']});
+    return;
+  }
+
+  parsePGNVariation(game, pgn.moves);
+  game.history.goto(game.history.first());
+}
+
+/** 
+ * Imports a list of moves (and all subvariations recursively) from a @mliebelt/pgn-parser object  
+ * and puts them in the provided Game's History object
+ */
+function parsePGNVariation(game: Game, variation: any) {
+  var prevHEntry = game.history.current();
+  var newSubvariation = !!prevHEntry.next; 
+
+  for(let move of variation) {
+    var parsedMove = parseMove(game, prevHEntry.fen, move.notation.notation);
+    if(!parsedMove)
+      break;
+    
+    if(newSubvariation && prevHEntry.next && prevHEntry.next.fen === parsedMove.fen) {
+      prevHEntry = prevHEntry.next;
+      continue;
+    }
+    
+    var currHEntry = game.history.add(parsedMove.move, parsedMove.fen, newSubvariation);
+    game.history.setCommentBefore(currHEntry, move.commentMove);
+    game.history.setCommentAfter(currHEntry, move.commentAfter);
+    if(move.nag) 
+      move.nag.forEach((nag) => game.history.setAnnotation(currHEntry, nag));
+    getOpening(game);
+    updateVariantMoveData(game);
+    newSubvariation = false;
+
+    for(let subvariation of move.variations) {
+      game.history.goto(prevHEntry);    
+      parsePGNVariation(game, subvariation);
+    }
+    game.history.goto(currHEntry);    
+    prevHEntry = currHEntry;
+  }
+}
+
+/**
+ * Displays the specified History by building its HTML move list / move table. E.g. when a game 
+ * is selected from the game list after being loaded from a PGN. If this is the first time a History has 
+ * been displayed, this will first parse the PGN move list. 
+ */
+function setCurrentHistory(game: Game, historyIndex: number) {
+  game.history = game.historyList[historyIndex];
+  $('#game-list-button > .label').text(getGameListDescription(game.history, false));
+  game.moveTableElement.empty();
+  game.moveListElement.empty();
+  game.statusElement.find('.game-status').html('');
+  updateGameFromMetatags(game);
+  if(game.history.pgn) { // lazy load game
+    var tags = game.history.metatags;
+    if(tags.SetUp === '1' && tags.FEN) 
+      game.history.first().fen = tags.FEN;
+    parsePGNMoves(game, game.history.pgn);
+    game.history.pgn = null;
+  }
+  else 
+    game.history.addAllMoveElements();
+  initGameControls(game);
+  game.history.display();
+  if(game.isExamining())
+    setupGameInExamineMode(game);
+}
+
+/**
+ * Sets a Game object's data based on the PGN metatags in its History, e.g. set game.wname from metatags.White
+ */
+function updateGameFromMetatags(game: Game) {
+  if(game.role === Role.NONE || game.isExamining()) { // Don't allow user to change the game's attributes while the game is in progress
+    var metatags = game.history.metatags;
+    var whiteName = metatags.White.slice(0, 17).trim().replace(/[^\w]+/g, '_'); // Convert multi-word names into a single word format that FICS can handle
+    var blackName = metatags.Black.slice(0, 17).trim().replace(/[^\w]+/g, '_');
+    var whiteStatus = game.element.find(game.color === 'w' ? '.player-status' : '.opponent-status');
+    var blackStatus = game.element.find(game.color === 'b' ? '.player-status' : '.opponent-status');
+    if(whiteName !== game.wname) {
+      game.wname = whiteName;
+      if(game.isExamining())
+        session.send('wname ' + whiteName);
+      whiteStatus.find('.name').text(metatags.White);
+    }
+    if(blackName !== game.bname) {
+      game.bname = blackName;
+      if(game.isExamining())
+        session.send('bname ' + blackName);
+      blackStatus.find('.name').text(metatags.Black);
+    }
+
+    var whiteElo = metatags.WhiteElo;
+    if(whiteElo && whiteElo !== '0' && whiteElo !== '-' && whiteElo !== '?')
+      game.wrating = whiteElo;
+    else
+      game.wrating = '';
+    whiteStatus.find('.rating').text(game.wrating);
+
+    var blackElo = metatags.BlackElo;
+    if(blackElo && blackElo !== '0' && blackElo !== '-' && blackElo !== '?')
+      game.brating = blackElo;
+    else
+      game.brating = '';
+    blackStatus.find('.rating').text(game.brating);
+
+    var supportedVariants = ['losers', 'suicide', 'crazyhouse', 'bughouse', 'atomic', 'chess960',
+      'blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
+    var variant = metatags.Variant?.toLowerCase();
+    if(variant && (supportedVariants.includes(variant) || variant.startsWith('wild'))) {
+      if(variant === 'chess960')
+        game.category = 'wild/fr';
+      else
+        game.category = variant;
+    }
+    else
+      game.category = 'untimed';
+
+    // Set the status panel text
+    if(!game.statusElement.find('.game-status').html()) {
+      if(!metatags.White && !metatags.Black)
+        var status = '';
+      else {
+        var status = (metatags.White || 'Unknown') + ' (' + (metatags.WhiteElo || '?') + ') ' 
+            + (metatags.Black || 'Unknown') + ' (' + (metatags.BlackElo || '?') + ')'
+            + (metatags.Variant ? ' ' + metatags.Variant : '');
+
+        if(metatags.TimeControl) {
+          if(metatags.TimeControl === '-')
+            status += ' untimed';
+          else {
+            var match = metatags.TimeControl.match(/^(\d+)(?:\+(\d+))?$/);
+            if(match)  
+              status += ' ' + (+match[1] / 60) + ' ' + (match[2] || '0');
+          }
+        }
+      }
+    
+      game.statusElement.find('.game-status').text(status);
+    }
+  }
+}
+
+/** 
+ * Display the game list when game list dropdown button clicked. The game list button is displayed when
+ * multiple games are opened from PGN(s) at once. 
+ */
+$('#game-list-button').on('show.bs.dropdown', function(event) {
+  var game = gameWithFocus;
+  if(game.historyList.length > 1) {   
+    $('#game-list-filter').val(game.gameListFilter);
+    addGameListItems(game);
+  }
+});
+
+/** 
+ * Filters the game list with the text in the filter input. Uses a debounce function to delay
+ * updating the list, so that it doesn't update every time a character is typed, which would 
+ * be performance intensive
+ */
+var gameListFilterHandler = debounce((event) => {
+  var game = gameWithFocus;
+  game.gameListFilter = $(event.target).val() as string;
+  addGameListItems(game);
+}, 500);
+$('#game-list-filter').on('input', gameListFilterHandler);
+
+/** 
+ * Create the game list dropdown 
+ */
+function addGameListItems(game: Game) {
+  $('#game-list-menu').remove();
+  var listElements = '';
+  for(let i = 0; i < game.historyList.length; i++) {
+    var h = game.historyList[i];
+    var description = getGameListDescription(h, true);
+    if(description.toLowerCase().includes(game.gameListFilter.toLowerCase()))
+      listElements += `<li style="width: max-content;" class="game-list-item"><a class="dropdown-item" data-index="` + i + `">` + description + `</a></li>`
+  }
+  $('#game-list-dropdown').append(`<ul id="game-list-menu">` + listElements + `</ul>`);
+}
+
+/**
+ * Get the text to be displayed for an item in the game list or in the game list dropdown button 
+ * @param longDescription the long description is used in the list itself, the short version is used
+ * in the dropdown button text
+ */
+function getGameListDescription(history: History, longDescription: boolean = false) {
+  var tags = history.metatags;
+  if(!tags)
+    return '';
+
+  var dateTimeStr = (tags.Date || tags.UTCDate || '');
+  if(tags.Time || tags.UTCTime)
+    dateTimeStr += (tags.Date || tags.UTCDate ? ' - ' : '') + (tags.Time || tags.UTCTime);
+
+  if(tags.White || tags.Black) {
+    var description = tags.White || 'unknown';
+    if(tags.WhiteElo && tags.WhiteElo !== '0' && tags.WhiteElo !== '-' && tags.WhiteElo !== '?')
+      description += ' (' + tags.WhiteElo + ')';
+    description += ' - ' + tags.Black || 'unknown';
+    if(tags.BlackElo && tags.BlackElo !== '0' && tags.BlackElo !== '-' && tags.BlackElo !== '?')
+      description += ' (' + tags.BlackElo + ')';
+    if(tags.Result)
+      description += ' [' + tags.Result + ']'; 
+  }
+  else {
+    description = tags.Event || 'Analysis';
+    if(!longDescription)
+      description += ' ' + dateTimeStr;
+  }
+
+  if(longDescription) {
+    if(dateTimeStr)
+      description += ', ' + dateTimeStr;
+    if(tags.ECO || tags.Opening || tags.Variation || tags.SubVariation) {
+      description += ',';
+      if(tags.ECO)
+        description += ' [' + tags.ECO + ']';
+      if(tags.Opening)
+        description += ' ' + tags.Opening;
+      else if(tags.Variation) 
+        description += ' ' + tags.Variation + (tags.SubVariation ? ': ' + tags.SubVariation : ''); 
+    }
+  }
+
+  return description;
+}
+
+/** 
+ * Clear the game list after it's closed, since it can take up a lot of memory, e.g. if it contains 
+ * 10000s of games. In future this should probably be displayed using a virtual scrolling library
+ */
+$('#game-list-button').on('hidden.bs.dropdown', function(event) {
+  $('#game-list-menu').html('');
+});
+
+/** Triggered when a game is selected from the game list */
+$('#game-list-dropdown').on('click', '.dropdown-item', (event) => {
+  var index = +$(event.target).attr('data-index');
+  setCurrentHistory(gameWithFocus, index);
+});
+
+/** Triggered when 'Save Game PGN' menu option is selected */ 
+$('#game-tools-save-pgn').on('click', (event) => {
+  savePGN(gameWithFocus);
+});
+
+/**
+ * Saves game to a .pgn file 
+ */
+function savePGN(game: Game) {
+  var metatags = game.history.metatags;
+  var movesStr = breakAtMaxLength(game.history.movesToString(), 80);
+  var pgnStr = game.history.metatagsToString() + '\n\n' + movesStr + ' ' + metatags.Result;
+  var wname = metatags.White;
+  var bname = metatags.Black;
+  var date = metatags.Date.replace(/\./g, '-');
+  var time = metatags.Time.replace(/:/g, '.');
+
+  if(wname)
+    var filename = wname + '_vs_' + bname + '_' + date + '_' + time + '.pgn';
+  else
+    var filename = 'Analysis_' + date + '_' + time + '.pgn';
+
+  const data = new Blob([pgnStr], { type: 'text/plain' });
+  const url = window.URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+/** Triggered when the 'Duplicate Game' menu option is selected */ 
 $('#game-tools-clone').on('click', (event) => {
   cloneGame(gameWithFocus);
 });
 
+/** 
+ * Make an exact copy of a game with its own board, move list and status panels. 
+ * The clone will not be in examine or observe mode, regardless of the original.
+*/
 function cloneGame(game: Game): Game {
   var clonedGame = createGame();
 
@@ -5690,9 +6614,11 @@ function cloneGame(game: Game): Game {
   clonedGame.element.find('.title-bar-text').empty();
   
   clonedGame.board.set({ orientation: game.board.state.orientation });
+  scrollToBoard(clonedGame);
   return clonedGame;
 }
 
+/** Triggered when the 'Examine Mode (Shared)' menu option is selected */ 
 $('#game-tools-examine').on('click', (event) => {
   examineModeRequested = gameWithFocus;
   var mainGame = getPlayingExaminingGame();
@@ -5701,9 +6627,12 @@ $('#game-tools-examine').on('click', (event) => {
   session.send('ex');
 });
 
-/** Convert a game to examine mode by using bsetup and then commiting the movelist */
+/** 
+ * Convert a game to examine mode by using bsetup and then commiting the movelist 
+ */
 function setupGameInExamineMode(game: Game) {
-  // Setup the board
+  /** Setup the board */
+  
   var fenWords = splitFEN(game.history.first().fen);
   
   // starting FEN
@@ -5718,9 +6647,8 @@ function setupGameInExamineMode(game: Game) {
   else if(game.category === 'losers' || game.category === 'crazyhouse' || game.category === 'atomic' || game.category === 'suicide')
     session.send('bsetup ' + game.category);
 
-   // turn color
-  if(fenWords.color === 'b') 
-    session.send('bsetup tomove black');
+  // turn color
+  session.send('bsetup tomove ' + (fenWords.color === 'w' ? 'white' : 'black'));
 
   // castling rights
   var castlingRights = fenWords.castlingRights;
@@ -5777,11 +6705,47 @@ function setupGameInExamineMode(game: Game) {
 
   // This is a hack just to indicate we are done
   session.send('done');
+
+  if(!game.statusElement.find('.game-status').html()) {
+    game.gameStatusRequested = true;
+    session.send('moves ' + game.id);
+  }
 }
 
+/** 
+ * Triggered when the 'Game Properties' menu item is selected.
+ * Displays the PGN metatags associated with the game which can then be modified.
+ * The game state is updated to reflect the modified metatags.
+ */
+$('#game-tools-properties').on('click', (event) => {
+  var okHandler = function(event) {
+    var metatagsStr = this.closest('.toast').querySelector('.game-properties-input').value;
+    try {
+      var pgn = PgnParser.parse(metatagsStr, {startRule: "tags"}) as PgnParser.ParseTree;
+    }
+    catch(err) {
+      showFixedDialog({type: 'Failed to update properties', msg: err.message, btnSuccess: ['', 'OK']});
+      return;
+    }
+    gameWithFocus.history.setMetatags(pgn.tags, true);
+    updateGameFromMetatags(gameWithFocus);
+  }; 
+
+  var headerTitle = 'Game Properties';
+  var bodyText = `<textarea style="resize: none" class="form-control game-properties-input" rows="10" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">`
+      + gameWithFocus.history.metatagsToString() + `</textarea>`;
+  var button1 = [okHandler, 'OK'];
+  var button2 = ['', 'Cancel']; 
+  showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, htmlMsg: true});
+});
+
+/** 
+ * Triggered when the 'Close Game' menu item is selected.
+ * Closes the game.
+ */
 $('#game-tools-close').on('click', (event) => {
   var game = gameWithFocus;
-  if(game.preserved)
+  if(game.preserved || game.editMode)
     closeGameDialog(game);
   else
     closeGame(game);
