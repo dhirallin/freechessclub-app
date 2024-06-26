@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^5.7.4",
+    "@mliebelt/pgn-types": "^1.0.4",
     "@types/bootstrap": "5.2.3",
     "@types/jquery": "^3.5.16",
     "@types/websocket": "^1.0.1",

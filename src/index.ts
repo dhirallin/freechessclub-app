@@ -7,7 +7,7 @@ import Cookies from 'js-cookie';
 import { Chessground } from 'chessground';
 import { Color, Key } from 'chessground/types';
 import { Polyglot } from 'cm-polyglot/src/Polyglot.js';
-import { parse as parsePGN } from '@mliebelt/pgn-parser';
+import PgnParser from '@mliebelt/pgn-parser';
 import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
 import Chat from './chat';
 import { Clock } from './clock';
@@ -5680,7 +5680,7 @@ $('#game-tools-open-pgn').on('click', (event) => {
 });
 
 function openPGN() {
-  const pgn = parsePGN(`[Site "Berlin"]
+  const pgn = PgnParser.parse(`[Site "Berlin"]
   [Date "1989.07.02"]
   [White "Haack, Stefan"]
   [Black "Maier, Karsten"]
