@@ -5688,18 +5688,28 @@ function openPGN() {
   [Date "1989.07.02"]
   [White "Haack, Stefan"]
   [Black "Maier, Karsten"]
-  1. e4 e5 2. Nf3 $1 {Great move!} Nc6 *`, {startRule: "game"}) as PgnParser.ParseTree;
+  1. e4 e5 2. Nf3 $1 {Great move!} (2. Bc4 b6) Nc6 *`, {startRule: "game"}) as PgnParser.ParseTree;
   console.log(pgn);
-  for(let move of pgn.moves) {
-    var parsedMove = parseMove(game, chess.fen(), move.notation.notation);
+  parsePGNVariation(game, pgn.moves, null);
+  console.log(JSON.stringify(pgn, null, 2))
+}
+
+function parsePGNVariation(game: Game, variation: any, parent: HEntry) {
+  if(!game.chess) 
+    game.chess = new Chess();
+  for(let move of variation) {
+    var parsedMove = parseMove(game, game.chess.fen(), move.notation.notation);
     if(!parsedMove)
       break;
-    chess.load(parsedMove.fen);
-    game.history.add(parsedMove.move, parsedMove.fen, false);
+    var currHEntry = game.history.add(parsedMove.move, parsedMove.fen, false);
+    game.chess.load(currHEntry.fen);
     getOpening(game);
     updateVariantMoveData(game);
+
+    for(let subvariation of move.variations) 
+      parsePGNVariation(game, subvariation, currHEntry);
   }
-  console.log(JSON.stringify(pgn, null, 2))
+  game.history.goto(parent);
 }
 
 $('#game-tools-save-pgn').on('click', (event) => {

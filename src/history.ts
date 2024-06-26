@@ -213,7 +213,7 @@ export class History {
     entry.btime = btime;    
   }
 
-  public add(move: any, fen: string, newSubvariation: boolean = false, wtime: number = 0, btime: number = 0, score?: string): void {
+  public add(move: any, fen: string, newSubvariation: boolean = false, wtime: number = 0, btime: number = 0, score?: string): HEntry {
     var newEntry = new HEntry(move, fen);
     
     if(newSubvariation) {
@@ -237,6 +237,8 @@ export class History {
       this.addMoveTableItem(this.currEntry);
       this.addMoveListItem(this.currEntry);
     }
+
+    return this.currEntry;
   }
 
   public remove(entry: HEntry): void {
