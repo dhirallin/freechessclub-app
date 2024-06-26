@@ -7,7 +7,7 @@ import Cookies from 'js-cookie';
 import { Chessground } from 'chessground';
 import { Color, Key } from 'chessground/types';
 import { Polyglot } from 'cm-polyglot/src/Polyglot.js';
-import { Pgn } from 'cm-pgn/src/Pgn.js';
+import { parse as parsePGN } from '@mliebelt/pgn-parser';
 import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
 import Chat from './chat';
 import { Clock } from './clock';
@@ -5674,6 +5674,23 @@ function initDropdownSubmenus() {
     $(e).next().show();
   });
 }
+
+$('#game-tools-open-pgn').on('click', (event) => {
+  openPGN();
+});
+
+function openPGN() {
+  const pgn = parsePGN(`[Site "Berlin"]
+  [Date "1989.07.02"]
+  [White "Haack, Stefan"]
+  [Black "Maier, Karsten"]
+  1. e4 e5 (e6) 2. Nf3 $1 {Great move!} P@c6 *`, {startRule: "game"});
+  console.log(JSON.stringify(pgn, null, 2))
+}
+
+$('#game-tools-save-pgn').on('click', (event) => {
+  console.log('SAVE PGN');
+});
 
 $('#game-tools-clone').on('click', (event) => {
   cloneGame(gameWithFocus);

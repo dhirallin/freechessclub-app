@@ -48,6 +48,7 @@
     "@capacitor/assets": "^3.0.4",
     "@capacitor/core": "^5.7.4",
     "@capacitor/ios": "^5.7.4",
+    "@mliebelt/pgn-parser": "^1.4.15",
     "@popperjs/core": "^2.11.6",
     "@uriopass/nosleep.js": "^0.12.2",
     "autolink-js": "freechessclub/autolink-js",

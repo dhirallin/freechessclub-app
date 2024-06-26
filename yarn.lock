@@ -438,6 +438,18 @@
     "lodash" "^4.17.15"
     "tmp-promise" "^3.0.2"
 
+"@mliebelt/pgn-parser@^1.4.15":
+  "integrity" "sha512-ONX3Tm9RFwUyE3h1n6TBCdQzxwjDQJumJlzEA2WlC+CvI5oVSJT+SOhe8RyQ5oLEebm3k6ZeH9zzrdTHf5miLg=="
+  "resolved" "https://registry.npmjs.org/@mliebelt/pgn-parser/-/pgn-parser-1.4.15.tgz"
+  "version" "1.4.15"
+  dependencies:
+    "@mliebelt/pgn-types" "^1.0.4"
+
+"@mliebelt/pgn-types@^1.0.4":
+  "integrity" "sha512-l1VUSp8pmdsr6HNTaZIQdmd70XqmtCp5jd0fOi4KpR/mq+NBbE1A178a6+rRy001A0/Li1rUxpssDzcYBR87GQ=="
+  "resolved" "https://registry.npmjs.org/@mliebelt/pgn-types/-/pgn-types-1.0.4.tgz"
+  "version" "1.0.4"
+
 "@nodelib/fs.scandir@2.1.5":
   "integrity" "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g=="
   "resolved" "https://registry.npmjs.org/@nodelib/fs.scandir/-/fs.scandir-2.1.5.tgz"
