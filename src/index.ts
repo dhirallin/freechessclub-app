@@ -5629,7 +5629,7 @@ function newGameDialog(category: string = 'untimed') {
 }
 
 (window as any).newGame = newGame;
-function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: string, chess960idn?: string) {
+function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: string, chess960idn?: string): Game {
   if(createNewBoard)
     var game = createGame();
   else {
@@ -5664,6 +5664,8 @@ function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: st
   Object.assign(game, data);
   game.statusElement.find('.game-status').html('');
   gameStart(game);
+
+  return game;
 };
 
 function initDropdownSubmenus() {
@@ -5680,11 +5682,23 @@ $('#game-tools-open-pgn').on('click', (event) => {
 });
 
 function openPGN() {
+  var game = newGame(false);
+  var chess = new Chess();
   const pgn = PgnParser.parse(`[Site "Berlin"]
   [Date "1989.07.02"]
   [White "Haack, Stefan"]
   [Black "Maier, Karsten"]
-  1. e4 e5 (e6) 2. Nf3 $1 {Great move!} P@c6 *`, {startRule: "game"});
+  1. e4 e5 2. Nf3 $1 {Great move!} Nc6 *`, {startRule: "game"}) as PgnParser.ParseTree;
+  console.log(pgn);
+  for(let move of pgn.moves) {
+    var parsedMove = parseMove(game, chess.fen(), move.notation.notation);
+    if(!parsedMove)
+      break;
+    chess.load(parsedMove.fen);
+    game.history.add(parsedMove.move, parsedMove.fen, false);
+    getOpening(game);
+    updateVariantMoveData(game);
+  }
   console.log(JSON.stringify(pgn, null, 2))
 }
 
