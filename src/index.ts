@@ -5689,27 +5689,35 @@ function openPGN() {
   [White "Haack, Stefan"]
   [Black "Maier, Karsten"]
   1. e4 e5 2. Nf3 $1 {Great move!} (2. Bc4 b6) Nc6 *`, {startRule: "game"}) as PgnParser.ParseTree;
-  console.log(pgn);
-  parsePGNVariation(game, pgn.moves, null);
+  parsePGNVariation(game, pgn.moves);
+  game.history.goto(game.history.first());
   console.log(JSON.stringify(pgn, null, 2))
 }
 
-function parsePGNVariation(game: Game, variation: any, parent: HEntry) {
+function parsePGNVariation(game: Game, variation: any) {
+  var prevHEntry = game.history.current();
+  var newSubvariation = !!prevHEntry.next; 
+
   if(!game.chess) 
     game.chess = new Chess();
+
   for(let move of variation) {
+    game.chess.load(prevHEntry.fen);
     var parsedMove = parseMove(game, game.chess.fen(), move.notation.notation);
     if(!parsedMove)
       break;
-    var currHEntry = game.history.add(parsedMove.move, parsedMove.fen, false);
-    game.chess.load(currHEntry.fen);
+    var currHEntry = game.history.add(parsedMove.move, parsedMove.fen, newSubvariation);
     getOpening(game);
     updateVariantMoveData(game);
+    newSubvariation = false;
 
-    for(let subvariation of move.variations) 
-      parsePGNVariation(game, subvariation, currHEntry);
+    for(let subvariation of move.variations) {
+      game.history.goto(prevHEntry);    
+      parsePGNVariation(game, subvariation);
+    }
+    game.history.goto(currHEntry);    
+    prevHEntry = currHEntry;
   }
-  game.history.goto(parent);
 }
 
 $('#game-tools-save-pgn').on('click', (event) => {

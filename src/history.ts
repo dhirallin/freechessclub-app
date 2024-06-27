@@ -233,6 +233,10 @@ export class History {
 
     this.currEntry = newEntry;
 
+    console.log(this.currEntry.fen);
+    if(this.currEntry.move)
+      console.log(this.currEntry.move.san);
+
     if(move) {
       this.addMoveTableItem(this.currEntry);
       this.addMoveListItem(this.currEntry);
