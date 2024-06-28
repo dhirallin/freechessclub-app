@@ -5702,7 +5702,7 @@ function openPGN() {
   [Date "1989.07.02"]
   [White "Haack, Stefan"]
   [Black "Maier, Karsten"]
-  1. e4 e5 2. Nf3 $1 {Great move!} (2. Bc4 b6) Nc6 *`, {startRule: "game"}) as PgnParser.ParseTree;
+  1. e4 (1.d4 Nf6 2.b3 (2.a3 h5) h6 3.h3 a6) e5 2. Nf3 $1 {Great move!} (2. Bc4 b6) Nc6 *`, {startRule: "game"}) as PgnParser.ParseTree;
   parsePGNVariation(game, pgn.moves);
   game.history.goto(game.history.first());
   console.log(JSON.stringify(pgn, null, 2))

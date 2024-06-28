@@ -217,7 +217,8 @@ export class History {
     var newEntry = new HEntry(move, fen);
     
     if(newSubvariation) {
-      this.removeAllSubvariations();
+      if(!this.game.editMode)
+        this.removeAllSubvariations();
       if(this.currEntry.next)
         this.currEntry.next.addSubvariation(newEntry); // Add subvariation
       else
