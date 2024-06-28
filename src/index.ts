@@ -5555,12 +5555,17 @@ function setMovelistViewMode() {
 
 $('#game-edit-mode').on('change', function (e) {
   gameWithFocus.editMode = $(this).is(':checked');
+  updateEditMode(gameWithFocus);
+});
+
+function updateEditMode(game: Game) {
+  $('#game-edit-mode').prop('checked', game.editMode);
   // Preserve the game when in edit mode, so the user doesn't accidently lose their annotations
-  if($(this).is(':checked')) {
+  if(game.editMode) {
     gameWithFocus.preserved = true;
     updateGamePreserved(gameWithFocus);
   }
-});
+}
 
 $('#game-preserved').on('change', function (e) {
   gameWithFocus.preserved = $(this).is(':checked');
@@ -5721,6 +5726,11 @@ function parsePGNVariation(game: Game, variation: any) {
     newSubvariation = false;
 
     for(let subvariation of move.variations) {
+      if(!game.editMode) {
+        // Enter edit mode to preserve subvariations
+        game.editMode = true;
+        updateEditMode(game);
+      }  
       game.history.goto(prevHEntry);    
       parsePGNVariation(game, subvariation);
     }
