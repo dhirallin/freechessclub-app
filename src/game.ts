@@ -85,6 +85,7 @@ export class Game extends GameData {
 
   lastComputerMoveEval: string = null; // Keeps track of the current eval for a game against the Computer. Used for draw offers
   partnerGameId: number = null;        // bughouse partner's game id
+  editMode: boolean = false;           // if true, allows adding multiple or nested subvariations to the move history
   preserved: boolean = false;          // if true, prevents a game/board from being overwritten 
   commitingMovelist = false;           // Used when entering examine mode and using 'commit' to submit a move list
 }

@@ -5553,6 +5553,15 @@ function setMovelistViewMode() {
     setViewModeList();
 }
 
+$('#game-edit-mode').on('change', function (e) {
+  gameWithFocus.editMode = $(this).is(':checked');
+  // Preserve the game when in edit mode, so the user doesn't accidently lose their annotations
+  if($(this).is(':checked')) {
+    gameWithFocus.preserved = true;
+    updateGamePreserved(gameWithFocus);
+  }
+});
+
 $('#game-preserved').on('change', function (e) {
   gameWithFocus.preserved = $(this).is(':checked');
   updateGamePreserved(gameWithFocus);
