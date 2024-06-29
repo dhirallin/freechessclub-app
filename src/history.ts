@@ -554,35 +554,13 @@ export class History {
     cell.remove();
     if(subvar && !subvar.children().length) {
       // Remove empty subvariation
-      subvar.remove();
+      subvar.parent().remove();
       if(parent && parent.next && parent.ply % 2 === 0) {
         // If parent's next move is black and there is no subvariations in between, remove the move number from the start
         var parentCell = parent.moveListCellElement;
         if(parentCell.next().hasClass('outer-move'))
           parentCell.next().find('.moveno').remove();
       }
-    }
-
-    // Rearrange subvariation brackets
-    var depth = entry.depth();  
-    var prevListEntry = this.getPrevListedHEntry(entry);
-    if(!prevListEntry) 
-      return;
-
-    var prevCell = prevListEntry.moveListCellElement;
-    var prevDepth = prevListEntry.depth();
-    
-    var prevRB = prevCell.find('.right-brackets');
-    var rb = cell.find('.right-brackets');
-
-    if(entry === entry.first) // first move in subvariation
-      rb.text(rb.text().slice(0, -1)); 
-
-    if(rb.length && rb.text().length) {
-      if(!prevRB.length)
-        rb.appendTo(prevCell);
-      else 
-        prevRB.text(prevRB.text() + rb.text());
     }
   }
 
@@ -601,7 +579,7 @@ export class History {
     if(prevEntry && prevEntry.move) {
       // Get previous html element including subvariation containers
       var prevElement = prevEntry.moveListCellElement; 
-      while(prevElement.next().length && !prevElement.next().hasClass('outer-move'))
+      while(prevElement.next().length && prevElement.next().hasClass('outer-subvariation'))
         prevElement = prevElement.next();
     }
     
@@ -624,14 +602,24 @@ export class History {
       }
   
       if(entry === entry.first) {
-        var subVar = $('<span class="subvariation d-inline-flex flex-wrap" style="flex-basis: 100%"></span>');
+        var outerSubVar = $(`
+          <span class="outer-subvariation" style="display: contents">
+            <span style="flex-basis: 100%"></span>
+            <span class="subvariation d-inline-flex flex-wrap"></span>
+          </span>`);
+        var subVar = outerSubVar.children('.subvariation');
         if(!entry.isContinuation())
           subVar.addClass('ms-2');
         subVar.append(cell);
-        prevElement.after(subVar);
+        if(prevElement.next('.outer-move').length)
+          outerSubVar.append(`<span style="flex-basis: 100%"></span>`); // Create a line break in a flex container
+        prevElement.after(outerSubVar);
       }
-      else
+      else {
         prevElement.after(cell);
+        if(prevElement.hasClass('outer-subvariation'))
+          prevElement.append(`<span style="flex-basis: 100%"></span>`);
+      }
 
       if(depth !== prevDepth || entry === entry.first) {
         if(ply % 2 == 0 && depth > prevDepth && entry.parent.next) 
@@ -639,36 +627,6 @@ export class History {
         else if(ply % 2 === 1) 
           cell.prepend('<span class="moveno ms-1">' + moveNo + '...</span>');
       }
-
-      // Rearrange subvariation brackets
-      var leftBracket = $('<span class="ms-1 brackets left-bracket">(</span>');
-      var rightBracket = $('<span class="me-1 brackets right-brackets">)</span>');
-      var prevRB = prevCell.find('.right-brackets');
-      if(entry === entry.first) { // first move in subvariation
-        cell.prepend(leftBracket);
-        if(!prevRB.length)
-          cell.append(rightBracket);
-        else {
-          var rb = prevRB.appendTo(cell); // move brackets from previous move
-          if(depth > prevDepth) 
-            rb.text(rb.text() + ')'); // add a bracket
-          else
-            prevCell.append(rightBracket);
-        }
-      }
-      else if(prevRB.length) {
-        var numBrackets = prevRB.text().length;
-        var depthDiff = prevDepth - depth;
-        if(numBrackets > depthDiff) {
-          if(depthDiff === 0) 
-            var rb = prevRB.appendTo(cell);
-          else {
-            var rb = prevRB.clone().appendTo(cell);
-            rb.text(')'.repeat(numBrackets - depthDiff));
-            prevRB.text(')'.repeat(depthDiff));
-          }
-        }
-      } 
     }
 
     cell.find('.move').data('hEntry', entry); // Add reference to HEntry to element

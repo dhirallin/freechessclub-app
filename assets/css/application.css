@@ -443,6 +443,14 @@ html, body {
 .movelist .subvariation {
   color: #5e4d3b;
 }
+.movelist .subvariation::before {
+  content: "(";
+  margin-left: 0.25rem;
+}
+.movelist .subvariation::after {
+  content: ")";
+  margin-right: 0.25rem;
+}
 .movelist .subvariation .selected {
   background-color: rgba(0, 0, 0, 0.2);
   color: #2e2418;
