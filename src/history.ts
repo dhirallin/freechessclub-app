@@ -554,6 +554,9 @@ export class History {
     cell.remove();
     if(subvar && !subvar.children().length) {
       // Remove empty subvariation
+      subvar.prev().remove();
+      if(subvar.next().hasClass('flex-line-break'))
+        
       subvar.parent().remove();
       if(parent && parent.next && parent.ply % 2 === 0) {
         // If parent's next move is black and there is no subvariations in between, remove the move number from the start
