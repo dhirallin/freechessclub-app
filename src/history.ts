@@ -602,23 +602,20 @@ export class History {
       }
   
       if(entry === entry.first) {
-        var outerSubVar = $(`
-          <span class="outer-subvariation" style="display: contents">
-            <span style="flex-basis: 100%"></span>
-            <span class="subvariation d-inline-flex flex-wrap"></span>
-          </span>`);
-        var subVar = outerSubVar.children('.subvariation');
+        var subVar = $(`<span class="subvariation d-inline-flex flex-wrap"></span>`);
         if(!entry.isContinuation())
           subVar.addClass('ms-2');
         subVar.append(cell);
-        if(prevElement.next('.outer-move').length)
-          outerSubVar.append(`<span style="flex-basis: 100%"></span>`); // Create a line break in a flex container
-        prevElement.after(outerSubVar);
+        prevElement.after(subVar);
+        // insert line breaks into flex container
+        subVar.before(`<span style="flex-basis: 100%"></span>`);
+        if(subVar.next('.outer-move').length)
+          subVar.after(`<span style="flex-basis: 100%"></span>`); 
       }
       else {
         prevElement.after(cell);
-        if(prevElement.hasClass('outer-subvariation'))
-          prevElement.append(`<span style="flex-basis: 100%"></span>`);
+        if(prevElement.hasClass('subvariation'))
+          prevElement.after(`<span style="flex-basis: 100%"></span>`);
       }
 
       if(depth !== prevDepth || entry === entry.first) {
