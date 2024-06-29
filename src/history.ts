@@ -550,20 +550,25 @@ export class History {
     var cell = entry.moveListCellElement;
     var parent = entry.parent;
     if(cell.parent().hasClass('subvariation'))
-      var subvar = cell.parent();
-    cell.remove();
-    if(subvar && !subvar.children().length) {
+      var subvar = cell.parent();   
+    if(subvar && subvar.children('.outer-move').length === 1) {
       // Remove empty subvariation
-      subvar.prev().remove();
-      if(subvar.next().hasClass('flex-line-break'))
-        
-      subvar.parent().remove();
+      subvar.prev('.flex-line-break').remove();
+      if(subvar.prev().hasClass('.outer-move') && subvar.next(':not(.flex-line-break)').hasClass('.outer-move'))
+        subvar.next('.flex-line-break').remove();
+      subvar.remove();
+
       if(parent && parent.next && parent.ply % 2 === 0) {
         // If parent's next move is black and there is no subvariations in between, remove the move number from the start
         var parentCell = parent.moveListCellElement;
         if(parentCell.next().hasClass('outer-move'))
           parentCell.next().find('.moveno').remove();
       }
+    }
+    else {
+      if(cell.prev().hasClass('flex-line-break')) 
+        cell.prev().remove();
+      cell.remove();
     }
   }
 
@@ -582,8 +587,10 @@ export class History {
     if(prevEntry && prevEntry.move) {
       // Get previous html element including subvariation containers
       var prevElement = prevEntry.moveListCellElement; 
-      while(prevElement.next().length && prevElement.next().hasClass('outer-subvariation'))
+      while(prevElement.next().length && !prevElement.next().hasClass('outer-move'))
         prevElement = prevElement.next();
+      if(prevElement.hasClass('flex-line-break'))
+        prevElement = prevElement.prev();
     }
     
     var cell = $('<span class="outer-move d-inline-flex"><span class="move px-1">' + san + '</span></span>');
@@ -611,14 +618,14 @@ export class History {
         subVar.append(cell);
         prevElement.after(subVar);
         // insert line breaks into flex container
-        subVar.before(`<span style="flex-basis: 100%"></span>`);
+        subVar.before(`<span class="flex-line-break"></span>`);
         if(subVar.next('.outer-move').length)
-          subVar.after(`<span style="flex-basis: 100%"></span>`); 
+          subVar.after(`<span class="flex-line-break"></span>`); 
       }
       else {
         prevElement.after(cell);
         if(prevElement.hasClass('subvariation'))
-          prevElement.after(`<span style="flex-basis: 100%"></span>`);
+          prevElement.after(`<span class="flex-line-break"></span>`);
       }
 
       if(depth !== prevDepth || entry === entry.first) {

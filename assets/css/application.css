@@ -464,6 +464,10 @@ html, body {
   color: rgb(10, 88, 202);
 }
 
+.flex-line-break {
+  flex-basis: 100%;
+}
+
 .nav-tabs .nav-item .closeTab {
   opacity: 0;
   margin: 0px;
