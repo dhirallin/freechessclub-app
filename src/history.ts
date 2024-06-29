@@ -554,14 +554,14 @@ export class History {
     if(subvar && subvar.children('.outer-move').length === 1) {
       // Remove empty subvariation
       subvar.prev('.flex-line-break').remove();
-      if(subvar.prev().hasClass('.outer-move') && subvar.next(':not(.flex-line-break)').hasClass('.outer-move'))
-        subvar.next('.flex-line-break').remove();
       subvar.remove();
 
-      if(parent && parent.next && parent.ply % 2 === 0) {
-        // If parent's next move is black and there is no subvariations in between, remove the move number from the start
+      if(parent && parent.next && parent.subvariations.length === 1) {
         var parentCell = parent.moveListCellElement;
-        if(parentCell.next().hasClass('outer-move'))
+        // if there are no other subvariations, remove line break 
+        parentCell.next('.flex-line-break').remove(); 
+        // If parent's next move is black and there are no other subvariations, remove the move number from the start
+        if(parent.ply % 2 === 0)
           parentCell.next().find('.moveno').remove();
       }
     }
