@@ -424,7 +424,7 @@ function calculateFontSize(container: any, containerMaxWidth: number, minWidth?:
   var textWidth;
   do {
     fontSize--;
-    textWidth = getTextWidth(container.text(), fontWeight + ' ' + fontSize + 'px ' + fontFamily);
+    textWidth = getTextWidth(container.text(), `${fontWeight} ${fontSize}px ${fontFamily}`);
   } while (textWidth > containerMaxWidth && fontSize > minWidth);
   return fontSize;
 }
@@ -499,7 +499,7 @@ function messageHandler(data) {
         session.send('set seek 0');
         session.send('set echo 1');
         session.send('set style 12');
-        session.send('set interface Free Chess Club (' + packageInfo.version + ')');
+        session.send(`set interface Free Chess Club (${packageInfo.version})`);
         session.send('iset defprompt 1'); // Force default prompt. Used for splitting up messages
         session.send('iset nowrap 1'); // Stop chat messages wrapping which was causing spaces to get removed erroneously
         session.send('iset pendinfo 1'); // Receive detailed match request info (both that we send and receive)
@@ -541,14 +541,14 @@ function messageHandler(data) {
         var game = getMainGame();
         if(game.isPlayingOnline() && game.id !== data.id) {
           if(data.role === Role.OBSERVING || data.role === Role.OBS_EXAMINED)
-            session.send('unobs ' + data.id);
+            session.send(`unobs ${data.id}`);
           break;
         }
         else if((game.isExamining() || game.isObserving()) && game.id !== data.id) {
           if(game.isExamining())
             session.send('unex');
           else if(game.isObserving()) 
-            session.send('unobs ' + game.id);
+            session.send(`unobs ${game.id}`);
                   
           if(data.role === Role.PLAYING_COMPUTER)
             cleanupGame(game);  
@@ -683,8 +683,8 @@ function messageHandler(data) {
           var lobbyEntryText = formatLobbyEntry(item);
 
           $('#lobby-table').append(
-            `<button type="button" data-offer-id="` + item.id + `" class="btn btn-outline-secondary lobby-entry" onclick="acceptSeek(` 
-              + item.id + `);">` + lobbyEntryText + `</button>`);
+            `<button type="button" data-offer-id="${item.id}" class="btn btn-outline-secondary lobby-entry"` +
+            ` onclick="acceptSeek(${item.id});">${lobbyEntryText}</button>`);
         });
 
         if(lobbyScrolledToBottom) {
@@ -698,7 +698,7 @@ function messageHandler(data) {
         || (item.type === 'pt' && (item.subtype === 'partner' || item.subtype === 'match')));
       if(sentOffers.length) {
         sentOffers.forEach((item) => {
-          if(!$('.sent-offer[data-offer-id="' + item.id + '"]').length) {
+          if(!$(`.sent-offer[data-offer-id="${item.id}"]`).length) {
             if(matchRequested)
               matchRequested--;
             newSentOffers.push(item);
@@ -721,23 +721,23 @@ function messageHandler(data) {
         switch(item.subtype) {
           case 'match': 
             displayType = 'notification';
-            var time = !isNaN(item.initialTime) ? ' ' + item.initialTime + ' ' + item.increment : '';
-            bodyText = item.ratedUnrated + ' ' + item.category + time;
+            var time = !isNaN(item.initialTime) ? ` ${item.initialTime} ${item.increment}` : '';
+            bodyText = `${item.ratedUnrated} ${item.category}${time}`;
             if(item.adjourned)
               headerTitle = 'Resume Adjourned Game Request';
             else
               headerTitle = 'Match Request';
-            bodyTitle = item.opponent + ' (' + item.opponentRating + ')' + (item.color ? ' [' + item.color + ']' : '');
+            bodyTitle = `${item.opponent} (${item.opponentRating})${item.color ? ` [${item.color}]` : ''}`;
             $('.notification').each((index, element) => {
               var headerTextElement = $(element).find('.header-text');
               var bodyTextElement = $(element).find('.body-text');
               if(headerTextElement.text() === 'Match Request' && bodyTextElement.text().startsWith(item.opponent + '(')) {
                 $(element).attr('data-offer-id', item.id);
-                bodyTextElement.text(bodyTitle + ' ' + bodyText);
+                bodyTextElement.text(`${bodyTitle} ${bodyText}`);
                 var btnSuccess = $(element).find('.button-success');
                 var btnFailure = $(element).find('.button-failure');
-                btnSuccess.attr('onclick', `sessionSend('accept ` + item.id + `');`);
-                btnFailure.attr('onclick', `sessionSend('decline ` + item.id + `');`);
+                btnSuccess.attr('onclick', `sessionSend('accept ${item.id}');`);
+                btnFailure.attr('onclick', `sessionSend('decline ${item.id}');`);
                 displayType = '';
               }
             });
@@ -752,7 +752,7 @@ function messageHandler(data) {
             displayType = 'dialog';
             headerTitle = 'Takeback Request';
             bodyTitle = item.toFrom;
-            bodyText = 'would like to take back ' + item.parameters + ' half move(s).';
+            bodyText = `would like to take back ${item.parameters} half move(s).`;
             break;
           case 'abort': 
             displayType = 'dialog';
@@ -788,10 +788,10 @@ function messageHandler(data) {
       var removals = offers.filter((item) => item.type === 'pr' || item.type === 'sr');
       removals.forEach((item) => {
         item.ids.forEach((id) => {
-          removeNotification($('.notification[data-offer-id="' + id + '"]')); // If match request was not ours, remove the Notification
-          $('.board-dialog[data-offer-id="' + id + '"]').toast('hide'); // if in-game request, hide the dialog
-          $('.sent-offer[data-offer-id="' + id + '"]').remove(); // If offer, match request or seek was sent by us, remove it from the Play pane
-          $('.lobby-entry[data-offer-id="' + id + '"]').remove(); // Remove seek from lobby
+          removeNotification($(`.notification[data-offer-id="${id}"]`)); // If match request was not ours, remove the Notification
+          $(`.board-dialog[data-offer-id="${id}"]`).toast('hide'); // if in-game request, hide the dialog
+          $(`.sent-offer[data-offer-id="${id}"]`).remove(); // If offer, match request or seek was sent by us, remove it from the Play pane
+          $(`.lobby-entry[data-offer-id="${id}"]`).remove(); // Remove seek from lobby
         });
         if(!$('#sent-offers-status').children().length)
           $('#sent-offers-status').hide();
@@ -834,9 +834,9 @@ function messageHandler(data) {
             numWatchers++;
             if(numWatchers == 1)
               req = 'Watchers:';
-            req += '<span class="ms-1 badge rounded-pill bg-secondary noselect">' + watchers[i] + '</span>';
+            req += `<span class="ms-1 badge rounded-pill bg-secondary noselect">${watchers[i]}</span>`;
             if (numWatchers > 5) {
-              req += ' + ' + (watchers.length - i) + ' more.';
+              req += ` + ${watchers.length - i} more.`;
               break;
             }
           }
@@ -857,7 +857,7 @@ function messageHandler(data) {
 
       match = msg.match(/^Game (\d+): (\S+) has lagged for 30 seconds\./m);
       if(match) {
-        var bodyText = match[2] + ' has lagged for 30 seconds.<br>You may courtesy adjourn the game.<br><br>If you believe your opponent has intentionally disconnected, you can request adjudication of an adjourned game. Type \'help adjudication\' in the console for more info.';
+        var bodyText = `${match[2]} has lagged for 30 seconds.<br>You may courtesy adjourn the game.<br><br>If you believe your opponent has intentionally disconnected, you can request adjudication of an adjourned game. Type \'help adjudication\' in the console for more info.`;
         showBoardDialog({type: 'Opponent Lagging', msg: bodyText, btnFailure: ['', 'Wait'], btnSuccess: ['adjourn', 'Adjourn'], useSessionSend: true});
         chat.newMessage('console', data);
         return;
@@ -944,13 +944,13 @@ function messageHandler(data) {
         
         if(status) {
           if(match[0].startsWith('Ambiguous name'))
-            status.text('There is no player matching the name ' + match[1] + '.');
+            status.text(`There is no player matching the name ${match[1]}.`);
           else if(match[0].includes('is not open for bughouse.'))
-            status.text(match[0] + ' Ask them to \'set bugopen 1\' in the Console.');
+            status.text(`${match[0]} Ask them to 'set bugopen 1' in the Console.`);
           else if(match[0] === 'You cannot seek bughouse games.') 
             status.text('You must specify an opponent for bughouse.');
           else if(match[0].includes('no partner for bughouse.'))
-            status.text(match[0] + ' Get one by using \'partner <username>\' in the Console.');
+            status.text(`${match[0]} Get one by using 'partner <username>' in the Console.`);
           else
             status.text(match[0]);
       
@@ -961,7 +961,7 @@ function messageHandler(data) {
       
       match = msg.match(/(?:^|\n)(\d+ players?, who (?:has|have) an adjourned game with you, (?:is|are) online:)\n(.*)/);
       if(match && match.length > 2) {
-        createNotification({type: 'Resume Game', title: match[1] + '<br>' + match[2], btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
+        createNotification({type: 'Resume Game', title: `${match[1]}<br>${match[2]}`, btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
         chat.newMessage('console', data);
         return;
       }
@@ -1044,7 +1044,7 @@ function messageHandler(data) {
         match = msg.match(/^Your seek (\d+) has been removed\./m);
       if(match) {
         if(match.length > 1) // delete seek by id
-          $('.sent-offer[data-offer-id="' + match[1] + '"]').remove();
+          $(`.sent-offer[data-offer-id="${match[1]}"]`).remove();
         else  // Remove all seeks
           $('.sent-offer[data-offer-type="sn"]').remove();
 
@@ -1086,12 +1086,12 @@ function messageHandler(data) {
             game.element.find('.player-status .rating').text(game.color === 'b' ? game.brating : game.wrating);
             game.element.find('.opponent-status .rating').text(game.color === 'b' ? game.wrating : game.brating);
 
-            let time = ' ' + initialTime + ' ' + increment;
+            let time = ` ${initialTime} ${increment}`;
             if(initialTime === '0' && increment === '0')
               time = '';
     
-            const statusMsg = '<span class="game-id">Game ' + id + ': </span>' + wname + ' (' + wrating + ') ' + bname + ' (' + brating + ') '
-              + rated + ' ' + game.category + time;
+            const statusMsg = `<span class="game-id">Game ${id}: </span>${wname} (${wrating}) ${bname} (${brating}) ` +
+                `${rated} ${game.category}${time}`;
             showStatusMsg(game, statusMsg);
 
             var tags = game.history.metatags;
@@ -1128,7 +1128,7 @@ function messageHandler(data) {
         var mainGame = getPlayingExaminingGame();
         if(mainGame) {
           mainGame.partnerGameId = partnerGameId;
-          chat.createTab('Game ' + mainGame.id + ' and ' + partnerGameId);
+          chat.createTab(`Game ${mainGame.id} and ${partnerGameId}`);
         }
       }
 
@@ -1151,7 +1151,7 @@ function messageHandler(data) {
           
           var status = match[0].substring(match[0].indexOf(':')+1);
           if(game.id)
-            status = '<span class="game-id">Game ' + game.id + ': </span>' + status;
+            status = `<span class="game-id">Game ${game.id}: </span>${status}`;
           showStatusMsg(game, status);
 
           if(game.history)
@@ -1358,10 +1358,10 @@ function gameStart(game: Game) {
       var gameType = 'Examining';
     else if(game.isObserving())
       var gameType = 'Observing';
-    game.element.find('.title-bar-text').text('Game ' + game.id + ' (' + gameType + ')');
+    game.element.find('.title-bar-text').text(`Game ${game.id} (${gameType})`);
     var gameStatus = game.statusElement.find('.game-status');
     if(gameStatus.text())
-      gameStatus.prepend('<span class="game-id">Game ' + game.id + ': </span>');
+      gameStatus.prepend(`<span class="game-id">Game ${game.id}: </span>`);
   }
   else if(game.role === Role.PLAYING_COMPUTER)
     game.element.find('.title-bar-text').text('Computer (Playing)');
@@ -1402,20 +1402,20 @@ function gameStart(game: Game) {
   }
 
   if(game.role !== Role.PLAYING_COMPUTER && game.role !== Role.NONE) {
-    session.send('allobs ' + game.id);
+    session.send(`allobs ${game.id}`);
     allobsRequested++;
     if(game.isPlaying()) {
       game.watchersInterval = setInterval(() => {
         const time = game.color === 'b' ? game.btime : game.wtime;
         if (time > 20000) {
-          session.send('allobs ' + game.id);
+          session.send(`allobs ${game.id}`);
           allobsRequested++;
         }
       }, 30000);
     }
     else {
       game.watchersInterval = setInterval(() => {
-        session.send('allobs ' + game.id);
+        session.send(`allobs ${game.id}`);
         allobsRequested++;
       }, 5000);
     }
@@ -1459,7 +1459,7 @@ function gameStart(game: Game) {
   // Open chat tabs
   if(game.isPlayingOnline()) {
     if(game.category === 'bughouse' && partnerGameId !== null) 
-      chat.createTab('Game ' + game.id + ' and ' + partnerGameId); // Open chat room for all bughouse participants
+      chat.createTab(`Game ${game.id} and ${partnerGameId}`); // Open chat room for all bughouse participants
     else if(game.color === 'w') 
       chat.createTab(game.bname);
     else 
@@ -1473,7 +1473,7 @@ function gameStart(game: Game) {
         chat.createTab(game.bname);
     }
     else 
-      chat.createTab('Game ' + game.id);    
+      chat.createTab(`Game ${game.id}`);    
   }
 
   if(game.isPlaying() || game.isObserving()) {
@@ -1517,7 +1517,7 @@ function gameStart(game: Game) {
     if(game.isExamining() || ((game.isObserving() || game.isPlayingOnline()) && game.move !== 'none')) {        
       game.movelistRequested++;
       session.send('iset startpos 1'); // Show the initial board position before the moves list 
-      session.send('moves ' + game.id);
+      session.send(`moves ${game.id}`);
       session.send('iset startpos 0');
     }
 
@@ -1537,13 +1537,13 @@ function gameStart(game: Game) {
 function showSentOffers(offers: any) {
   var requestsHtml = '';
   offers.forEach((offer) => {
-    requestsHtml += `<div class="sent-offer" data-offer-type="` + offer.type + `" data-offer-id="` + offer.id + `">`;
+    requestsHtml += `<div class="sent-offer" data-offer-type="${offer.type}" data-offer-id="${offer.id}">`;
     requestsHtml += `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>&nbsp;&nbsp;`;
 
     if(offer.type === 'pt') {
       if(offer.subtype === 'partner') {
-        requestsHtml += 'Making a partnership offer to ' + offer.toFrom + '.';
-        var removeCmd = 'withdraw ' + offer.id;
+        requestsHtml += `Making a partnership offer to ${offer.toFrom}.`;
+        var removeCmd = `withdraw ${offer.id}`;
       }
       else if(offer.subtype === 'match') {
         // convert match offers to the same format as seeks
@@ -1558,7 +1558,7 @@ function showSentOffers(offers: any) {
         if(session.isRegistered() && offer.ratedUnrated === 'unrated') 
           unrated = 'u ';
 
-        let time = offer.initialTime + ' ' + offer.increment + ' ';
+        let time = `${offer.initialTime} ${offer.increment} `;
         if(offer.category === 'untimed') {
           time = '';
           unrated = '';
@@ -1566,8 +1566,8 @@ function showSentOffers(offers: any) {
 
         var adjourned = (offer.adjourned ? ' (adjourned)' : '');
 
-        requestsHtml += 'Challenging ' + offer.opponent + ' to ' + (time === '' ? 'an ' : 'a ') + time + unrated + offer.category + color + ' game' + adjourned + '.';
-        var removeCmd = 'withdraw ' + offer.id;
+        requestsHtml += `Challenging ${offer.opponent} to ${time === '' ? 'an ' : 'a '}${time}${unrated}${offer.category}${color} game${adjourned}.`;
+        var removeCmd = `withdraw ${offer.id}`;
       }
     }
     else if(offer.type === 'sn') {
@@ -1577,22 +1577,22 @@ function showSentOffers(offers: any) {
         unrated = 'u ';
 
       // Change 0 0 to 'untimed'
-      let time = offer.initialTime + ' ' + offer.increment + ' ';
+      let time = `${offer.initialTime} ${offer.increment} `;
       if(offer.category === 'untimed') {
         unrated = '';
         time = '';
       }
       let color = (offer.color !== '?' ? offer.color : '');
 
-      requestsHtml += 'Seeking ' + (time === '' ? 'an ' : 'a ') + time + unrated + offer.category + color + ' game.';
-      var removeCmd = 'unseek ' + offer.id;
+      requestsHtml += `Seeking ${time === '' ? 'an ' : 'a '}${time}${unrated}${offer.category}${color} game.`;
+      var removeCmd = `unseek ${offer.id}`;
     }
     
     var lastIndex = requestsHtml.lastIndexOf(' ') + 1;
     var lastWord = requestsHtml.slice(lastIndex);
     requestsHtml = requestsHtml.substring(0, lastIndex);
 
-    requestsHtml += `<span style="white-space: nowrap">` + lastWord + `<span class="fa fa-times-circle btn btn-default btn-sm" onclick="sessionSend('` + removeCmd + `')" aria-hidden="false"></span></span></div>`;
+    requestsHtml += `<span style="white-space: nowrap">${lastWord}<span class="fa fa-times-circle btn btn-default btn-sm" onclick="sessionSend('${removeCmd}')" aria-hidden="false"></span></span></div>`;
   });
 
   $('#sent-offers-status').append(requestsHtml);
@@ -1648,7 +1648,7 @@ function setFontSizes() {
     var nameBorderWidth = nameElement.outerWidth() - nameElement.width();
     var nameMaxWidth = nameRatingElement.width() - ratingElement.outerWidth() - nameBorderWidth;
     var fontSize = calculateFontSize(nameElement, nameMaxWidth);
-    nameElement.css('font-size', fontSize + 'px');
+    nameElement.css('font-size', `${fontSize}px`);
 
     // Hide rating badge if partially clipped
     if(nameElement.outerWidth() + ratingElement.outerWidth() > nameRatingElement.width()) {
@@ -1722,20 +1722,20 @@ function showCapturedMaterial(game: Game) {
     let panel = undefined;
     if(whiteChanged && key === key.toLowerCase() && captured[key] > 0) {
       var color = 'b';
-      var piece = color + key.toUpperCase();
+      var piece = `${color}${key.toUpperCase()}`;
       var num = captured[key];
       panel = (game.color === 'w' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     }
     else if(blackChanged && key === key.toUpperCase() && captured[key] > 0) {
       var color = 'w';
-      var piece = color + key;
+      var piece = `${color}${key}`;
       var num = captured[key];
       panel = (game.color === 'b' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     }
     if(panel) {
       panel.append(
-        `<span class="captured-piece" id="` + piece + `"><img src="assets/css/images/pieces/merida/` +
-          piece + `.svg"/><small>` + num + `</small></span>`);
+        `<span class="captured-piece" id="${piece}"><img src="assets/css/images/pieces/merida/` +
+            `${piece}.svg"/><small>${num}</small></span>`);
 
       if(game.category === 'crazyhouse' || game.category === 'bughouse') {
         $('#' + piece)[0].addEventListener('touchstart', dragCapturedPiece, {passive: false});
@@ -2066,7 +2066,7 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 
 function preMovePiece(source: any, target: any, metadata: any) {
   var game = gameWithFocus;
-  var chess = new Chess(game.board.getFen() + ' w KQkq - 0 1'); 
+  var chess = new Chess(`${game.board.getFen()} w KQkq - 0 1`); 
   if(!game.promotePiece && chess.get(source).type === 'p' && (target.charAt(1) === '1' || target.charAt(1) === '8')) {
     showPromotionPanel(game, true);
   }
@@ -2115,7 +2115,7 @@ function variantToDests(game: Game, chess: any): Map<Key, Key[]> {
     var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     var startChess = new Chess(game.history.first().fen);
     for(const file of files) {
-      let square = file + rank;
+      let square = `${file}${rank}`;
       let piece = startChess.get(square);
       if(piece && piece.color === color && piece.type === 'r') {
         if(!leftRook)
@@ -2180,30 +2180,30 @@ function showPromotionPanel(game: Game, premove: boolean = false) {
   var fileNum = target.toLowerCase().charCodeAt(0) - 97;
 
   // Add temporary pieces to the DOM in order to retrieve the background-image style from them
-  var pieces = $('<div class="cg-wrap d-none"></div>').appendTo($('body'));
-  var bgQueen = $('<piece class="queen ' + color + '"></piece>').appendTo(pieces).css('background-image').replace(/\"/g, '\'');
-  var bgKnight = $('<piece class="knight ' + color + '"></piece>').appendTo(pieces).css('background-image').replace(/\"/g, '\'');
-  var bgRook = $('<piece class="rook ' + color + '"></piece>').appendTo(pieces).css('background-image').replace(/\"/g, '\'');
-  var bgBishop = $('<piece class="bishop ' + color + '"></piece>').appendTo(pieces).css('background-image').replace(/\"/g, '\'');  
+  var pieces = $(`<div class="cg-wrap d-none"></div>`).appendTo($('body'));
+  var bgQueen = $(`<piece class="queen ${color}"></piece>`).appendTo(pieces).css('background-image').replace(/\"/g, '\'');
+  var bgKnight = $(`<piece class="knight ${color}"></piece>`).appendTo(pieces).css('background-image').replace(/\"/g, '\'');
+  var bgRook = $(`<piece class="rook ${color}"></piece>`).appendTo(pieces).css('background-image').replace(/\"/g, '\'');
+  var bgBishop = $(`<piece class="bishop ${color}"></piece>`).appendTo(pieces).css('background-image').replace(/\"/g, '\'');  
   pieces.remove();
   var promotionPanel = game.element.find('.promotion-panel');
   promotionPanel.css('left', promotionPanel.width() * (orientation === "white" ? fileNum : 7 - fileNum));
   if(orientation === color) {
     promotionPanel.css('top', 0);
     promotionPanel.html(`
-      <button id="promote-piece-q" class="btn btn-default promote-piece w-100 h-25" style="background-image: ` + bgQueen + `; background-size: cover;"></button>
-      <button id="promote-piece-n" class="btn btn-default promote-piece w-100 h-25" style="background-image: ` + bgKnight + `; background-size: cover;"></button>
-      <button id="promote-piece-r" class="btn btn-default promote-piece w-100 h-25" style="background-image: ` + bgRook + `; background-size: cover;"></button>
-      <button id="promote-piece-b" class="btn btn-default promote-piece w-100 h-25" style="background-image: ` + bgBishop + `; background-size: cover;"></button>
+      <button id="promote-piece-q" class="btn btn-default promote-piece w-100 h-25" style="background-image: ${bgQueen}; background-size: cover;"></button>
+      <button id="promote-piece-n" class="btn btn-default promote-piece w-100 h-25" style="background-image: ${bgKnight}; background-size: cover;"></button>
+      <button id="promote-piece-r" class="btn btn-default promote-piece w-100 h-25" style="background-image: ${bgRook}; background-size: cover;"></button>
+      <button id="promote-piece-b" class="btn btn-default promote-piece w-100 h-25" style="background-image: ${bgBishop}; background-size: cover;"></button>
     `);
   }
   else {
     promotionPanel.css('top', '50%');
     promotionPanel.html(`
-      <button id="promote-piece-b" class="btn btn-default promote-piece w-100 h-25" style="background-image: ` + bgBishop + `; background-size: cover;"></button>
-      <button id="promote-piece-r" class="btn btn-default promote-piece w-100 h-25" style="background-image: ` + bgRook + `; background-size: cover;"></button>
-      <button id="promote-piece-n" class="btn btn-default promote-piece w-100 h-25" style="background-image: ` + bgKnight + `; background-size: cover;"></button>
-      <button id="promote-piece-q" class="btn btn-default promote-piece w-100 h-25" style="background-image: ` + bgQueen + `; background-size: cover;"></button>
+      <button id="promote-piece-b" class="btn btn-default promote-piece w-100 h-25" style="background-image: ${bgBishop}; background-size: cover;"></button>
+      <button id="promote-piece-r" class="btn btn-default promote-piece w-100 h-25" style="background-image: ${bgRook}; background-size: cover;"></button>
+      <button id="promote-piece-n" class="btn btn-default promote-piece w-100 h-25" style="background-image: ${bgKnight}; background-size: cover;"></button>
+      <button id="promote-piece-q" class="btn btn-default promote-piece w-100 h-25" style="background-image: ${bgQueen}; background-size: cover;"></button>
     `);
   }
  
@@ -2300,7 +2300,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
     if(move.from) 
       var fromPiece = chess.get(move.from);
     else 
-      san = move.piece.toUpperCase() + '@' + move.to; // Crazyhouse/bughouse piece placement
+      san = `${move.piece.toUpperCase()}@${move.to}`; // Crazyhouse/bughouse piece placement
     var toPiece = chess.get(move.to);
 
     if(fromPiece && fromPiece.type === 'k') {
@@ -2398,7 +2398,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
       var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
       var startChess = new Chess(game.history.first().fen);
       for(const file of files) {
-        let square = file + rank;
+        let square = `${file}${rank}`;
         let piece = startChess.get(square);
         if(piece && piece.color === color && piece.type === 'r') {
           if(!leftRook)
@@ -2415,41 +2415,41 @@ function parseVariantMove(game: Game, fen: string, move: any) {
       if(san.toUpperCase() === 'O-O') {
         if(category === 'wild/fr') {
           // fischer random
-          var kingTo = 'g' + rank;
+          var kingTo = `g${rank}`;
           var rookFrom = rightRook;
-          var rookTo = 'f' + rank;
+          var rookTo = `f${rank}`;
         }
         else {
           // wild/0, wild/1 etc
           if(kingFrom[0] === 'e') {
-            var kingTo = 'g' + rank;
+            var kingTo = `g${rank}`;
             var rookFrom = rightRook;
-            var rookTo = 'f' + rank;
+            var rookTo = `f${rank}`;
           }
           else {
-            var kingTo = 'b' + rank;
+            var kingTo = `b${rank}`;
             var rookFrom = leftRook;
-            var rookTo = 'c' + rank;
+            var rookTo = `c${rank}`;
           }
         }
       }
       else if(san.toUpperCase() === 'O-O-O') {
         if(category === 'wild/fr') {
-          var kingTo = 'c' + rank;
+          var kingTo = `c${rank}`;
           var rookFrom = leftRook;
-          var rookTo = 'd' + rank;
+          var rookTo = `d${rank}`;
         }
         else {
           // wild/0, wild/1
           if(kingFrom[0] === 'e') {
-            var kingTo = 'c' + rank;
+            var kingTo = `c${rank}`;
             var rookFrom = leftRook;
-            var rookTo = 'd' + rank;
+            var rookTo = `d${rank}`;
           }
           else {
-            var kingTo = 'f' + rank;
+            var kingTo = `f${rank}`;
             var rookFrom = rightRook;
-            var rookTo = 'e' + rank;
+            var rookTo = `e${rank}`;
           }
         }
       }
@@ -2479,7 +2479,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
         var endCode = kingFrom.charCodeAt(0);
       }
       for(let code = startCode; code <= endCode; code++) {
-        var square = String.fromCharCode(code) + kingFrom[1];
+        var square = `${String.fromCharCode(code)}${kingFrom[1]}`;
         // square blocked?
         if(square !== kingFrom && square !== rookFrom && chess.get(square))
           return null;
@@ -2497,7 +2497,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
         var endCode = rookFrom.charCodeAt(0);
       }
       for(let code = startCode; code <= endCode; code++) {
-        var square = String.fromCharCode(code) + rookFrom[1];
+        var square = `${String.fromCharCode(code)}${rookFrom[1]}`;
         // square blocked?
         if(square !== rookFrom && square !== kingFrom && chess.get(square))
           return null;
@@ -2536,7 +2536,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
     }
 
     var boardAfter = chess.fen().split(/\s+/)[0];
-    outFen = boardAfter + ' ' + colorAfter + ' ' + castlingRightsAfter + ' ' + enPassantAfter + ' ' + plyClockAfter + ' ' + moveNoAfter;
+    outFen = `${boardAfter} ${colorAfter} ${castlingRightsAfter} ${enPassantAfter} ${plyClockAfter} ${moveNoAfter}`;
   
     chess.load(outFen);
     if(chess.in_checkmate())
@@ -2613,7 +2613,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
       var rightRook = '';
       for(const file of files) {
         // Get starting location of rooks
-        let square = file + rank;
+        let square = `${file}${rank}`;
         let piece = startChess.get(square);
         if(piece && piece.type === 'r' && piece.color === afterPre.color) {
           if(!leftRook) 
@@ -2650,9 +2650,9 @@ function parseVariantMove(game: Game, fen: string, move: any) {
       if(castlingRights === '-')
         castlingRights = '';
       if(afterPost.color === 'w')
-        afterPost.castlingRights = opponentRights + castlingRights;
+        afterPost.castlingRights = `${opponentRights}${castlingRights}`;
       else
-        afterPost.castlingRights = castlingRights + opponentRights;
+        afterPost.castlingRights = `${castlingRights}${opponentRights}`;
     }
   }
   outFen = joinFEN(afterPost);
@@ -2830,7 +2830,7 @@ function updateHistory(game: Game, move?: any, fen?: string) {
       // move not found, request move list
       game.movelistRequested++;
       session.send('iset startpos 1'); // Show the initial board position before the moves list 
-      session.send('moves ' + game.id);
+      session.send(`moves ${game.id}`);
       session.send('iset startpos 0');
     }
   }
@@ -3078,7 +3078,7 @@ function animateBoundingRects(fromElement: any, toElement: any, color: string = 
     height: fromHeight,
     zIndex: 3,
     'transition-property': 'width, height, top, left',
-    'transition-duration': speed + 's',
+    'transition-duration': `${speed}s`,
     'transition-timing-function': 'ease'
   });
   boundingDiv.appendTo($('body'));
@@ -3090,8 +3090,8 @@ function animateBoundingRects(fromElement: any, toElement: any, color: string = 
     childRect.css({
       width: '100%',
       height: '100%',
-      padding: 'calc(50% / ' + (numRects - i) + ')',
-      border: width + ' solid ' + color
+      padding: `calc(50% / ${numRects - i})`,
+      border: `${width} solid ${color}`
     });
     var rect = childRect.appendTo(rect);
   }
@@ -3176,7 +3176,7 @@ function closeGame(game: Game) {
     gameExitPending++;
   
   if(game.isObserving()) 
-    session.send('unobs ' + game.id);
+    session.send(`unobs ${game.id}`);
   else if(game.isExamining())
     session.send('unex');
   removeGame(game);    
@@ -3401,7 +3401,7 @@ export function gotoMove(to: HEntry, playSound = false) {
     
     var backNum = curr.visited;
     if(backNum > 0) {
-      session.send('back ' + backNum);
+      session.send(`back ${backNum}`);
       game.bufferedHistoryEntry = curr;
       game.bufferedHistoryCount++;
     }
@@ -3420,7 +3420,7 @@ export function gotoMove(to: HEntry, playSound = false) {
         forwardNum++;
       }
       if(forwardNum > 0) {
-        session.send('for ' + forwardNum);
+        session.send(`for ${forwardNum}`);
         game.bufferedHistoryEntry = curr;
         game.bufferedHistoryCount++;
       }
@@ -3441,7 +3441,7 @@ function sendMove(move: any) {
   if(move.san.startsWith('O-O') || move.san.includes('@')) // support for variants
     moveStr = move.san;
   else
-    moveStr = move.from + '-' + move.to + (move.promotion ? '=' + move.promotion : ''); 
+    moveStr = `${move.from}-${move.to}${move.promotion ? '=' + move.promotion : ''}`; 
 
   session.send(moveStr);
 }
@@ -3493,7 +3493,7 @@ function hideLeftPanelHeader2() {
 }
 
 $('#stop-observing').on('click', (event) => {
-  session.send('unobs ' + gameWithFocus.id);
+  session.send(`unobs ${gameWithFocus.id}`);
 });
 
 $('#stop-examining').on('click', (event) => {
@@ -3598,18 +3598,18 @@ function playComputer(params: any) {
   }
 
   // Show game status mmessage
-  var computerName = 'Computer (Lvl ' + params.difficulty + ')'; 
+  var computerName = `Computer (Lvl ${params.difficulty})`; 
   if(params.playerColor === 'White')
     bname = computerName;
   else
     wname = computerName;
-  let time = ' ' + params.playerTime + ' ' + params.playerInc;
+  let time = ` ${params.playerTime} ${params.playerInc}`;
   if(params.playerTime === 0 && params.playerInc === 0)
     time = '';
   let gameType = '';
   if(params.gameType !== 'Standard')
-    gameType = ' ' + params.gameType;
-  const statusMsg = wname + ' vs. ' + bname + gameType + time;
+    gameType = ` ${params.gameType}`;
+  const statusMsg = `${wname} vs. ${bname}${gameType}${time}`;
   showStatusMsg(game, statusMsg);
 
   messageHandler(data); 
@@ -3633,7 +3633,7 @@ function getPlayComputerMoveParams(game: Game): string {
   // Max nodes for each difficulty level. This is also used to limit the engine's thinking time
   // but in a way that keeps the difficulty the same across devices
   var maxNodes = [100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000];
-  var moveParams = 'nodes ' + maxNodes[game.difficulty - 1];
+  var moveParams = `nodes ${maxNodes[game.difficulty - 1]}`;
 
   return moveParams;
 }
@@ -3736,7 +3736,7 @@ function checkGameEnd(game: Game) {
   var isThreefold = game.history.isThreefoldRepetition();
   var winner = '', loser = '';
   var turnColor = History.getTurnColorFromFEN(chess.fen());
-  var gameStr = '(' + game.wname + ' vs. ' + game.bname + ')';
+  var gameStr = `(${game.wname} vs. ${game.bname})`;
 
   // Check white or black is out of time
   if(game.clock.getWhiteTime() < 0 || game.clock.getBlackTime() < 0) {
@@ -3746,23 +3746,23 @@ function checkGameEnd(game: Game) {
     // Check if the side that is not out of time has sufficient material to mate, otherwise its a draw
     var insufficientMaterial = false;
     if(wtime < 0) 
-      var fen = chess.fen().replace(' ' + 'w' + ' ', ' ' + 'b' + ' '); // Set turn color to the side not out of time in order to check their material
+      var fen = chess.fen().replace(' w ', ' b '); // Set turn color to the side not out of time in order to check their material
     else if(btime < 0) 
-      var fen = chess.fen().replace(' ' + 'b' + ' ', ' ' + 'w' + ' ');
+      var fen = chess.fen().replace(' b ', ' w ');
 
     chess.load(fen);
     insufficientMaterial = chess.insufficient_material();
 
     if(insufficientMaterial) {
       var reason = Reason.Draw;
-      var reasonStr = (wtime < 0 ? game.wname : game.bname) + ' ran out of time and ' + (wtime >= 0 ? game.wname : game.bname) + ' has no material to mate';
+      var reasonStr = `${wtime < 0 ? game.wname : game.bname} ran out of time and ${wtime >= 0 ? game.wname : game.bname} has no material to mate`;
       var scoreStr = '1/2-1/2';
     }
     else {
       winner = (wtime >= 0 ? game.wname : game.bname);
       loser = (wtime < 0 ? game.wname : game.bname);
       var reason = Reason.TimeForfeit;
-      var reasonStr = loser + ' forfeits on time';
+      var reasonStr = `${loser} forfeits on time`;
       var scoreStr = (winner === game.wname ? '1-0' : '0-1');
     }
     gameEnd = true;
@@ -3771,7 +3771,7 @@ function checkGameEnd(game: Game) {
     winner = (turnColor === 'w' ? game.bname : game.wname);
     loser = (turnColor === 'w' ? game.wname : game.bname);
     var reason = Reason.Checkmate;
-    var reasonStr = loser + ' checkmated';
+    var reasonStr = `${loser} checkmated`;
     var scoreStr = (winner === game.wname ? '1-0' : '0-1');
 
     gameEnd = true;
@@ -3799,7 +3799,7 @@ function checkGameEnd(game: Game) {
       loser,
       reason,
       score: scoreStr,
-      message: gameStr + ' ' + reasonStr + ' ' + scoreStr
+      message: `${gameStr} ${reasonStr} ${scoreStr}`
     };
     messageHandler(gameEndData);  
   }
@@ -3852,11 +3852,11 @@ function getGame(min: number, sec: number) {
 
   matchRequested++;
 
-  const cmd: string = (opponent !== '') ? 'match ' + opponent : 'seek'; 
+  const cmd: string = (opponent !== '') ? `match ${opponent}` : 'seek'; 
   var mainGame = getPlayingExaminingGame();
   if(mainGame && mainGame.isExamining())
     session.send('unex'); 
-  session.send(cmd + ' ' + min + ' ' + sec + ' ' + ratedUnrated + ' ' + color + newGameVariant);
+  session.send(`${cmd} ${min} ${sec} ${ratedUnrated} ${color}${newGameVariant}`);
 }
 (window as any).getGame = getGame;
 
@@ -3986,16 +3986,16 @@ $('#lobby-table-container').on('scroll', (e) => {
 });
 
 function formatLobbyEntry(seek: any): string {
-  var title = (seek.title !== '' ? '(' + seek.title + ')' : '');
-  var color = (seek.color !== '?' ? ' ' + seek.color : '');
-  var rating = (seek.rating !== '' ? '(' + seek.rating + ')' : '');
-  return seek.toFrom + title + rating + ' ' + seek.initialTime + ' ' + seek.increment + ' ' 
-      + seek.ratedUnrated + ' ' + seek.category + color;
+  var title = (seek.title !== '' ? `(${seek.title})` : '');
+  var color = (seek.color !== '?' ? ` ${seek.color}` : '');
+  var rating = (seek.rating !== '' ? `(${seek.rating})` : '');
+  return `${seek.toFrom}${title}${rating} ${seek.initialTime} ${seek.increment} ${seek.ratedUnrated} ` + 
+      `${seek.category}${color}`;
 }
 
 (window as any).acceptSeek = (id: number) => {
   matchRequested++;
-  session.send('play ' + id);
+  session.send(`play ${id}`);
 };
 
 /*************************** 
@@ -4034,7 +4034,7 @@ function observe(id?: string) {
   }
   if(id.length > 0) {
     obsRequested++;
-    session.send('obs ' + id);
+    session.send(`obs ${id}`);
   }
 }
 
@@ -4063,8 +4063,7 @@ function showGames(games: string) {
       var gg = match.slice(1).join(' ')
 
       $('#games-table').append(
-        '<button type="button" class="w-100 btn btn-outline-secondary" onclick="observeGame(\''
-        + id + '\');">' + gg + '</button>');
+        `<button type="button" class="w-100 btn btn-outline-secondary" onclick="observeGame('${id}');">${gg}</button>`);
     }
   }
 }
@@ -4094,7 +4093,7 @@ function initExaminePane() {
   var game = getPlayingExaminingGame();
   if(game && game.isExamining())
     session.send('unex');
-  session.send('ex ' + user + ' ' + id);
+  session.send(`ex ${user} ${id}`);
 };
 
 function getHistory(user: string) {
@@ -4104,7 +4103,7 @@ function getHistory(user: string) {
       user = session.getUser();
     $('#examine-username').val(user);
     historyRequested++;
-    session.send('hist ' + user);
+    session.send(`hist ${user}`);
   }
 }
 
@@ -4130,8 +4129,8 @@ function showHistory(user: string, history: string) {
   for(let i = hArr.length - 1; i >= 0; i--) {
     const id = hArr[i].slice(0, hArr[i].indexOf(':'));
     $('#history-table').append(
-      `<button type="button" class="w-100 btn btn-outline-secondary" onclick="examineGame('` + user + `', '` +
-      + id + `');">` + hArr[i] + `</button>`);
+      `<button type="button" class="w-100 btn btn-outline-secondary" onclick="examineGame('${user}', ` +
+      `'${id}');">${hArr[i]}</button>`);
   }
 }
 
@@ -4254,7 +4253,7 @@ function createMoveContextMenu(event: any) {
   contextMenu.append(`<li><hr class="dropdown-divider"></li>`);
   var annotationsHtml = `<div class="annotations-menu annotation">`;
   for(let a of History.annotations)
-    annotationsHtml += `<li><a class="dropdown-item noselect" data-bs-toggle="tooltip" data-nags="` + a.nags + `" title="` + a.description + `">` + a.symbol + `</a></li>`;
+    annotationsHtml += `<li><a class="dropdown-item noselect" data-bs-toggle="tooltip" data-nags="${a.nags}" title="${a.description}">${a.symbol}</a></li>`;
   annotationsHtml += `</div>`;
   contextMenu.append(annotationsHtml);
   contextMenu.find('[data-bs-toggle="tooltip"]').each((index, element) => {
@@ -4542,13 +4541,13 @@ function newGameDialog(category: string = 'untimed') {
     var headerTitle = 'Create new game';
     var bodyTitle = '';
     if(gameWithFocus.role === Role.NONE && multiboardToggle) {
-      var bodyText = bodyText + 'Overwrite existing game or open new board?';
+      var bodyText = `${bodyText}Overwrite existing game or open new board?`;
       button1 = [overwriteHandler, 'Overwrite'];
       button2 = [newBoardHandler, 'New Board'];
       var showIcons = false;
     }
     else if(gameWithFocus.role === Role.NONE) {
-      var bodyText = bodyText + 'This will clear the current game.';
+      var bodyText = `${bodyText}This will clear the current game.`;
       button1 = [overwriteHandler, 'OK'];
       button2 = ['', 'Cancel']; 
       var showIcons = true;
@@ -4649,13 +4648,13 @@ function openPGNDialog(files: any) {
       var headerTitle = 'Open PGN';
       var bodyTitle = '';
       if(gameWithFocus.role === Role.NONE && multiboardToggle) {
-        var bodyText = bodyText + 'Overwrite existing game or open new board?';
+        var bodyText = `${bodyText}Overwrite existing game or open new board?`;
         button1 = [overwriteHandler, 'Overwrite'];
         button2 = [newBoardHandler, 'New Board'];
         var showIcons = false;
       }
       else if(gameWithFocus.role === Role.NONE) {
-        var bodyText = bodyText + 'This will clear the current game.';
+        var bodyText = `${bodyText}This will clear the current game.`;
         button1 = [overwriteHandler, 'OK'];
         button2 = ['', 'Cancel']; 
         var showIcons = true;
@@ -4699,7 +4698,7 @@ async function openPGNFiles(files: any, createNewBoard: boolean = false) {
           const error = e.target?.error;
           let errorMessage = 'An unknown error occurred';
           if (error)
-            errorMessage = error.name + ' - ' + error.message;
+            errorMessage = `${error.name} - ${error.message}`;
           showFixedDialog({type: 'Failed to open PGN file', msg: errorMessage, btnSuccess: ['', 'OK']}); 
           reject(error);
         };
@@ -4835,13 +4834,13 @@ function updateGameFromMetatags(game: Game) {
     if(whiteName !== game.wname) {
       game.wname = whiteName;
       if(game.isExamining())
-        session.send('wname ' + whiteName);
+        session.send(`wname ${whiteName}`);
       whiteStatus.find('.name').text(metatags.White);
     }
     if(blackName !== game.bname) {
       game.bname = blackName;
       if(game.isExamining())
-        session.send('bname ' + blackName);
+        session.send(`bname ${blackName}`);
       blackStatus.find('.name').text(metatags.Black);
     }
 
@@ -4876,9 +4875,9 @@ function updateGameFromMetatags(game: Game) {
       if(!metatags.White && !metatags.Black)
         var status = '';
       else {
-        var status = (metatags.White || 'Unknown') + ' (' + (metatags.WhiteElo || '?') + ') ' 
-            + (metatags.Black || 'Unknown') + ' (' + (metatags.BlackElo || '?') + ')'
-            + (metatags.Variant ? ' ' + metatags.Variant : '');
+        var status = `${metatags.White || 'Unknown'} (${metatags.WhiteElo || '?'}) `  
+            + `${metatags.Black || 'Unknown'} (${metatags.BlackElo || '?'})`
+            + `${metatags.Variant ? ` ${metatags.Variant}` : ''}`;
 
         if(metatags.TimeControl) {
           if(metatags.TimeControl === '-')
@@ -4886,7 +4885,7 @@ function updateGameFromMetatags(game: Game) {
           else {
             var match = metatags.TimeControl.match(/^(\d+)(?:\+(\d+))?$/);
             if(match)  
-              status += ' ' + (+match[1] / 60) + ' ' + (match[2] || '0');
+              status += ` ${+match[1] / 60} ${match[2] || '0'}`;
           }
         }
       }
@@ -4930,9 +4929,9 @@ function addGameListItems(game: Game) {
     var h = game.historyList[i];
     var description = getGameListDescription(h, true);
     if(description.toLowerCase().includes(game.gameListFilter.toLowerCase()))
-      listElements += `<li style="width: max-content;" class="game-list-item"><a class="dropdown-item" data-index="` + i + `">` + description + `</a></li>`
+      listElements += `<li style="width: max-content;" class="game-list-item"><a class="dropdown-item" data-index="${i}">${description}</a></li>`;
   }
-  $('#game-list-dropdown').append(`<ul id="game-list-menu">` + listElements + `</ul>`);
+  $('#game-list-dropdown').append(`<ul id="game-list-menu">${listElements}</ul>`);
 }
 
 /**
@@ -4947,35 +4946,35 @@ function getGameListDescription(history: History, longDescription: boolean = fal
 
   var dateTimeStr = (tags.Date || tags.UTCDate || '');
   if(tags.Time || tags.UTCTime)
-    dateTimeStr += (tags.Date || tags.UTCDate ? ' - ' : '') + (tags.Time || tags.UTCTime);
+    dateTimeStr += `${(tags.Date || tags.UTCDate) ? ' - ' : ''}${tags.Time || tags.UTCTime}`;
 
   if(tags.White || tags.Black) {
     var description = tags.White || 'unknown';
     if(tags.WhiteElo && tags.WhiteElo !== '0' && tags.WhiteElo !== '-' && tags.WhiteElo !== '?')
-      description += ' (' + tags.WhiteElo + ')';
-    description += ' - ' + tags.Black || 'unknown';
+      description += ` (${tags.WhiteElo})`;
+    description += ` - ${tags.Black || 'unknown'}`;
     if(tags.BlackElo && tags.BlackElo !== '0' && tags.BlackElo !== '-' && tags.BlackElo !== '?')
-      description += ' (' + tags.BlackElo + ')';
+      description += ` (${tags.BlackElo})`;
     if(tags.Result)
-      description += ' [' + tags.Result + ']'; 
+      description += ` [${tags.Result}]`; 
   }
   else {
     description = tags.Event || 'Analysis';
     if(!longDescription)
-      description += ' ' + dateTimeStr;
+      description += ` ${dateTimeStr}`;
   }
 
   if(longDescription) {
     if(dateTimeStr)
-      description += ', ' + dateTimeStr;
+      description += `, ${dateTimeStr}`;
     if(tags.ECO || tags.Opening || tags.Variation || tags.SubVariation) {
-      description += ',';
+      description += `,`;
       if(tags.ECO)
-        description += ' [' + tags.ECO + ']';
+        description += ` [${tags.ECO}]`;
       if(tags.Opening)
-        description += ' ' + tags.Opening;
+        description += ` ${tags.Opening}`;
       else if(tags.Variation) 
-        description += ' ' + tags.Variation + (tags.SubVariation ? ': ' + tags.SubVariation : ''); 
+        description += ` ${tags.Variation}${tags.SubVariation ? `: ${tags.SubVariation}` : ''}`; 
     }
   }
 
@@ -5007,16 +5006,16 @@ $('#game-tools-save-pgn').on('click', (event) => {
 function savePGN(game: Game) {
   var metatags = game.history.metatags;
   var movesStr = breakAtMaxLength(game.history.movesToString(), 80);
-  var pgnStr = game.history.metatagsToString() + '\n\n' + movesStr + ' ' + metatags.Result;
+  var pgnStr = `${game.history.metatagsToString()}\n\n${movesStr} ${metatags.Result}`;
   var wname = metatags.White;
   var bname = metatags.Black;
   var date = metatags.Date.replace(/\./g, '-');
   var time = metatags.Time.replace(/:/g, '.');
 
   if(wname)
-    var filename = wname + '_vs_' + bname + '_' + date + '_' + time + '.pgn';
+    var filename = `${wname}_vs_${bname}_${date}_${time}.pgn`;
   else
-    var filename = 'Analysis_' + date + '_' + time + '.pgn';
+    var filename = `Analysis_${date}_${time}.pgn`;
 
   const data = new Blob([pgnStr], { type: 'text/plain' });
   const url = window.URL.createObjectURL(data);
@@ -5077,7 +5076,7 @@ function setupGameInExamineMode(game: Game) {
   var fenWords = splitFEN(game.history.first().fen);
   
   // starting FEN
-  session.send('bsetup fen ' + fenWords.board);
+  session.send(`bsetup fen ${fenWords.board}`);
 
   // game rules
   // Note bsetup for fr and wild are currently broken on FICS and there is no option for bughouse 
@@ -5086,10 +5085,10 @@ function setupGameInExamineMode(game: Game) {
   else if(game.category.startsWith('wild'))
     session.send('bsetup wild');
   else if(game.category === 'losers' || game.category === 'crazyhouse' || game.category === 'atomic' || game.category === 'suicide')
-    session.send('bsetup ' + game.category);
+    session.send(`bsetup ${game.category}`);
 
   // turn color
-  session.send('bsetup tomove ' + (fenWords.color === 'w' ? 'white' : 'black'));
+  session.send(`bsetup tomove ${fenWords.color === 'w' ? 'white' : 'black'}`);
 
   // castling rights
   var castlingRights = fenWords.castlingRights;
@@ -5109,17 +5108,17 @@ function setupGameInExamineMode(game: Game) {
     var bcastling = 'qside';
   else
     var bcastling = 'none';    
-  session.send('bsetup wcastle ' + wcastling);
-  session.send('bsetup bcastle ' + bcastling);
+  session.send(`bsetup wcastle ${wcastling}`);
+  session.send(`bsetup bcastle ${bcastling}`);
 
   // en passant rights
   var enPassant = fenWords.enPassant;
   if(enPassant !== '-')
-    session.send('bsetup eppos ' + enPassant[0]);
+    session.send(`bsetup eppos ${enPassant[0]}`);
 
   session.send('bsetup done');
-  session.send('wname ' + game.wname);
-  session.send('bname ' + game.bname);
+  session.send(`wname ${game.wname}`);
+  session.send(`bname ${game.bname}`);
 
   // Send and commit move list
   game.commitingMovelist = true;
@@ -5130,8 +5129,8 @@ function setupGameInExamineMode(game: Game) {
   while(hEntry) {
     if(hEntry.move)
       sendMove(hEntry.move);
-    session.send('wclock ' + Clock.MSToHHMMSS(hEntry.wtime));
-    session.send('bclock ' + Clock.MSToHHMMSS(hEntry.btime));
+    session.send(`wclock ${Clock.MSToHHMMSS(hEntry.wtime)}`);
+    session.send(`bclock ${Clock.MSToHHMMSS(hEntry.btime)}`);
     var hEntry = hEntry.next;
   }
   if(!game.history.scratch() && game.history.length())  
@@ -5149,7 +5148,7 @@ function setupGameInExamineMode(game: Game) {
 
   if(!game.statusElement.find('.game-status').html()) {
     game.gameStatusRequested = true;
-    session.send('moves ' + game.id);
+    session.send(`moves ${game.id}`);
   }
 }
 
@@ -5174,7 +5173,7 @@ $('#game-tools-properties').on('click', (event) => {
 
   var headerTitle = 'Game Properties';
   var bodyText = `<textarea style="resize: none" class="form-control game-properties-input" rows="10" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">`
-      + gameWithFocus.history.metatagsToString() + `</textarea>`;
+      + `${gameWithFocus.history.metatagsToString()}</textarea>`;
   var button1 = [okHandler, 'OK'];
   var button2 = ['', 'Cancel']; 
   showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, htmlMsg: true});
@@ -5408,7 +5407,7 @@ $('#remove-pv').on('click', (event) => {
 });
 
 function displayEnginePV(game: Game, pvNum: number, pvEval: string, pvMoves: string) {
-  $('#engine-pvs li').eq(pvNum - 1).html('<b>(' + pvEval + ')</b> ' + pvMoves + '<b/>');
+  $('#engine-pvs li').eq(pvNum - 1).html(`<b>(${pvEval})</b> ${pvMoves}<b/>`);
 
   if(pvNum === 1 && pvMoves) {
     var words = pvMoves.split(/\s+/);
@@ -5475,8 +5474,8 @@ $('#resign').on('click', (event) => {
   if(game.role === Role.PLAYING_COMPUTER) {
     var winner = (game.color === 'w' ? game.bname : game.wname);
     var loser = (game.color === 'w' ? game.wname : game.bname);
-    var gameStr = '(' + game.wname + ' vs. ' + game.bname + ')';
-    var reasonStr = loser + ' resigns';
+    var gameStr = `(${game.wname} vs. ${game.bname})`;
+    var reasonStr = `${loser} resigns`;
     var scoreStr = (winner === game.wname ? '1-0' : '0-1');
     var gameEndData = {
       game_id: -1,
@@ -5484,7 +5483,7 @@ $('#resign').on('click', (event) => {
       loser,
       reason: Reason.Resign,
       score: scoreStr,
-      message: gameStr + ' ' + reasonStr + ' ' + scoreStr
+      message: `${gameStr} ${reasonStr} ${scoreStr}`
     };
     messageHandler(gameEndData);  
   }
@@ -5501,7 +5500,7 @@ $('#abort').on('click', (event) => {
   }
 
   if(game.role === Role.PLAYING_COMPUTER) {
-    var gameStr = '(' + game.wname + ' vs. ' + game.bname + ')';
+    var gameStr = `(${game.wname} vs. ${game.bname})`;
     var reasonStr = 'Game aborted';
     var gameEndData = {
       game_id: -1,
@@ -5509,7 +5508,7 @@ $('#abort').on('click', (event) => {
       loser: '',
       reason: Reason.Abort,
       score: '*',
-      message: gameStr + ' ' + reasonStr + ' *'
+      message: `${gameStr} ${reasonStr} *`
     };
     messageHandler(gameEndData);  
   }
@@ -5541,7 +5540,7 @@ $('#draw').on('click', (event) => {
         gameEval = '';
       gameEval = gameEval.replace(/[#+=]/, '');
       if(gameEval !== '' && game.history.length() >= 60 && (game.color === 'w' ? +gameEval >= 0 : +gameEval <= 0)) {
-        var gameStr = '(' + game.wname + ' vs. ' + game.bname + ')';
+        var gameStr = `(${game.wname} vs. ${game.bname})`;
         var reasonStr = 'Game drawn by mutual agreement';
         var scoreStr = '1/2-1/2';
         var gameEndData = {
@@ -5550,7 +5549,7 @@ $('#draw').on('click', (event) => {
           loser: '',
           reason: Reason.Draw,
           score: scoreStr,
-          message: gameStr + ' ' + reasonStr + ' ' + scoreStr
+          message: `${gameStr} ${reasonStr} ${scoreStr}`
         };
         messageHandler(gameEndData);  
       }
@@ -5658,9 +5657,9 @@ $('#sound-toggle').on('click', (event) => {
   Cookies.set('sound', String(soundToggle), { expires: 365 })
 });
 function updateDropdownSound() {
-  const iconClass = 'dropdown-icon fa fa-volume-' + (soundToggle ? 'up' : 'off');
-  $('#sound-toggle').html('<span id="sound-toggle-icon" class="' + iconClass +
-    '" aria-hidden="false"></span>Sounds ' + (soundToggle ? 'ON' : 'OFF'));
+  const iconClass = `dropdown-icon fa fa-volume-${soundToggle ? 'up' : 'off'}`;
+  $('#sound-toggle').html(`<span id="sound-toggle-icon" class="${iconClass}" ` +
+    `aria-hidden="false"></span>Sounds ${soundToggle ? 'ON' : 'OFF'}`);
 }
 
 $('#notifications-toggle').prop('checked', notificationsToggle);
@@ -5745,10 +5744,10 @@ $('#input-form').on('submit', (event) => {
       else
         var xcmd = 'xkibitz'; 
           
-      text = xcmd + ' ' + gameNum + ' ' + val;
+      text = `${xcmd} ${gameNum} ${val}`;
     } 
     else 
-      text = 't ' + tab + ' ' + val;
+      text = `t ${tab} ${val}`;
   } 
   else
     text = val;
@@ -5790,7 +5789,7 @@ $('#input-form').on('submit', (event) => {
           message: msg,
         });
       }
-      session.send(chatCmd + ' ' + (recipient ? recipient + ' ' : '') + msg);    
+      session.send(`${chatCmd} ${recipient ? `${recipient} ` : ''}${msg}`);    
     }
   }
   else
@@ -5944,11 +5943,11 @@ interface DialogParams {
 }
 
 function createDialog({type = '', title = '', msg = '', btnFailure, btnSuccess, useSessionSend = false, icons = true, progress = false, htmlMsg = false}: DialogParams): JQuery<HTMLElement> { 
-  const dialogId = 'dialog' + dialogCounter++;
+  const dialogId = `dialog${dialogCounter++}`;
   let req = `
-  <div id="` + dialogId + `" class="toast" data-bs-autohide="false" role="status" aria-live="polite" aria-atomic="true">
+  <div id="${dialogId}" class="toast" data-bs-autohide="false" role="status" aria-live="polite" aria-atomic="true">
     <div class="toast-header">
-      <strong class="header-text me-auto">` + type + `</strong>
+      <strong class="header-text me-auto">${type}</strong>
       <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
     <div class="toast-body">`;
@@ -5957,11 +5956,11 @@ function createDialog({type = '', title = '', msg = '', btnFailure, btnSuccess, 
     req += msg;
   else {
     req += `<div class="d-flex align-items-center">
-          <strong class="body-text text-primary my-auto">` + title + ' ' + msg + '</strong>';
+          <strong class="body-text text-primary my-auto">${title} ${msg}</strong>`;
     if (progress) {
-      req += '<div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>';
+      req += `<div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>`;
     }
-    req += '</div>';
+    req += `</div>`;
   }
 
   if((btnSuccess && btnSuccess.length === 2) || (btnFailure && btnFailure.length === 2)) {
@@ -5973,16 +5972,16 @@ function createDialog({type = '', title = '', msg = '', btnFailure, btnSuccess, 
       if(typeof btnSuccess[0] === 'string') {
         var successCmd = `onclick="`;
         if(useSessionSend) 
-          successCmd += `sessionSend('` + btnSuccess[0] + `');`;
+          successCmd += `sessionSend('${btnSuccess[0]}');`;
         else
           successCmd += btnSuccess[0];
         successCmd += `" `;
       }
 
-      req += `<button type="button" ` + successCmd + `class="button-success btn btn-sm btn-outline-success` 
+      req += `<button type="button" ${successCmd}class="button-success btn btn-sm btn-outline-success` 
           + (btnFailure && btnFailure.length === 2 ? ` me-4` : ``) + `" data-bs-dismiss="toast">`
           + (icons ? `<span class="fa fa-check-circle-o" aria-hidden="false"></span> ` : ``) 
-          + btnSuccess[1] + '</button>';
+          + `${btnSuccess[1]}</button>`;
     }
     if (btnFailure && btnFailure.length === 2) {
       var failureCmd = '';
@@ -5991,20 +5990,20 @@ function createDialog({type = '', title = '', msg = '', btnFailure, btnSuccess, 
       if(typeof btnFailure[0] === 'string') {
         var failureCmd = `onclick="`;
         if(useSessionSend) 
-          failureCmd += `sessionSend('` + btnFailure[0] + `');`;
+          failureCmd += `sessionSend('${btnFailure[0]}');`;
         else
           failureCmd += btnFailure[0];
         failureCmd += `" `;
       }
 
-      req += `<button type="button" ` + failureCmd + `" class="button-failure btn btn-sm btn-outline-danger" data-bs-dismiss="toast">` 
+      req += `<button type="button" ${failureCmd}" class="button-failure btn btn-sm btn-outline-danger" data-bs-dismiss="toast">` 
           + (icons ? `<span class="fa fa-times-circle-o" aria-hidden="false"></span> ` : ``)
-          + btnFailure[1] + '</button>';
+          + `${btnFailure[1]}</button>`;
     }
-    req += '</div>';
+    req += `</div>`;
   }
 
-  req += '</div></div>';
+  req += `</div></div>`;
 
   var dialog = $(req);
 
@@ -6173,7 +6172,7 @@ function slideNotification(element: any, direction: 'down' | 'up' | 'left' | 'ri
     // Set initial state before transition
     element.css('z-index', '-1');
     element.addClass('slide-sideways'); 
-    element.css('transform', 'translateX(' + (direction === 'left' ? '-' : '') + '100%)');
+    element.css('transform', `translateX(${direction === 'left' ? '-' : ''}100%)`);
     element.css('opacity', '0');
     element.one('transitionend', (event) => {
       $(event.target).removeClass('slide-sideways');
@@ -6257,8 +6256,8 @@ function notificationMouseDown(e) {
       var yMax = $('#notifications').outerHeight(true);
       var xOffset = Math.min(xMax, Math.max(-xMax, mouse.x - swipeStart.x));
       var yOffset = Math.min(0, mouse.y - swipeStart.y);
-      $('#notifications').css('--dragX', xOffset + 'px');
-      $('#notifications').css('--dragY', yOffset + 'px');
+      $('#notifications').css('--dragX', `${xOffset}px`);
+      $('#notifications').css('--dragY', `${yOffset}px`);
       $('#notifications').css('--opacityY', (yMax - Math.abs(yOffset)) / yMax);   
       $('#notifications').css('--opacityX', (xMax - Math.abs(xOffset)) / xMax);   
     }
@@ -6367,7 +6366,7 @@ export function createTooltip(element: JQuery<HTMLElement>) {
 
   var description = element.attr('data-description');
   if(description) 
-    title = `<b>` + title + `</b><hr class="tooltip-separator"><div>` + description + `</div>`; 
+    title = `<b>${title}</b><hr class="tooltip-separator"><div>${description}</div>`; 
 
   element.tooltip('dispose').tooltip({
     trigger: (isSmallWindow() ? 'hover focus' : 'hover'), // Tooltips stay visible after element is clicked on mobile, but only when hovering on desktop 
@@ -6765,7 +6764,7 @@ function isAttacked(fen: string, square: string, color: string) : boolean {
 
   // Switch to the right turn
   if(History.getTurnColorFromFEN(fen) !== color)
-    fen = fen.replace(' ' + oppositeColor + ' ', ' ' + color + ' ');
+    fen = fen.replace(` ${oppositeColor} `, ` ${color} `);
 
   var chess = new Chess(fen);
 
@@ -6791,24 +6790,24 @@ function getAdjacentSquares(square: string) : string[] {
   var file = square[0];
   var rank = square[1];
   if(rank !== '1') 
-    adjacent.push(file + (+rank - 1));
+    adjacent.push(`${file}${+rank - 1}`);
   if(rank !== '8')
-    adjacent.push(file + (+rank + 1));
+    adjacent.push(`${file}${+rank + 1}`);
   if(file !== 'a') {
     var prevFile = String.fromCharCode(file.charCodeAt(0) - 1);
-    adjacent.push(prevFile + rank);
+    adjacent.push(`${prevFile}${rank}`);
     if(rank !== '1') 
-      adjacent.push(prevFile + (+rank - 1));
+      adjacent.push(`${prevFile}${+rank - 1}`);
     if(rank !== '8')
-      adjacent.push(prevFile + (+rank + 1));
+      adjacent.push(`${prevFile}${+rank + 1}`);
   }
   if(file !== 'h') {
     var nextFile = String.fromCharCode(file.charCodeAt(0) + 1);
-    adjacent.push(nextFile + rank);
+    adjacent.push(`${nextFile}${rank}`);
     if(rank !== '1') 
-      adjacent.push(nextFile + (+rank - 1));
+      adjacent.push(`${nextFile}${+rank - 1}`);
     if(rank !== '8')
-      adjacent.push(nextFile + (+rank + 1));
+      adjacent.push(`${nextFile}${+rank + 1}`);
   }
   return adjacent;
 }
@@ -6868,7 +6867,7 @@ function generateChess960FEN(idn?: number): string {
 
   var whiteBackRow = backRow.join('');
   var blackBackRow = whiteBackRow.toLowerCase();
-  var fen = blackBackRow + '/pppppppp/8/8/8/8/PPPPPPPP/' + whiteBackRow + ' w KQkq - 0 1';
+  var fen = `${blackBackRow}/pppppppp/8/8/8/8/PPPPPPPP/${whiteBackRow} w KQkq - 0 1`;
 
   return fen;
 }

@@ -5,29 +5,29 @@
 import Cookies from 'js-cookie';
 import packageInfo from '../package.json';
 
-$('#version').text('Version: ' + packageInfo.version);
+$('#version').text(`Version: ${packageInfo.version}`);
 
 // text size controls
 const textSize = Cookies.get('text-size');
 if (textSize !== undefined) {
-  $('.tab-content').css('font-size', textSize + 'em');
+  $('.tab-content').css('font-size', `${textSize}em`);
   $('#textsize-range').val(parseInt(textSize, 10));
 }
 
 $('#textsize-range').on('change', (event) => {
-  $('.tab-content').css('font-size', String($(event.target).val()) + 'em');
+  $('.tab-content').css('font-size', `${String($(event.target).val())}em`);
   Cookies.set('text-size', String($(event.target).val()), { expires: 365 })
 });
 
 function setStyle(component: string, name: string) {
-  $('#' + component).attr('href', 'assets/css/' + component + 's/' + name + '.css');
+  $('#' + component).attr('href', `assets/css/${component}s/${name}.css`);
   Cookies.set(component, name, { expires: 365 });
 }
 
 // color theme controls
 const theme = Cookies.get('theme');
 if (theme !== undefined) {
-  $('#theme').attr('href', 'assets/css/themes/' + theme + '.css');
+  $('#theme').attr('href', `assets/css/themes/${theme}.css`);
 }
 
 $('#theme-default').on('click', (event) => { setStyle('theme', 'default') });
@@ -41,7 +41,7 @@ $('#theme-newspaper').on('click', (event) => { setStyle('theme', 'newspaper') })
 // board piece controls
 const piece = Cookies.get('piece');
 if (piece !== undefined) {
-  $('#piece').attr('href', 'assets/css/pieces/' + piece + '.css');
+  $('#piece').attr('href', `assets/css/pieces/${piece}.css`);
 }
 
 $('#pieces-merida').on('click', (event) => { setStyle('piece', 'default') });

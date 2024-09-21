@@ -165,8 +165,8 @@ export class Parser {
         return [p1, p2, Reason.Draw];
       case 'adjourned':
       case 'adjourned by mutual agreement':
-      case 'courtesyadjourned by ' + p1:
-      case 'courtesyadjourned by ' + p2:
+      case `courtesyadjourned by ${p1}`:
+      case `courtesyadjourned by ${p2}`:
       case 'lost connection; game adjourned':
         return [p1, p2, Reason.Adjourn];
     }

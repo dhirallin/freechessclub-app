@@ -90,11 +90,11 @@ export class Session {
   }
 
   public setUser(user: string): void {
-    $('#session-status').html('<span style="overflow: hidden; text-overflow: ellipsis"><span class="fa fa-circle" aria-hidden="false"></span>&nbsp;<span class="h6">' + user + '</span></span>');
+    $('#session-status').html(`<span style="overflow: hidden; text-overflow: ellipsis"><span class="fa fa-circle" aria-hidden="false"></span>&nbsp;<span class="h6">${user}</span></span>`);
     if(!this.user) { // Only display popover if this is a new user or guest
       $('#session-status').popover({
         animation: true,
-        content: 'Connected as ' + user + '. Click here to connect as a different user!',
+        content: `Connected as ${user}. Click here to connect as a different user!`,
         placement: 'top',
       });
       $('#session-status').popover('show');
@@ -116,9 +116,9 @@ export class Session {
     let text = '';
     if (login) {
       loginOptions += '?login=1';
-      text = '[' + user;
-      if (pass !== undefined && pass.length > 0) {
-        text += ',' + btoa(pass);
+      text = `[${user}`;
+      if(pass !== undefined && pass.length > 0) {
+        text += `,${btoa(pass)}`;
       }
       text += ']';
     }
