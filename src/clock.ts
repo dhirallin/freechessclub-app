@@ -95,7 +95,7 @@ export class Clock {
       fractionalTimeElement.hide();
     else {
       var msPart = Math.abs(time) - (Math.floor(Math.abs(time) / 1000) * 1000); // Get fractional part of time remaining
-      fractionalTimeElement.text('.' + (Math.floor(msPart / 100))); // Get 10ths of a second digit
+      fractionalTimeElement.text(`.${Math.floor(msPart / 100)}`); // Get 10ths of a second digit
       fractionalTimeElement.show();
     }
   }

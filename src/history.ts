@@ -640,7 +640,7 @@ export class History {
         var parentMoveNo = History.getMoveNoFromFEN(entry.parent.fen);
         var parentTurnColor = History.getTurnColorFromFEN(entry.parent.fen);
         var parentPeriods = (parentTurnColor === 'w' ? '...' : '.');  
-        movesStr += '(' + parentMoveNo + parentPeriods + entry.parent.move.san + ' ';
+        movesStr += `(${parentMoveNo}${parentPeriods}${entry.parent.move.san} `;
         showMoveNo = false;
       }
 
@@ -650,23 +650,23 @@ export class History {
           movesStr += '(';      
 
         if(entry.commentBefore) 
-          movesStr += '{' + entry.commentBefore + '} ';
+          movesStr += `{${entry.commentBefore}} `;
 
         var moveNo = History.getMoveNoFromFEN(entry.fen);
         var periods = (turnColor === 'w' ? '...' : '.');
-        movesStr += moveNo + periods;
+        movesStr += `${moveNo}${periods}`;
         showMoveNo = false;
       }
-      movesStr += entry.move.san + ' ';
+      movesStr += `${entry.move.san} `;
 
       if(entry.nags.length) {
         for(let nag of entry.nags) 
-          movesStr += nag + ' ';
+          movesStr += `${nag} `;
         showMoveNo = true;
       }
 
       if(entry.commentAfter) {
-        movesStr += '{' + entry.commentAfter + '} ';
+        movesStr += `{${entry.commentAfter}} `;
         showMoveNo = true;
       }
     }, 
@@ -781,13 +781,13 @@ export class History {
       }
     }
     
-    var cell = $('<span class="outer-move d-inline-flex"><span class="move annotation px-1">' + san + '</span></span>');
+    var cell = $(`<span class="outer-move d-inline-flex"><span class="move annotation px-1">${san}</span></span>`);
     if(ply % 2 === 0) 
-      cell.prepend('<span class="moveno ms-1">' + moveNo + '.</span>'); // Prepend move number for white move
+      cell.prepend(`<span class="moveno ms-1">${moveNo}.</span>`); // Prepend move number for white move
 
     if(!prevEntry || !prevEntry.move) { // Prepend move number if this is the first move in the move list
       if(ply % 2 === 1)
-        cell.prepend('<span class="moveno ms-1">' + moveNo + '...</span>');
+        cell.prepend(`<span class="moveno ms-1">${moveNo}...</span>`);
       moveList.append(cell);
       var moveNoElement = cell.find('moveno');
       moveNoElement.removeClass('ms-1');
@@ -805,9 +805,9 @@ export class History {
       // following a subvariation
       if(prevElement.hasClass('subvariation') || entry === entry.first) {
         if(ply % 2 == 0 && !prevElement.hasClass('subvariation') && entry.parent.next?.moveListCellElement) 
-          entry.parent.next.moveListCellElement.prepend('<span class="moveno ms-1">' + moveNo + '...</span>');
+          entry.parent.next.moveListCellElement.prepend(`<span class="moveno ms-1">${moveNo}...</span>`);
         else if(ply % 2 === 1)
-          cell.prepend('<span class="moveno ms-1">' + moveNo + '...</span>');
+          cell.prepend(`<span class="moveno ms-1">${moveNo}...</span>`);
       }
     }
 
@@ -863,7 +863,7 @@ export class History {
     var ply = entry.ply;
     var moveNo = moveNo = Math.floor(ply / 2);
 
-    const cellBody = '<a class="annotation" href="javascript:void(0);">' + san + '</a>';
+    const cellBody = `<a class="annotation" href="javascript:void(0);">${san}</a>`;
 
     // Find previous td cell before the insertion point
 
@@ -890,17 +890,17 @@ export class History {
     var cell;  
     if(!prevCell || prevCell.length === 0) { // Move is the first move in the move table
       if(ply % 2 === 0) { 
-        moveTable.append('<tr><th scope="row">' + moveNo + '</th><td class="selectable">' + cellBody + '</td><td></td></tr>');
+        moveTable.append(`<tr><th scope="row">${moveNo}</th><td class="selectable">${cellBody}</td><td></td></tr>`);
         cell = moveTable.find('td:eq(0)');      
       }
       else {
-        moveTable.append('<tr><th scope="row">' + moveNo + '</th><td>...</td><td class="selectable">' + cellBody + '</td></tr>');
+        moveTable.append(`<tr><th scope="row">${moveNo}</th><td>...</td><td class="selectable">${cellBody}</td></tr>`);
         cell = moveTable.find('td:eq(1)');   
       }
     }
     else if(prevCell.children('table').length || entry === entry.first) { // Move is first move in subvariation or first move following a subvariation
       if(ply % 2 == 0) { // New move is a white move (column 1)
-        var newRow = $('<tr><th scope="row">' + moveNo + '</th><td class="selectable">' + cellBody + '</td><td></td></tr>');
+        var newRow = $(`<tr><th scope="row">${moveNo}</th><td class="selectable">${cellBody}</td><td></td></tr>`);
         cell = newRow.find('td:eq(0)');
 
         // Add new subvariation as a nested table
@@ -937,7 +937,7 @@ export class History {
           prevCell.parent().after(newRow);
       }
       else { // new move is a black move (column 2)
-        var newRow = $('<tr><th scope="row">' + moveNo + '</th><td>...</td><td class="selectable">' + cellBody + '</td></tr>');
+        var newRow = $(`<tr><th scope="row">${moveNo}</th><td>...</td><td class="selectable">${cellBody}</td></tr>`);
         cell = newRow.find('td:eq(1)');
 
         if(entry === entry.first) { // first move in subvariation
@@ -953,7 +953,7 @@ export class History {
       cell = prevCell.next();
 
       if(!cell.length) { // move is a white move (column 1)
-        prevCell.parent().after('<tr><th scope="row">' + moveNo + '</th><td class="selectable">' + cellBody + '</td><td></td></tr>');
+        prevCell.parent().after(`<tr><th scope="row">${moveNo}</th><td class="selectable">${cellBody}</td><td></td></tr>`);
         cell = prevCell.parent().next().find('td:eq(0)');
       }
       else { // move is a black move (column 2)
@@ -1204,8 +1204,8 @@ export class History {
         nagStr += (a ? a.symbol : '');
       }
 
-      entry.moveListCellElement.find('.move').html(entry.move.san + nagStr);
-      entry.moveTableCellElement.find('a').html(entry.move.san + nagStr);
+      entry.moveListCellElement.find('.move').html(`${entry.move.san}${ nagStr}`);
+      entry.moveTableCellElement.find('a').html(`${entry.move.san}${nagStr}`);
     }
   }
 
@@ -1248,16 +1248,16 @@ export class History {
     let year = now.getUTCFullYear();
     let month = String(now.getUTCMonth() + 1).padStart(2, '0'); 
     let day = String(now.getUTCDate()).padStart(2, '0'); 
-    var date = year + '.' + month + '.' + day;
+    var date = `${year}.${month}.${day}`;
     let hours = String(now.getUTCHours()).padStart(2, '0');
     let minutes = String(now.getUTCMinutes()).padStart(2, '0');
     let seconds = String(now.getUTCSeconds()).padStart(2, '0');
-    var time = hours + ':' + minutes + ':' + seconds;
+    var time = `${hours}:${minutes}:${seconds}`;
 
     if(!game.time && !game.inc)
       var timeControl = '-';
     else
-      var timeControl = game.time * 60 + '+' + game.inc; 
+      var timeControl = `${game.time * 60}+${game.inc}`; 
 
     // If we are at the start of the game and it's a non-standard position set the SetUp and FEN metatags
     var isSetupPosition = game.move === 'none' && game.fen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -1342,7 +1342,7 @@ export class History {
     var tagsString = '';
     var tags = this.metatags;
     for(let key in tags) 
-      tagsString += '[' + key + ' \"' + tags[key] + '\"]\n';
+      tagsString += `[${key} "${tags[key]}"]\n`;
     tagsString = tagsString.slice(0, -1); 
 
     return tagsString;
