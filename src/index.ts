@@ -5365,20 +5365,12 @@ function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: number, even
     }
   }
 
-  if(event && event.type === 'touchstart') {
-    $(document).one('touchend touchcancel touchmove', function(event) {
-      if(event.type === 'touchmove')
-        closeMenuEventHandler(event);
-      else 
-        document.addEventListener('touchstart', closeMenuEventHandler, {passive: false});
-    });
-  }
-  else {
-    setTimeout(() => {
-      $(document).on('wheel.closeMenu mousedown.closeMenu keydown.closeMenu', closeMenuEventHandler);
-      document.addEventListener('touchstart', closeMenuEventHandler, {passive: false});
-    }, 0);
-  }
+  // Set a timeout before creating 'close context menu' listeners, so that a mouse click that occurs at the 
+  // same time as the menu was opened doesn't immediately trigger its closing
+  setTimeout(() => {
+    $(document).on('wheel.closeMenu mousedown.closeMenu keydown.closeMenu', closeMenuEventHandler);
+    document.addEventListener('touchstart', closeMenuEventHandler, {passive: false});
+  }, 0);
 }
 
 /**
