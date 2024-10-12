@@ -6791,7 +6791,7 @@ function setupGameInExamineMode(game: Game) {
   }
 }
 
-/** Triggered when 'Board Setup' menu option is selected */ 
+/** Triggered when 'Setup Board' menu option is selected */ 
 $('#game-tools-setup').on('click', (event) => {
   enterBoardSetup(gameWithFocus);
 });
