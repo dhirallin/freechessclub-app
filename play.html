@@ -411,7 +411,7 @@
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item noselect" id="game-tools-clone"><span class="fa-solid fa-copy dropdown-icon" aria-hidden="false"></span>Duplicate Game</a></li>
                                 <li><a class="dropdown-item noselect" id="game-tools-examine"><span class="fa-brands fa-slideshare dropdown-icon" aria-hidden="false"></span>Examine Mode (Shared)</a></li>
-                                <li><a class="dropdown-item noselect" id="game-tools-setup"><span class="fa-solid fa-chess-board dropdown-icon" aria-hidden="false"></span>Board Setup</a></li>
+                                <li><a class="dropdown-item noselect" id="game-tools-setup"><span class="fa-solid fa-chess-board dropdown-icon" aria-hidden="false"></span>Setup Board</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item noselect" id="game-tools-properties"><span class="fa-solid fa-file-pen dropdown-icon" aria-hidden="false"></span>Game Properties</a></li>
                                 <li style="display: none"><a class="dropdown-item noselect" id="game-tools-close"><span class="fa-solid fa-xmark dropdown-icon" aria-hidden="false"></span>Close Game</a></li>
@@ -529,7 +529,16 @@
                 </div>
               </div>
               <div class="top-panel card-header p-0">
-                <div class="board-setup-top h-100 w-100 d-flex justify-content-between align-items-center noselect" style="display: none"></div>
+                <div class="setup-board setup-board-top h-100 w-100 justify-content-between align-items-center noselect" style="display: none">
+                  <div class="flex-grow-1 d-flex justify-content-end setup-board-black">
+                    <span><img src="assets/css/images/pieces/merida/bP.svg"/ class="setup-board-piece"></span>
+                    <span><img src="assets/css/images/pieces/merida/bR.svg"/ class="setup-board-piece"></span>
+                    <span><img src="assets/css/images/pieces/merida/bB.svg"/ class="setup-board-piece"></span>
+                    <span><img src="assets/css/images/pieces/merida/bN.svg"/ class="setup-board-piece"></span>
+                    <span><img src="assets/css/images/pieces/merida/bQ.svg"/ class="setup-board-piece"></span>
+                    <span><img src="assets/css/images/pieces/merida/bK.svg"/ class="setup-board-piece"></span>
+                  </div>
+                </div>
                 <div class="h-100 w-100 justify-content-between align-items-center status noselect opponent-status" style="display: flex">
                   <div class="d-flex flex-grow-1 overflow-hidden align-items-center">
                     <div class="d-flex flex-grow-1 overflow-hidden align-items-center name-rating">

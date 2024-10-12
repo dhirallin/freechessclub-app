@@ -245,6 +245,14 @@ html, body {
   flex-shrink: 0;
 }
 
+.setup-board {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+.setup-board-piece {
+  width: 48px;
+}
+
 .game-card {
   --game-tie-color: #fcddae;
   --game-win-color: #d4f9d9;
