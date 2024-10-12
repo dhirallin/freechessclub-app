@@ -381,6 +381,9 @@ html, body {
 #game-tools-save-pgn .dropdown-icon {
   padding-right: 0.25rem;
 }
+#game-tools-setup .dropdown-icon {
+  padding-right: 0.125rem; 
+}
 #game-tools-close .dropdown-icon {
   padding-left: 0.125rem; 
   padding-right: 0.25rem;
