@@ -6791,6 +6791,23 @@ function setupGameInExamineMode(game: Game) {
   }
 }
 
+/** Triggered when 'Board Setup' menu option is selected */ 
+$('#game-tools-setup').on('click', (event) => {
+  enterBoardSetup(gameWithFocus);
+});
+
+function enterBoardSetup(game: Game) {
+  game.element.find('.status').hide();
+  game.element.find('.board-setup-top').css('display', 'flex');
+  game.element.find('.board-setup-bottom').css('display', 'flex');
+}
+
+function leaveBoardSetup(game: Game) {
+  game.element.find('.board-setup-top').hide();
+  game.element.find('.board-setup-bottom').hide();
+  game.element.find('.status').css('display', 'flex');
+}
+
 /** 
  * Triggered when the 'Game Properties' menu item is selected.
  * Displays the PGN metatags associated with the game which can then be modified.
