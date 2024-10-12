@@ -6796,18 +6796,18 @@ function setupGameInExamineMode(game: Game) {
 
 /** Triggered when 'Setup Board' menu option is selected */ 
 $('#game-tools-setup').on('click', (event) => {
-  enterSetupBoard(gameWithFocus);
+  setupBoard(gameWithFocus);
 });
 
-function enterSetupBoard(game: Game) {
+function setupBoard(game: Game) {
   game.element.find('.status').hide();
-  game.element.find('.board-setup-top').css('display', 'flex');
-  game.element.find('.board-setup-bottom').css('display', 'flex');
+  game.element.find('.setup-board-top').css('display', 'flex');
+  game.element.find('.setup-board-bottom').css('display', 'flex');
 }
 
 function leaveSetupBoard(game: Game) {
-  game.element.find('.board-setup-top').hide();
-  game.element.find('.board-setup-bottom').hide();
+  game.element.find('.setup-board-top').hide();
+  game.element.find('.setup-board-bottom').hide();
   game.element.find('.status').css('display', 'flex');
 }
 
