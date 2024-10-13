@@ -251,9 +251,14 @@ html, body {
   padding-right: 0.5rem;
   font-size: calc(var(--panel-height) / 3.5);
 }
-.setup-board button {
+#reset-board, #clear-board {
   font-size: calc(var(--panel-height) / 1.8);
-  padding: 0.5rem;
+  padding: 0.25em;
+}
+#color-to-move-button {
+  font-size: calc(var(--panel-height) / 3.5);
+  --bs-btn-padding-x: 0.75em;
+  --bs-btn-padding-y: 0.375em;
 }
 .setup-board .setup-board-pieces {
   max-width: calc(6 * (var(--panel-height) - 8px));
