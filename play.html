@@ -530,7 +530,7 @@
               </div>
               <div class="top-panel card-header p-0">
                 <div class="setup-board setup-board-top h-100 w-100 justify-content-between align-items-center noselect" style="display: none">
-                  <div class="cg-wrap flex-grow-1 d-flex justify-content-end align-items-center setup-board-black">
+                  <div class="flex-grow-1 h-100 d-flex justify-content-end align-items-center setup-board-black">
                     <div class="me-3">
                       <div class="m-0 form-check">
                         <input class="form-check-input" type="checkbox" id="can-short-castle-black" checked>
@@ -541,12 +541,14 @@
                         <label class="form-check-label" for="can-long-castle-black">O-O-O</label>
                       </div>
                     </div>
-                    <piece class="black king setup-board-piece" style="margin-right: 4px""></piece>
-                    <piece class="black queen setup-board-piece" style="margin-right: 3px"></piece>
-                    <piece class="black rook setup-board-piece"></piece>
-                    <piece class="black bishop setup-board-piece" style="margin-right: 1px"></piece>
-                    <piece class="black knight setup-board-piece"></piece>
-                    <piece class="black pawn setup-board-piece"></piece>
+                    <div class="cg-wrap h-100 flex-grow-1 setup-board-pieces">
+                      <piece class="black king setup-board-piece"></piece>
+                      <piece class="black queen setup-board-piece"></piece>
+                      <piece class="black rook setup-board-piece"></piece>
+                      <piece class="black bishop setup-board-piece"></piece>
+                      <piece class="black knight setup-board-piece"></piece>
+                      <piece class="black pawn setup-board-piece"></piece>
+                    </div>
                   </div>
                 </div>
                 <div class="h-100 w-100 justify-content-between align-items-center status noselect opponent-status" style="display: flex">
