@@ -249,9 +249,11 @@ html, body {
 .setup-board {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
-}
-.setup-board .can-castle {
   font-size: calc(var(--panel-height) / 3.5);
+}
+.setup-board button {
+  font-size: calc(var(--panel-height) / 1.8);
+  padding: 0.5rem;
 }
 .setup-board .setup-board-pieces {
   max-width: calc(6 * (var(--panel-height) - 8px));
