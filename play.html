@@ -538,13 +538,13 @@
                   </button>
                   <div class="flex-grow-1 h-100 d-flex justify-content-end align-items-center setup-board-black">
                     <div class="ms-2 me-3 can-castle">
-                      <div class="m-0 form-check" style="min-height: 0;">
-                        <input class="form-check-input" type="checkbox" id="can-short-castle-black" checked>
-                        <label class="form-check-label" for="can-short-castle-black">O-O</label>
+                      <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can black castle king-side?">
+                        <input class="form-check-input" type="checkbox" id="can-kingside-castle-black" checked>
+                        <label class="form-check-label" for="can-kingside-castle-black">O-O</label>
                       </div>
-                      <div class="m-0 form-check" style="min-height: 0;">
-                        <input class="form-check-input" type="checkbox" id="can-long-castle-black" checked>
-                        <label class="form-check-label" for="can-long-castle-black">O-O-O</label>
+                      <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can black castle queen-side?">
+                        <input class="form-check-input" type="checkbox" id="can-queenside-castle-black" checked>
+                        <label class="form-check-label" for="can-queenside-castle-black">O-O-O</label>
                       </div>
                     </div>
                     <div class="cg-wrap h-100 d-flex align-items-center flex-grow-1 setup-board-pieces">
@@ -578,6 +578,28 @@
                 </div>
               </div>
               <div class="bottom-panel card-footer p-0">
+                <div class="setup-board setup-board-bottom h-100 w-100 justify-content-between align-items-center noselect" style="display: none">
+                  <div class="flex-grow-1 h-100 d-flex justify-content-end align-items-center setup-board-white">
+                    <div class="ms-2 me-3 can-castle">
+                      <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can white castle king-side?">
+                        <input class="form-check-input" type="checkbox" id="can-kingside-castle-white" checked>
+                        <label class="form-check-label" for="can-kingside-castle-white">O-O</label>
+                      </div>
+                      <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can white castle queen-side?">
+                        <input class="form-check-input" type="checkbox" id="can-queenside-castle-white" checked>
+                        <label class="form-check-label" for="can-queenside-castle-white">O-O-O</label>
+                      </div>
+                    </div>
+                    <div class="cg-wrap h-100 d-flex align-items-center flex-grow-1 setup-board-pieces">
+                      <piece class="white king setup-board-piece"></piece>
+                      <piece class="white queen setup-board-piece"></piece>
+                      <piece class="white rook setup-board-piece"></piece>
+                      <piece class="white bishop setup-board-piece"></piece>
+                      <piece class="white knight setup-board-piece"></piece>
+                      <piece class="white pawn setup-board-piece"></piece>
+                    </div>
+                  </div>
+                </div>
                 <div class="h-100 w-100 justify-content-between align-items-center status noselect player-status" style="display: flex">
                   <div class="d-flex flex-grow-1 overflow-hidden align-items-center">
                     <div class="d-flex flex-grow-1 overflow-hidden align-items-center name-rating">
