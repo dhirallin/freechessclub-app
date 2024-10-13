@@ -249,8 +249,10 @@ html, body {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
 }
-.setup-board-piece {
+.setup-board .setup-board-piece {
+  position: static;
   width: 48px;
+  height: 48px;
 }
 
 .game-card {
