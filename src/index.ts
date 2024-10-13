@@ -4548,8 +4548,6 @@ function setPanelSizes() {
   if(!isSmallWindow() && prevSizeCategory === SizeCategory.Small) {
     topPanel.css('height', '');
     bottomPanel.css('height', '');
-    topPanel.css('--height', topPanel.css('height'));
-    bottomPanel.css('--height', bottomPanel.css('height'));
   }
 
   // Make sure the board is smaller than the window height and also leaves room for the other columns' min-widths
@@ -4592,13 +4590,13 @@ function setPanelSizes() {
 
     topPanel.height(playerStatusHeight);
     bottomPanel.height(playerStatusHeight);
-    topPanel.css('--height', topPanel.css('height'));
-    bottomPanel.css('--height', bottomPanel.css('height'));
   }
+
+  topPanel.css('--height', topPanel.css('height'));
+  bottomPanel.css('--height', bottomPanel.css('height'));
 
   setLeftColumnSizes();
   setRightColumnSizes();
-
 
   // Adjust Notifications drop-down width
   if(isSmallWindow() && prevSizeCategory !== SizeCategory.Small) 

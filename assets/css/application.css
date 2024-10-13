@@ -250,7 +250,7 @@ html, body {
   padding-right: 0.5rem;
 }
 .setup-board-pieces {
-  max-width: calc(48 * 6px);
+  max-width: calc(6 * (var(--height) - 8px));
 }
 .setup-board .setup-board-piece {
   display: inline-block;
