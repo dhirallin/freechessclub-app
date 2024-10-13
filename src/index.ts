@@ -4542,12 +4542,10 @@ function setPanelSizes() {
   // Reset player status panels that may have been previously slimmed down on single column screen
   var maximizedGame = getMainGame();
   var maximizedGameCard = maximizedGame.element;
-  var topPanel = maximizedGameCard.find('.top-panel');
-  var bottomPanel = maximizedGameCard.find('.bottom-panel');
 
   if(!isSmallWindow() && prevSizeCategory === SizeCategory.Small) {
-    topPanel.css('height', '');
-    bottomPanel.css('height', '');
+    maximizedGameCard.find('.top-panel').css('--panel-height', '');
+    maximizedGameCard.find('.bottom-panel').css('--panel-height', '');
   }
 
   // Make sure the board is smaller than the window height and also leaves room for the other columns' min-widths
@@ -4588,12 +4586,9 @@ function setPanelSizes() {
     var playerStatusHeight = ($(window).height() - addressBarHeight - $('#board-card').outerHeight() - $('#left-panel-footer').outerHeight() - $('#right-panel-header').outerHeight() - cardBorders) / 2 - playerStatusBorder;
     playerStatusHeight = Math.min(Math.max(playerStatusHeight, originalStatusHeight - 20), originalStatusHeight);
 
-    topPanel.height(playerStatusHeight);
-    bottomPanel.height(playerStatusHeight);
+    maximizedGameCard.find('.top-panel').css('--panel-height', playerStatusHeight + 'px');
+    maximizedGameCard.find('.bottom-panel').css('--panel-height', playerStatusHeight + 'px');
   }
-
-  topPanel.css('--height', topPanel.css('height'));
-  bottomPanel.css('--height', bottomPanel.css('height'));
 
   setLeftColumnSizes();
   setRightColumnSizes();

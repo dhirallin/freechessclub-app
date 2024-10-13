@@ -238,7 +238,8 @@ html, body {
 }
 
 .top-panel, .bottom-panel {
-  height: 56px;
+  --panel-height: 56px;
+  height: var(--panel-height);
   padding-top: 0;
   padding-bottom: 0;
   display: flex;  
@@ -249,8 +250,11 @@ html, body {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
 }
-.setup-board-pieces {
-  max-width: calc(6 * (var(--height) - 8px));
+.setup-board .can-castle {
+  font-size: calc(var(--panel-height) / 3.5);
+}
+.setup-board .setup-board-pieces {
+  max-width: calc(6 * (var(--panel-height) - 8px));
 }
 .setup-board .setup-board-piece {
   display: inline-block;
