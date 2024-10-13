@@ -269,6 +269,8 @@ html, body {
   flex: 1;
   height: auto;
   aspect-ratio: 1 / 1;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .game-card {
