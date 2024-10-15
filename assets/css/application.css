@@ -257,7 +257,7 @@ html, body {
   font-size: calc(min(var(--panel-width) / 16, var(--panel-height) / 1.8));
   padding: 0.25em;
 }
-#color-to-move-button {
+.color-to-move-button {
   font-size: calc(min(var(--panel-width) / 32, var(--panel-height) / 3.5));
   --bs-btn-padding-x: 0.75em;
   --bs-btn-padding-y: 0.375em;

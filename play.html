@@ -531,22 +531,26 @@
               <div class="top-panel card-header p-0">
                 <div class="setup-board setup-board-top h-100 w-100 justify-content-between align-items-center noselect" style="display: none">
                   <div class="setup-board-buttons">
-                    <button type="button" id="reset-board" class="btn btn-outline-secondary btn-transparent" data-bs-toggle="tooltip" title="Reset to initial position">
+                    <button type="button" class="reset-board btn btn-outline-secondary btn-transparent" data-bs-toggle="tooltip" title="Reset to initial position">
                       <span class="fa-solid fa-rotate-left" aria-hidden="false"></span>
                     </button>
-                    <button type="button" id="clear-board" class="btn btn-outline-secondary btn-transparent" data-bs-toggle="tooltip" title="Clear board">
+                    <button type="button" class="clear-board btn btn-outline-secondary btn-transparent" data-bs-toggle="tooltip" title="Clear board">
                       <span class="fa-solid fa-trash-can" aria-hidden="false"></span>
                     </button>
                   </div>
                   <div class="cg-wrap flex-grow-1 h-100 d-flex flex-grow-1 justify-content-end align-items-center setup-board-black">
                     <div class="can-castle">
                       <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can black castle king-side?">
-                        <input class="form-check-input" type="checkbox" id="can-kingside-castle-black" checked>
-                        <label class="form-check-label" for="can-kingside-castle-black">O-O</label>
+                        <label class="form-check-label">
+                          <input class="form-check-input can-kingside-castle-black" type="checkbox" checked>
+                          O-O
+                        </label>
                       </div>
                       <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can black castle queen-side?">
-                        <input class="form-check-input" type="checkbox" id="can-queenside-castle-black" checked>
-                        <label class="form-check-label" for="can-queenside-castle-black">O-O-O</label>
+                        <label class="form-check-label">
+                          <input class="form-check-input can-queenside-castle-black" type="checkbox" checked>
+                          O-O-O
+                        </label>
                       </div>
                     </div>
                     <piece class="black king setup-board-piece"></piece>
@@ -580,19 +584,23 @@
               <div class="bottom-panel card-footer p-0">
                 <div class="setup-board setup-board-bottom h-100 w-100 justify-content-between align-items-center noselect" style="display: none">
                   <button class="btn btn-outline-secondary dropdown-toggle" id="color-to-move-button" type="button" data-bs-toggle="dropdown" aria-expanded="false">White's move</button>
-                  <ul class="dropdown-menu" id="color-to-move-menu">
+                  <ul class="dropdown-menu" class="color-to-move-menu">
                     <li><a class="dropdown-item">White to move</a></li>
                     <li><a class="dropdown-item">Black to move</a></li>
                   </ul>
                   <div class="cg-wrap flex-grow-1 h-100 d-flex justify-content-end align-items-center setup-board-white">
                     <div class="can-castle">
                       <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can white castle king-side?">
-                        <input class="form-check-input" type="checkbox" id="can-kingside-castle-white" checked>
-                        <label class="form-check-label" for="can-kingside-castle-white">O-O</label>
+                        <label class="form-check-label">
+                          <input class="form-check-input can-kingside-castle-white" type="checkbox" checked>  
+                          O-O
+                        </label>
                       </div>
                       <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can white castle queen-side?">
-                        <input class="form-check-input" type="checkbox" id="can-queenside-castle-white" checked>
-                        <label class="form-check-label" for="can-queenside-castle-white">O-O-O</label>
+                        <label class="form-check-label">
+                          <input class="form-check-input can-queenside-castle-white" type="checkbox" checked>
+                          O-O-O
+                        </label>
                       </div>
                     </div>
                     <piece class="white king setup-board-piece"></piece>
