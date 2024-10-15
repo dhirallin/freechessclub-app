@@ -246,11 +246,14 @@ html, body {
 }
 
 .setup-board {
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
   font-size: calc(min(var(--panel-width) / 32, var(--panel-height) / 3.5));
 }
-#reset-board, #clear-board {
+.setup-board-buttons {
+  min-width: 8.25em;
+}
+.setup-board-buttons button {
   font-size: calc(min(var(--panel-width) / 16, var(--panel-height) / 1.8));
   padding: 0.25em;
 }
