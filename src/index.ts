@@ -4663,6 +4663,14 @@ function setRightColumnSizes() {
       var boardAreaScrollbarWidth = $('#secondary-board-area')[0].offsetWidth - $('#secondary-board-area')[0].clientWidth; 
       var innerWidth = $('#secondary-board-area').width() - boardAreaScrollbarWidth - 1;
       setGameCardSize(game, innerWidth / cardsPerRow - parseInt($('#secondary-board-area').css('gap')) * (cardsPerRow - 1) / cardsPerRow, cardHeight);
+    
+      // These variables are used to resize status panel elements based on the width / height of the panel
+      var topPanel = game.element.find('.top-panel');
+      topPanel.css('--panel-height', topPanel.css('height'));
+      topPanel.css('--panel-width', topPanel.css('width'));
+      var bottomPanel = game.element.find('.bottom-panel');
+      bottomPanel.css('--panel-height', bottomPanel.css('height'));
+      bottomPanel.css('--panel-width', bottomPanel.css('width'));
     }
   });
   if(isSmallWindow())
