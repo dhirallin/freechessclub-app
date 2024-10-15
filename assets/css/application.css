@@ -238,8 +238,7 @@ html, body {
 }
 
 .top-panel, .bottom-panel {
-  --panel-height: 56px;
-  height: var(--panel-height);
+  height: 56px;
   padding-top: 0;
   padding-bottom: 0;
   display: flex;  
@@ -249,24 +248,26 @@ html, body {
 .setup-board {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
-  font-size: calc(var(--panel-height) / 3.5);
+  font-size: calc(min(var(--panel-width) / 32, var(--panel-height) / 3.5));
 }
 #reset-board, #clear-board {
-  font-size: calc(var(--panel-height) / 1.8);
+  font-size: calc(min(var(--panel-width) / 16, var(--panel-height) / 1.8));
   padding: 0.25em;
 }
 #color-to-move-button {
-  font-size: calc(var(--panel-height) / 3.5);
+  font-size: calc(min(var(--panel-width) / 32, var(--panel-height) / 3.5));
   --bs-btn-padding-x: 0.75em;
   --bs-btn-padding-y: 0.375em;
 }
-.setup-board .setup-board-pieces {
-  max-width: calc(6 * (var(--panel-height) - 8px));
+.setup-board .can-castle {
+  margin-left: 0.75em;
+  margin-right: 0.75em;
 }
 .setup-board .setup-board-piece {
   display: inline-block;
   position: static;
   flex: 1;
+  max-width: calc(var(--panel-height) - 8px);
   height: auto;
   aspect-ratio: 1 / 1;
   pointer-events: auto;

@@ -536,8 +536,8 @@
                   <button type="button" id="clear-board" class="btn btn-outline-secondary btn-transparent" data-bs-toggle="tooltip" title="Clear board">
                     <span class="fa-solid fa-trash-can" aria-hidden="false"></span>
                   </button>
-                  <div class="flex-grow-1 h-100 d-flex justify-content-end align-items-center setup-board-black">
-                    <div class="ms-2 me-3 can-castle">
+                  <div class="cg-wrap flex-grow-1 h-100 d-flex flex-grow-1 justify-content-end align-items-center setup-board-black">
+                    <div class="can-castle">
                       <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can black castle king-side?">
                         <input class="form-check-input" type="checkbox" id="can-kingside-castle-black" checked>
                         <label class="form-check-label" for="can-kingside-castle-black">O-O</label>
@@ -547,14 +547,12 @@
                         <label class="form-check-label" for="can-queenside-castle-black">O-O-O</label>
                       </div>
                     </div>
-                    <div class="cg-wrap h-100 d-flex align-items-center flex-grow-1 setup-board-pieces">
-                      <piece class="black king setup-board-piece"></piece>
-                      <piece class="black queen setup-board-piece"></piece>
-                      <piece class="black rook setup-board-piece"></piece>
-                      <piece class="black bishop setup-board-piece"></piece>
-                      <piece class="black knight setup-board-piece"></piece>
-                      <piece class="black pawn setup-board-piece"></piece>
-                    </div>
+                    <piece class="black king setup-board-piece"></piece>
+                    <piece class="black queen setup-board-piece"></piece>
+                    <piece class="black rook setup-board-piece"></piece>
+                    <piece class="black bishop setup-board-piece"></piece>
+                    <piece class="black knight setup-board-piece"></piece>
+                    <piece class="black pawn setup-board-piece"></piece>
                   </div>
                 </div>
                 <div class="h-100 w-100 justify-content-between align-items-center status noselect opponent-status" style="display: flex">
@@ -584,7 +582,7 @@
                     <li><a class="dropdown-item">White to move</a></li>
                     <li><a class="dropdown-item">Black to move</a></li>
                   </ul>
-                  <div class="flex-grow-1 h-100 d-flex justify-content-end align-items-center setup-board-white">
+                  <div class="cg-wrap flex-grow-1 h-100 d-flex justify-content-end align-items-center setup-board-white">
                     <div class="ms-2 me-3 can-castle">
                       <div class="m-0 form-check" style="min-height: 0;" data-bs-toggle="tooltip" title="Can white castle king-side?">
                         <input class="form-check-input" type="checkbox" id="can-kingside-castle-white" checked>
@@ -595,14 +593,12 @@
                         <label class="form-check-label" for="can-queenside-castle-white">O-O-O</label>
                       </div>
                     </div>
-                    <div class="cg-wrap h-100 d-flex align-items-center flex-grow-1 setup-board-pieces">
-                      <piece class="white king setup-board-piece"></piece>
-                      <piece class="white queen setup-board-piece"></piece>
-                      <piece class="white rook setup-board-piece"></piece>
-                      <piece class="white bishop setup-board-piece"></piece>
-                      <piece class="white knight setup-board-piece"></piece>
-                      <piece class="white pawn setup-board-piece"></piece>
-                    </div>
+                    <piece class="white king setup-board-piece"></piece>
+                    <piece class="white queen setup-board-piece"></piece>
+                    <piece class="white rook setup-board-piece"></piece>
+                    <piece class="white bishop setup-board-piece"></piece>
+                    <piece class="white knight setup-board-piece"></piece>
+                    <piece class="white pawn setup-board-piece"></piece>
                   </div>
                 </div>
                 <div class="h-100 w-100 justify-content-between align-items-center status noselect player-status" style="display: flex">
