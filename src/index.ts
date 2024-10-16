@@ -288,12 +288,20 @@ function hidePanel(id: string) {
   $(id).hide();
   if(id.startsWith('#left-'))
     setLeftColumnSizes();
+  else if(id.startsWith('#right-'))
+    setRightColumnSizes();
+  else
+    setPanelSizes();
 }
 
 function showPanel(id: string) {
   $(id).show();
   if(id.startsWith('#left-'))
     setLeftColumnSizes();
+  else if(id.startsWith('#right-'))
+    setRightColumnSizes();
+  else
+    setPanelSizes();
 }
 
 function hideStatusPanel() {
@@ -6848,8 +6856,6 @@ function setupBoard(game: Game) {
   setColorToMove(game, 'w');
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
-  $('#setup-done').show();
-  $('#setup-cancel').show();
   showPanel('#left-panel-setup-board');
   scrollToBoard();
 }
@@ -6859,10 +6865,7 @@ function leaveSetupBoard(game: Game) {
   game.element.find('.setup-board-top').hide();
   game.element.find('.setup-board-bottom').hide();
   game.element.find('.status').css('display', 'flex');
-  $('#setup-done').hide();
-  $('#setup-cancel').hide();
-  if(!$('#left-panel-setup-board').find('button').is(':visible'))
-    hidePanel('#left-panel-setup-board');
+  hidePanel('#left-panel-setup-board');
 }
 
 /** Sets the color to move using the Setup Board dropdown button */
