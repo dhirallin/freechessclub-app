@@ -6819,6 +6819,7 @@ function setupBoard(game: Game) {
   setColorToMove(game, 'White');
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
+  scrollToBoard();
 }
 
 function leaveSetupBoard(game: Game) {
