@@ -4452,18 +4452,21 @@ function hideButton(button: any) {
 // If on small screen device displaying 1 column, move the navigation buttons so they are near the board
 function useMobileLayout() {
   swapLeftRightPanelHeaders();
+  moveLeftPanelBoardSetup();
   $('#chat-maximize-btn').hide();
   $('#viewing-games-buttons:visible:last').removeClass('me-0'); 
   $('#stop-observing').appendTo($('#viewing-game-buttons').last());
   $('#stop-examining').appendTo($('#viewing-game-buttons').last());
   $('#viewing-games-buttons:visible:last').addClass('me-0'); // This is so visible buttons in the btn-toolbar center properly
   hidePanel('#left-panel-header-2');
+
   createTooltips();
   layout = Layout.Mobile;
 }
 
 function useDesktopLayout() {
   swapLeftRightPanelHeaders();
+  moveLeftPanelBoardSetup();
   $('#chat-maximize-btn').show();
   $('#stop-observing').appendTo($('#left-panel-header-2').last());
   $('#stop-examining').appendTo($('#left-panel-header-2').last());
@@ -4493,6 +4496,24 @@ function swapLeftRightPanelHeaders() {
   else {
     $('#chat-toggle-btn').appendTo($('#right-panel-header .btn-toolbar').last());
     $('#menus-toggle-btn').appendTo($('#navigation-toolbar').last());
+  }  
+}
+
+function moveLeftPanelBoardSetup() {
+  var setupBoardPanel = $('#left-panel-setup-board');
+  if(isSmallWindow()) {
+    setupBoardPanel.removeClass('card-header');
+    setupBoardPanel.addClass('card-footer');
+    setupBoardPanel.removeClass('top-panel');
+    setupBoardPanel.addClass('bottom-panel');
+    $('#left-panel-footer').after(setupBoardPanel);
+  }
+  else {
+    setupBoardPanel.removeClass('card-footer');
+    setupBoardPanel.addClass('card-header');
+    setupBoardPanel.removeClass('bottom-panel');
+    setupBoardPanel.addClass('top-panel');
+    $('#left-panel-header-2').before(setupBoardPanel);
   }
 }
 
