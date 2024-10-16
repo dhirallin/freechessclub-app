@@ -177,7 +177,7 @@ function cleanupGame(game: Game) {
   if(game === gameWithFocus) {
     hideButton($('#stop-observing'));
     hideButton($('#stop-examining'));
-    hideLeftPanelHeader2();
+    hidePanel('#left-panel-header-2');
     $('#takeback').prop('disabled', false);
     $('#play-computer').prop('disabled', false);  
     $('#playing-game-buttons').hide();
@@ -284,39 +284,29 @@ function initAnalysis(game: Game) {
   }
 }
 
-function hideLeftPanelHeader2() {
-  $('#left-panel-header-2').hide();
-  setLeftColumnSizes();
+function hidePanel(id: string) {
+  $(id).hide();
+  if(id.startsWith('#left-'))
+    setLeftColumnSizes();
 }
 
-function showLeftPanelHeader2() {
-  $('#left-panel-header-2').show();
-  setLeftColumnSizes();
-}
-
-function showLeftPanelSetupBoard() {
-  $('#left-panel-setup-board').show();
-  setLeftColumnSizes();
-}
-
-function hideLeftPanelSetupBoard() {
-  $('#left-panel-setup-board').hide();
-  setLeftColumnSizes();
+function showPanel(id: string) {
+  $(id).show();
+  if(id.startsWith('#left-'))
+    setLeftColumnSizes();
 }
 
 function hideStatusPanel() {
   $('#show-status-panel').text('Status/Analysis');
   $('#show-status-panel').attr('title', 'Show Status Panel');
   $('#show-status-panel').show();
-  $('#left-panel-bottom').hide();
   stopEngine();
-  setLeftColumnSizes();
+  hidePanel('#left-panel-bottom');
 }
 
 function showStatusPanel() {
-  $('#left-panel-bottom').show();
+  showPanel('#left-panel-bottom');
   initStatusPanel();
-  setLeftColumnSizes();
 }
 
 function initStatusPanel() {
@@ -4349,9 +4339,9 @@ function initGameControls(game: Game) {
   $('#takeback').prop('disabled', game.role === Role.PLAYING_COMPUTER);
 
   if((game.isExamining() || game.isObserving()) && !isSmallWindow())       
-    showLeftPanelHeader2();
+    showPanel('#left-panel-header-2');
   else
-    hideLeftPanelHeader2();
+    hidePanel('#left-panel-header-2');
 
   if(game.isExamining()) 
     showButton($('#stop-examining'));
@@ -4467,7 +4457,7 @@ function useMobileLayout() {
   $('#stop-observing').appendTo($('#viewing-game-buttons').last());
   $('#stop-examining').appendTo($('#viewing-game-buttons').last());
   $('#viewing-games-buttons:visible:last').addClass('me-0'); // This is so visible buttons in the btn-toolbar center properly
-  hideLeftPanelHeader2();
+  hidePanel('#left-panel-header-2');
   createTooltips();
   layout = Layout.Mobile;
 }
@@ -4478,7 +4468,7 @@ function useDesktopLayout() {
   $('#stop-observing').appendTo($('#left-panel-header-2').last());
   $('#stop-examining').appendTo($('#left-panel-header-2').last());
   if(gameWithFocus.isObserving() || gameWithFocus.isExamining())
-    showLeftPanelHeader2();
+    showPanel('#left-panel-header-2');
 
   createTooltips();
   layout = Layout.Desktop;
@@ -6839,7 +6829,7 @@ function setupBoard(game: Game) {
   game.element.find('.setup-board-bottom').css('display', 'flex');
   $('#setup-done').show();
   $('#setup-cancel').show();
-  showLeftPanelSetupBoard();
+  showPanel('#left-panel-setup-board');
   scrollToBoard();
 }
 
@@ -6851,7 +6841,7 @@ function leaveSetupBoard(game: Game) {
   $('#setup-done').hide();
   $('#setup-cancel').hide();
   if(!$('#left-panel-setup-board').find('button').is(':visible'))
-    hideLeftPanelSetupBoard();
+    hidePanel('#left-panel-setup-board');
 }
 
 /** Sets the color to move using the Setup Board dropdown button */
