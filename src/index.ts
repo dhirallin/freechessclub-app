@@ -285,20 +285,24 @@ function initAnalysis(game: Game) {
 }
 
 function hidePanel(id: string) {
-  $(id).hide();
-  if(id.startsWith('#left-'))
+  var elem = $(id);
+  elem.hide();
+  
+  if(elem.closest('#left-col'))
     setLeftColumnSizes();
-  else if(id.startsWith('#right-'))
+  else if(elem.closest('#right-col'))
     setRightColumnSizes();
   else
     setPanelSizes();
 }
 
 function showPanel(id: string) {
-  $(id).show();
-  if(id.startsWith('#left-'))
+  var elem = $(id);
+  elem.show();
+  
+  if(elem.closest('#left-col'))
     setLeftColumnSizes();
-  else if(id.startsWith('#right-'))
+  else if(elem.closest('#right-col'))
     setRightColumnSizes();
   else
     setPanelSizes();
