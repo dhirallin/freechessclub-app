@@ -6819,7 +6819,7 @@ $('#game-tools-setup').on('click', (event) => {
 function setupBoard(game: Game) {
   game.setupBoard = true;
   game.element.find('.status').hide();
-  setColorToMove(game, 'White');
+  setColorToMove(game, 'w');
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
   scrollToBoard();
@@ -6837,6 +6837,7 @@ function leaveSetupBoard(game: Game) {
   setColorToMove(gameWithFocus, color);
 };
 function setColorToMove(game: Game, color: string) {
+  var color = (color === 'w' ? 'White' : 'Black');
   if(isSmallWindow())
     var label = color + `'s move`;
   else
