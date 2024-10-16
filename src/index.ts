@@ -294,6 +294,16 @@ function showLeftPanelHeader2() {
   setLeftColumnSizes();
 }
 
+function showLeftPanelSetupBoard() {
+  $('#left-panel-setup-board').show();
+  setLeftColumnSizes();
+}
+
+function hideLeftPanelSetupBoard() {
+  $('#left-panel-setup-board').hide();
+  setLeftColumnSizes();
+}
+
 function hideStatusPanel() {
   $('#show-status-panel').text('Status/Analysis');
   $('#show-status-panel').attr('title', 'Show Status Panel');
@@ -6813,12 +6823,23 @@ $('#game-tools-setup').on('click', (event) => {
   setupBoard(gameWithFocus);
 });
 
+$('#setup-done').on('click', (event) => {
+  leaveSetupBoard(gameWithFocus);
+});
+
+$('#setup-cancel').on('click', (event) => {
+  leaveSetupBoard(gameWithFocus);
+});
+
 function setupBoard(game: Game) {
   game.setupBoard = true;
   game.element.find('.status').hide();
   setColorToMove(game, 'w');
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
+  $('#setup-done').show();
+  $('#setup-cancel').show();
+  showLeftPanelSetupBoard();
   scrollToBoard();
 }
 
@@ -6827,6 +6848,10 @@ function leaveSetupBoard(game: Game) {
   game.element.find('.setup-board-top').hide();
   game.element.find('.setup-board-bottom').hide();
   game.element.find('.status').css('display', 'flex');
+  $('#setup-done').hide();
+  $('#setup-cancel').hide();
+  if(!$('#left-panel-setup-board').find('button').is(':visible'))
+    hideLeftPanelSetupBoard();
 }
 
 /** Sets the color to move using the Setup Board dropdown button */
