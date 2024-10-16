@@ -2055,9 +2055,9 @@ function messageHandler(data) {
         if(multiboardToggle) {
           // Get game object
           var game = findGame(data.id);
-          if(!game)
+          if(!game) 
             game = getFreeGame();
-          if(!game)
+          if(!game) 
             game = createGame();
         }
 
@@ -4022,6 +4022,7 @@ function createGame(): Game {
   else {
     game.element = $('#main-board-area').children().first().clone();
     game.board = createBoard(game.element.find('.board'));
+    leaveSetupBoard(game);
     makeSecondaryBoard(game);
     game.element.find($('[title="Close"]')).css('visibility', 'visible');
     $('#secondary-board-area').css('display', 'flex');
@@ -4209,10 +4210,10 @@ function getPlayingExaminingGame(): Game {
 
 function getFreeGame(): Game {
   var game = getMainGame();
-  if(game.role === Role.NONE && !game.preserved && !game.history?.editMode)
+  if(game.role === Role.NONE && !game.preserved && !game.history?.editMode && !game.setupBoard)
     return game;
 
-  return games.find(g => g.role === Role.NONE && !g.preserved && !g.history?.editMode);
+  return games.find(g => g.role === Role.NONE && !g.preserved && !g.history?.editMode && !g.setupBoard);
 }
 
 function getComputerGame(): Game {
@@ -6813,15 +6814,30 @@ $('#game-tools-setup').on('click', (event) => {
 });
 
 function setupBoard(game: Game) {
+  game.setupBoard = true;
   game.element.find('.status').hide();
+  setColorToMove(game, 'White');
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
 }
 
 function leaveSetupBoard(game: Game) {
+  game.setupBoard = false;
   game.element.find('.setup-board-top').hide();
   game.element.find('.setup-board-bottom').hide();
   game.element.find('.status').css('display', 'flex');
+}
+
+/** Sets the color to move using the Setup Board dropdown button */
+(window as any).setColorToMove = (color: string) => {
+  setColorToMove(gameWithFocus, color);
+};
+function setColorToMove(game: Game, color: string) {
+  if(isSmallWindow())
+    var label = color + `'s move`;
+  else
+    var label = color + ' to move';
+  game.element.find('.color-to-move-button').text(label);
 }
 
 /** 

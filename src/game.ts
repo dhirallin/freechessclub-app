@@ -98,6 +98,7 @@ export class Game extends GameData {
   partnerGameId: number = null;        // bughouse partner's game id
   newVariationMode: number = NewVariationMode.ASK; 
   preserved: boolean = false;          // if true, prevents a game/board from being overwritten 
+  setupBoard: boolean = false;         // in setup-board mode or not 
   commitingMovelist = false;           // Used when entering examine mode and using 'commit' to submit a move list
   movelistRequested: number = 0;       // Used to keep track of move list requests
   gameListFilter: string = ''          // Stores the filter text for the game selector menu (when loading a PGN with multiple games)
