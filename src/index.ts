@@ -629,6 +629,12 @@ export function movePiece(source: any, target: any, metadata: any) {
   let move = null;
   var game = gameWithFocus;
 
+  // Show 'Analyze' button once any moves have been made on the board
+  showAnalyzeButton();
+
+  if(game.setupBoard)
+    return;
+
   if(game.isPlaying() || game.isExamining() || game.role === Role.NONE) {  
     if(game.isPlaying() || game.isExamining()) 
       var chess = game.chess;
@@ -702,8 +708,6 @@ export function movePiece(source: any, target: any, metadata: any) {
   } 
 
   showTab($('#pills-game-tab'));
-  // Show 'Analyze' button once any moves have been made on the board
-  showAnalyzeButton();
 }
 
 /**
@@ -4478,7 +4482,7 @@ function hideButton(button: any) {
 // If on small screen device displaying 1 column, move the navigation buttons so they are near the board
 function useMobileLayout() {
   swapLeftRightPanelHeaders();
-  moveLeftPanelBoardSetup();
+  moveLeftPanelSetupBoard();
   $('#chat-maximize-btn').hide();
   $('#viewing-games-buttons:visible:last').removeClass('me-0'); 
   $('#stop-observing').appendTo($('#viewing-game-buttons').last());
@@ -4492,7 +4496,7 @@ function useMobileLayout() {
 
 function useDesktopLayout() {
   swapLeftRightPanelHeaders();
-  moveLeftPanelBoardSetup();
+  moveLeftPanelSetupBoard();
   $('#chat-maximize-btn').show();
   $('#stop-observing').appendTo($('#left-panel-header-2').last());
   $('#stop-examining').appendTo($('#left-panel-header-2').last());
@@ -4523,24 +4527,6 @@ function swapLeftRightPanelHeaders() {
     $('#chat-toggle-btn').appendTo($('#right-panel-header .btn-toolbar').last());
     $('#menus-toggle-btn').appendTo($('#navigation-toolbar').last());
   }  
-}
-
-function moveLeftPanelBoardSetup() {
-  var setupBoardPanel = $('#left-panel-setup-board');
-  if(isSmallWindow()) {
-    setupBoardPanel.removeClass('card-header');
-    setupBoardPanel.addClass('card-footer');
-    setupBoardPanel.removeClass('top-panel');
-    setupBoardPanel.addClass('bottom-panel');
-    $('#left-panel-footer').after(setupBoardPanel);
-  }
-  else {
-    setupBoardPanel.removeClass('card-footer');
-    setupBoardPanel.addClass('card-header');
-    setupBoardPanel.removeClass('bottom-panel');
-    setupBoardPanel.addClass('top-panel');
-    $('#left-panel-header-2').before(setupBoardPanel);
-  }
 }
 
 function setGameCardSize(game: Game, cardMaxWidth?: number, cardMaxHeight?: number) {
@@ -6900,7 +6886,40 @@ function setColorToMove(game: Game, color: string) {
     var label = color + `'s move`;
   else
     var label = color + ' to move';
-  game.element.find('.color-to-move-button').text(label);
+
+  var button = game.element.find('.color-to-move-button');
+  button.text(label);
+  button.attr('data-color', color);
+}
+
+function moveLeftPanelSetupBoard() {
+  var setupBoardPanel = $('#left-panel-setup-board');
+  if(isSmallWindow()) {
+    setupBoardPanel.removeClass('card-header');
+    setupBoardPanel.addClass('card-footer');
+    setupBoardPanel.removeClass('top-panel');
+    setupBoardPanel.addClass('bottom-panel');
+    $('#left-panel-footer').after(setupBoardPanel);
+  }
+  else {
+    setupBoardPanel.removeClass('card-footer');
+    setupBoardPanel.addClass('card-header');
+    setupBoardPanel.removeClass('bottom-panel');
+    setupBoardPanel.addClass('top-panel');
+    $('#left-panel-header-2').before(setupBoardPanel);
+  }
+}
+
+function getSetupBoardFEN(game: Game): string {
+  var colorToMove = game.element.find('.color-to-move-button').attr('data-color');
+  var wK = (game.element.find('.can-kingside-castle-white').is(':checked') ? 'K' : '');
+  var wQ = (game.element.find('.can-queenside-castle-white').is(':checked') ? 'Q' : '');
+  var bK = (game.element.find('.can-kingside-castle-black').is(':checked') ? 'k' : '');
+  var bQ = (game.element.find('.can-queenside-castle-black').is(':checked') ? 'q' : ''); 
+  var castlingRights = wK + wQ + bK + bQ;
+  if(!castlingRights) 
+    castlingRights = '-';
+  return game.board.getFen() + ' ' + colorToMove + ' ' + castlingRights + ' - 0 1';
 }
 
 /** 
