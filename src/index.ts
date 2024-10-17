@@ -6869,6 +6869,7 @@ function setupBoard(game: Game) {
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
   showPanel('#left-panel-setup-board');
+  initGameTools(game);
   updateBoard(game);
   scrollToBoard();
 }
@@ -6879,6 +6880,7 @@ function leaveSetupBoard(game: Game) {
   game.element.find('.setup-board-bottom').hide();
   game.element.find('.status').css('display', 'flex');
   hidePanel('#left-panel-setup-board');
+  initGameTools(game);
   updateBoard(game);
 }
 
