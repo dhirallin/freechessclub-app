@@ -3270,6 +3270,9 @@ export function updateBoard(game: Game, playSound = false) {
   game.board.set({
     turnColor,
     movable,
+    draggable: {
+      deleteOnDropOff: game.setupBoard 
+    },
     highlight: {
       lastMove: highlightsToggle,
       check: highlightsToggle
