@@ -3219,7 +3219,8 @@ export function updateBoard(game: Game, playSound = false) {
 
   setClocks(game);
 
-  game.board.set({ fen });
+  if(!game.setupBoard)
+    game.board.set({ fen });
 
   if(game.element.find('.promotion-panel').is(':visible')) {
     game.board.cancelPremove();
@@ -3247,6 +3248,9 @@ export function updateBoard(game: Game, playSound = false) {
     dests = toDests(game, game.chess);
     turnColor = toColor(game.chess);
   }
+  else if(game.setupBoard) {
+    movableColor = 'both';
+  }
   else {
     movableColor = toColor(localChess);
     dests = toDests(game, localChess);
@@ -3258,7 +3262,8 @@ export function updateBoard(game: Game, playSound = false) {
     color: movableColor,
     dests,
     showDests: highlightsToggle,
-    rookCastle: game.category === 'wild/fr'
+    rookCastle: game.category === 'wild/fr',
+    free: game.setupBoard
   };
 
   game.board.set({
@@ -3271,6 +3276,7 @@ export function updateBoard(game: Game, playSound = false) {
     predroppable: { enabled: game.category === 'crazyhouse' || game.category === 'bughouse' },
     check: localChess.in_check() ? toColor(localChess) : false,
     blockTouchScroll: (game.isPlaying() ? true : false),
+    autoCastle: !game.setupBoard
   });
 
   showCapturedMaterial(game);
@@ -6874,6 +6880,7 @@ function setupBoard(game: Game) {
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
   showPanel('#left-panel-setup-board');
+  updateBoard(game);
   scrollToBoard();
 }
 
@@ -6883,6 +6890,7 @@ function leaveSetupBoard(game: Game) {
   game.element.find('.setup-board-bottom').hide();
   game.element.find('.status').css('display', 'flex');
   hidePanel('#left-panel-setup-board');
+  updateBoard(game);
 }
 
 /** Sets the color to move using the Setup Board dropdown button */
