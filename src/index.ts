@@ -4358,6 +4358,11 @@ function initGameControls(game: Game) {
   else
     hidePanel('#left-panel-header-2');
 
+  if(game.setupBoard)
+    showPanel('#left-panel-setup-board');
+  else
+    hidePanel('#left-panel-setup-board');
+
   if(game.isExamining()) 
     showButton($('#stop-examining'));
   else if(game.isObserving()) 
