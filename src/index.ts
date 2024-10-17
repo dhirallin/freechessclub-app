@@ -6056,6 +6056,8 @@ function initGameTools(game: Game) {
     $('#game-tools-examine').toggleClass('disabled', (mainGame && mainGame.isPlayingOnline()) || game.isPlaying() || game.isExamining() 
         || game.category === 'wild/fr' || game.category === 'wild/0' // Due to a bug in 'bsetup' it's not possible to convert some wild variants to examine mode
         || game.category === 'wild/1' || game.category === 'bughouse');
+  
+    $('#game-tools-setup-board').toggleClass('disabled', game.setupBoard || game.isPlaying() || game.isObserving());    
   }
 }
 
@@ -6853,7 +6855,7 @@ function setupGameInExamineMode(game: Game) {
 }
 
 /** Triggered when 'Setup Board' menu option is selected */ 
-$('#game-tools-setup').on('click', (event) => {
+$('#game-tools-setup-board').on('click', (event) => {
   setupBoard(gameWithFocus);
 });
 
