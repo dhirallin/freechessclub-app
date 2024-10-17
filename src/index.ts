@@ -4039,6 +4039,9 @@ function createGame(): Game {
     game.element.find($('[title="Close"]')).css('visibility', 'visible');
     $('#secondary-board-area').css('display', 'flex');
     $('#collapse-chat-arrow').show();
+    game.element.find('[data-bs-toggle="tooltip"]').each(function() {
+      createTooltip($(this));
+    });
 
     game.statusElement = gameWithFocus.statusElement.clone();
     game.statusElement.css('display', 'none');
