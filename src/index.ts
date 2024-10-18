@@ -6855,7 +6855,10 @@ $('#game-tools-setup-board').on('click', (event) => {
 });
 
 $('#setup-done').on('click', (event) => {
-  leaveSetupBoard(gameWithFocus);
+  var game = gameWithFocus;
+  var fen = getSetupBoardFEN(game);
+  game.history.reset(fen);
+  leaveSetupBoard(game);
 });
 
 $('#setup-cancel').on('click', (event) => {
@@ -6889,11 +6892,11 @@ function leaveSetupBoard(game: Game) {
   setColorToMove(gameWithFocus, color);
 };
 function setColorToMove(game: Game, color: string) {
-  var color = (color === 'w' ? 'White' : 'Black');
+  var colorName = (color === 'w' ? 'White' : 'Black');
   if(isSmallWindow())
-    var label = color + `'s move`;
+    var label = colorName + `'s move`;
   else
-    var label = color + ' to move';
+    var label = colorName + ' to move';
 
   var button = game.element.find('.color-to-move-button');
   button.text(label);
