@@ -2485,6 +2485,8 @@ function messageHandler(data) {
       if(!match)
         match = msg.match(/^You are muted./m);
       if(!match)
+        match = msg.match(/^Only registered players may whisper to others' games./m);
+      if(!match)
         match = msg.match(/^Notification: .*/m);
       if(match && match.length > 0) {
         chat.newNotification(match[0]);
@@ -3658,8 +3660,11 @@ async function showOpeningName(game: Game) {
     hEntry = game.history.last();
 
   while(!hEntry.opening) {
-    if(!hEntry.move)
+    if(!hEntry.move) {
+      game.statusElement.find('.opening-name').text('');
+      game.statusElement.find('.opening-name').hide();      
       return;
+    }
     hEntry = hEntry.prev;
   }
 
@@ -6855,11 +6860,15 @@ $('#game-tools-setup-board').on('click', (event) => {
 });
 
 $('#setup-done').on('click', (event) => {
-  var game = gameWithFocus;
+  setupDone(gameWithFocus);
+});
+
+function setupDone(game: Game) {
   var fen = getSetupBoardFEN(game);
   game.history.reset(fen);
+  $('#game-pane-status').hide();
   leaveSetupBoard(game);
-});
+}
 
 $('#setup-cancel').on('click', (event) => {
   leaveSetupBoard(gameWithFocus);
@@ -6868,7 +6877,7 @@ $('#setup-cancel').on('click', (event) => {
 function setupBoard(game: Game) {
   game.setupBoard = true;
   game.element.find('.status').hide();
-  setColorToMove(game, 'w');
+  setupBoardColorToMove(game, game.history.current().turnColor);
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
   showPanel('#left-panel-setup-board');
@@ -6888,10 +6897,10 @@ function leaveSetupBoard(game: Game) {
 }
 
 /** Sets the color to move using the Setup Board dropdown button */
-(window as any).setColorToMove = (color: string) => {
-  setColorToMove(gameWithFocus, color);
+(window as any).setupBoardColorToMove = (color: string) => {
+  setupBoardColorToMove(gameWithFocus, color);
 };
-function setColorToMove(game: Game, color: string) {
+function setupBoardColorToMove(game: Game, color: string) {
   var colorName = (color === 'w' ? 'White' : 'Black');
   if(isSmallWindow())
     var label = colorName + `'s move`;
