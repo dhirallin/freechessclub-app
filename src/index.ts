@@ -2965,31 +2965,34 @@ function showCapturedMaterial(game: Game) {
     if(whiteChanged && key === key.toLowerCase() && captured[key] > 0) {
       var color = 'b';
       var piece = color + key.toUpperCase();
+      var draggedPiece = 'w' + key;
       var num = captured[key];
       panel = (game.color === 'w' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     }
     else if(blackChanged && key === key.toUpperCase() && captured[key] > 0) {
       var color = 'w';
       var piece = color + key;
+      var draggedPiece = 'b' + key;
       var num = captured[key];
       panel = (game.color === 'b' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     }
     if(panel) {
-      panel.append(
-        `<span class="captured-piece" id="` + piece + `"><img src="assets/css/images/pieces/merida/` +
+      var pieceElement = $(`<span class="captured-piece" data-drag-piece="` + draggedPiece + `"><img src="assets/css/images/pieces/merida/` +
           piece + `.svg"/><small>` + num + `</small></span>`);
 
+      panel.append(pieceElement);
+
       if(game.category === 'crazyhouse' || game.category === 'bughouse') {
-        $('#' + piece)[0].addEventListener('touchstart', dragCapturedPiece, {passive: false});
-        $('#' + piece)[0].addEventListener('mousedown', dragCapturedPiece);
+        pieceElement[0].addEventListener('touchstart', dragPiece, {passive: false});
+        pieceElement[0].addEventListener('mousedown', dragPiece);
       }
     }
   }
 }
 
-function dragCapturedPiece(event: any) {  
+function dragPiece(event: any) {  
   var game = gameWithFocus;
-  var id = $(event.currentTarget).attr('id');
+  var id = $(event.target).attr('data-drag-piece');
   var color = id.charAt(0);
   var type = id.charAt(1);
 
@@ -3004,7 +3007,7 @@ function dragCapturedPiece(event: any) {
 
   var piece = {
     role: cgRoles[type.toLowerCase()], 
-    color: (color === 'w' ? 'black' : 'white')
+    color: (color === 'w' ? 'white' : 'black')
   };
 
   if((game.isPlaying() && game.color !== color) || game.isExamining() || game.role === Role.NONE) {
@@ -6866,6 +6869,14 @@ $(document).on('click', '.reset-board', (event) => {
 $(document).on('click', '.clear-board', (event) => {
   gameWithFocus.board.set({ fen: '8/8/8/8/8/8/8/8 w - - 0 1' });
 })
+
+document.addEventListener('touchstart', dragSetupBoardPiece, {passive: false});
+document.addEventListener('mousedown', dragSetupBoardPiece);
+function dragSetupBoardPiece(event: any) {
+  if(!$(event.target).hasClass('setup-board-piece'))
+    return;
+  dragPiece(event);
+}
 
 $('#setup-done').on('click', (event) => {
   setupDone(gameWithFocus);
