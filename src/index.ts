@@ -6859,6 +6859,14 @@ $('#game-tools-setup-board').on('click', (event) => {
   setupBoard(gameWithFocus);
 });
 
+$(document).on('click', '.reset-board', (event) => {
+  gameWithFocus.board.set({ fen: gameWithFocus.history.first().fen });
+})
+
+$(document).on('click', '.clear-board', (event) => {
+  gameWithFocus.board.set({ fen: '8/8/8/8/8/8/8/8 w - - 0 1' });
+})
+
 $('#setup-done').on('click', (event) => {
   setupDone(gameWithFocus);
 });
