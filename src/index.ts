@@ -6862,13 +6862,64 @@ $('#game-tools-setup-board').on('click', (event) => {
   setupBoard(gameWithFocus);
 });
 
+function setupBoard(game: Game) {
+  game.setupBoard = true;
+  game.element.find('.status').hide();
+  setupBoardColorToMove(game, game.history.current().turnColor);
+  var fen = game.history.current().fen;
+  setupBoardCastlingRights(game, splitFEN(fen).castlingRights);
+  game.element.find('.setup-board-top').css('display', 'flex');
+  game.element.find('.setup-board-bottom').css('display', 'flex');
+  showPanel('#left-panel-setup-board');
+  initGameTools(game);
+  updateBoard(game);
+  scrollToBoard();
+}
+
+function leaveSetupBoard(game: Game) {
+  game.setupBoard = false;
+  game.element.find('.setup-board-top').hide();
+  game.element.find('.setup-board-bottom').hide();
+  game.element.find('.status').css('display', 'flex');
+  hidePanel('#left-panel-setup-board');
+  initGameTools(game);
+  updateBoard(game);
+}
+
 $(document).on('click', '.reset-board', (event) => {
-  gameWithFocus.board.set({ fen: gameWithFocus.history.first().fen });
-})
+  var game = gameWithFocus;
+  var fen = game.history.first().fen;
+  game.board.set({ fen: fen });
+  setupBoardCastlingRights(game, splitFEN(fen).castlingRights);
+});
 
 $(document).on('click', '.clear-board', (event) => {
   gameWithFocus.board.set({ fen: '8/8/8/8/8/8/8/8 w - - 0 1' });
-})
+  setupBoardCastlingRights(gameWithFocus, '-');
+});
+
+/** Sets the color to move using the Setup Board dropdown button */
+(window as any).setupBoardColorToMove = (color: string) => {
+  setupBoardColorToMove(gameWithFocus, color);
+};
+function setupBoardColorToMove(game: Game, color: string) {
+  var colorName = (color === 'w' ? 'White' : 'Black');
+  if(isSmallWindow())
+    var label = colorName + `'s move`;
+  else
+    var label = colorName + ' to move';
+
+  var button = game.element.find('.color-to-move-button');
+  button.text(label);
+  button.attr('data-color', color);
+}
+
+function setupBoardCastlingRights(game: Game, castlingRights: string) { 
+  game.element.find('.can-kingside-castle-white').prop('checked', castlingRights.includes('K'));
+  game.element.find('.can-queenside-castle-white').prop('checked', castlingRights.includes('Q'));
+  game.element.find('.can-kingside-castle-black').prop('checked', castlingRights.includes('k'));
+  game.element.find('.can-queenside-castle-black').prop('checked', castlingRights.includes('q'));
+}
 
 document.addEventListener('touchstart', dragSetupBoardPiece, {passive: false});
 document.addEventListener('mousedown', dragSetupBoardPiece);
@@ -6892,44 +6943,6 @@ function setupDone(game: Game) {
 $('#setup-cancel').on('click', (event) => {
   leaveSetupBoard(gameWithFocus);
 });
-
-function setupBoard(game: Game) {
-  game.setupBoard = true;
-  game.element.find('.status').hide();
-  setupBoardColorToMove(game, game.history.current().turnColor);
-  game.element.find('.setup-board-top').css('display', 'flex');
-  game.element.find('.setup-board-bottom').css('display', 'flex');
-  showPanel('#left-panel-setup-board');
-  initGameTools(game);
-  updateBoard(game);
-  scrollToBoard();
-}
-
-function leaveSetupBoard(game: Game) {
-  game.setupBoard = false;
-  game.element.find('.setup-board-top').hide();
-  game.element.find('.setup-board-bottom').hide();
-  game.element.find('.status').css('display', 'flex');
-  hidePanel('#left-panel-setup-board');
-  initGameTools(game);
-  updateBoard(game);
-}
-
-/** Sets the color to move using the Setup Board dropdown button */
-(window as any).setupBoardColorToMove = (color: string) => {
-  setupBoardColorToMove(gameWithFocus, color);
-};
-function setupBoardColorToMove(game: Game, color: string) {
-  var colorName = (color === 'w' ? 'White' : 'Black');
-  if(isSmallWindow())
-    var label = colorName + `'s move`;
-  else
-    var label = colorName + ' to move';
-
-  var button = game.element.find('.color-to-move-button');
-  button.text(label);
-  button.attr('data-color', color);
-}
 
 function moveLeftPanelSetupBoard() {
   var setupBoardPanel = $('#left-panel-setup-board');
