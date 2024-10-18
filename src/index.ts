@@ -632,8 +632,14 @@ export function movePiece(source: any, target: any, metadata: any) {
   // Show 'Analyze' button once any moves have been made on the board
   showAnalyzeButton();
 
-  if(game.setupBoard)
+  if(game.setupBoard) {
+    // Remove castling rights if king or rooks move from initial position
+    var castlingRights = splitFEN(getSetupBoardFEN(game)).castlingRights;
+    var newCastlingRights = adjustCastlingRights(game, source, castlingRights);
+    if(newCastlingRights !== castlingRights)
+      setupBoardCastlingRights(game, newCastlingRights);
     return;
+  }
 
   if(game.isPlaying() || game.isExamining() || game.role === Role.NONE) {  
     if(game.isPlaying() || game.isExamining()) 
@@ -1628,42 +1634,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
   }
   if(category.startsWith('wild')) {
     // Adjust castling rights after rook move
-    if(outMove.piece === 'r') {
-      // Check if rook moved from starting position
-      var startChess = new Chess(game.history.first().fen);
-      var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-      var rank = (afterPre.color === 'w' ? '1' : '8');
-      var leftRook = '';
-      var rightRook = '';
-      for(const file of files) {
-        // Get starting location of rooks
-        let square = file + rank;
-        let piece = startChess.get(square);
-        if(piece && piece.type === 'r' && piece.color === afterPre.color) {
-          if(!leftRook) 
-            var leftRook = square;
-          else 
-            var rightRook = square;
-        }
-      }
-      if(outMove.from === leftRook) 
-        var leftRookMoved = true;
-      if(outMove.from === rightRook) 
-        var rightRookMoved = true;
-
-      if(leftRookMoved || rightRookMoved) {
-        var castlingRights = afterPre.castlingRights;
-        if(leftRookMoved)
-          var castlingRights = castlingRights.replace((afterPre.color === 'w' ? 'Q' : 'q'), '');
-        else
-          var castlingRights = castlingRights.replace((afterPre.color === 'w' ? 'K' : 'k'), '');
-
-        if(!castlingRights)
-          castlingRights = '-';
-
-        afterPost.castlingRights = castlingRights;
-      }
-    }
+    afterPost.castlingRights = adjustCastlingRights(game, outMove.from, afterPre.castlingRights);
 
     // Don't let chess.js change the castling rights erroneously
     if(outMove.piece !== 'k' && outMove.piece !== 'r') 
@@ -1686,6 +1657,49 @@ function parseVariantMove(game: Game, fen: string, move: any) {
     return null;
 
   return {fen: outFen, move: outMove};
+}
+
+function adjustCastlingRights(game: Game, from: string, castlingRights: string): string {
+  var rank = from.charAt(1);
+  var color = (rank === '1' ? 'w' : 'b');
+
+  // Check if rook moved from starting position
+  var startChess = new Chess(game.history.first().fen);
+  var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  var leftRook = '';
+  var rightRook = '';
+  for(const file of files) {
+    let square = file + rank;
+    let p = startChess.get(square);
+    if(p && p.type === 'r' && p.color === color) { // Get starting location of rooks
+      if(!leftRook) 
+        var leftRook = square;
+      else 
+        var rightRook = square;
+    }
+    else if(p && p.type === 'k' && p.color === color) // Get starting location of king
+      var king = square;
+  }
+
+  if(from === king) 
+    var castlingRights = castlingRights.replace((color === 'w' ? 'KQ' : 'kq'), '');
+
+  if(from === leftRook) 
+    var leftRookMoved = true;
+  if(from === rightRook) 
+    var rightRookMoved = true;
+
+  if(leftRookMoved || rightRookMoved) {
+    if(leftRookMoved)
+      var castlingRights = castlingRights.replace((color === 'w' ? 'Q' : 'q'), '');
+    else
+      var castlingRights = castlingRights.replace((color === 'w' ? 'K' : 'k'), '');
+  }
+  
+  if(!castlingRights)
+    castlingRights = '-';
+
+  return castlingRights;
 }
 
 export function parseMovelist(game: Game, movelist: string) {
