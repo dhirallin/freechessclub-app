@@ -3233,7 +3233,7 @@ function hitClock(game: Game, setClocks: boolean = false) {
   }
 }
 
-export function updateBoard(game: Game, playSound = false) {
+export function updateBoard(game: Game, playSound: boolean = false, setBoard: boolean = true) {
   if(!game.history)
     return;
 
@@ -3242,8 +3242,11 @@ export function updateBoard(game: Game, playSound = false) {
 
   setClocks(game);
 
-  if(!game.setupBoard)
+  if(setBoard) {
     game.board.set({ fen });
+    if(game.setupBoard)
+      initSetupBoardControls(game);
+  }
 
   if(game.element.find('.promotion-panel').is(':visible')) {
     game.board.cancelPremove();
@@ -3344,12 +3347,14 @@ export function updateBoard(game: Game, playSound = false) {
       $('#exit-subvariation').addClass('disabled');
     
     // create new imstance of Stockfish for each move, since waiting for new position/go commands is very slow (with current SF build)
-    if(engine) {
-      stopEngine();
-      startEngine();
+    if(setBoard) {
+      if(engine) {
+        stopEngine();
+        startEngine();
+      }
+      if(evalEngine)
+        evalEngine.evaluate();
     }
-    if(evalEngine)
-      evalEngine.evaluate();
   }
 }
 
@@ -4358,7 +4363,7 @@ export function setGameWithFocus(game: Game) {
     setMovelistViewMode();
     initGameControls(game);
   
-    updateBoard(game);
+    updateBoard(game, false, false);
   }
 }
 
@@ -5141,7 +5146,7 @@ $('#autopromote-toggle').on('click', (event) => {
 $('#highlights-toggle').prop('checked', highlightsToggle);
 $('#highlights-toggle').on('click', (event) => {
   highlightsToggle = !highlightsToggle;
-  updateBoard(gameWithFocus);
+  updateBoard(gameWithFocus, false, false);
   Cookies.set('highlights', String(highlightsToggle), { expires: 365 })
 });
 
@@ -6879,14 +6884,12 @@ $('#game-tools-setup-board').on('click', (event) => {
 function setupBoard(game: Game) {
   game.setupBoard = true;
   game.element.find('.status').hide();
-  setupBoardColorToMove(game, game.history.current().turnColor);
-  var fen = game.history.current().fen;
-  setupBoardCastlingRights(game, splitFEN(fen).castlingRights);
+  initSetupBoardControls(game);
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
   showPanel('#left-panel-setup-board');
   initGameTools(game);
-  updateBoard(game);
+  updateBoard(game, false, false);
   scrollToBoard();
 }
 
@@ -6898,6 +6901,12 @@ function leaveSetupBoard(game: Game) {
   hidePanel('#left-panel-setup-board');
   initGameTools(game);
   updateBoard(game);
+}
+
+function initSetupBoardControls(game: Game) {
+  setupBoardColorToMove(game, game.history.current().turnColor);
+  var fen = game.history.current().fen;
+  setupBoardCastlingRights(game, splitFEN(fen).castlingRights);
 }
 
 $(document).on('click', '.reset-board', (event) => {

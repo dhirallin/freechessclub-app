@@ -1348,7 +1348,6 @@ export class History {
    */
   public resetMetatags() {
     var tags = this.metatags;
-    delete tags.Termination;
     delete tags.Opening;
     delete tags.Variation;
     delete tags.SubVariation;
