@@ -537,23 +537,10 @@ function variantToDests(game: Game, chess: any): Map<Key, Key[]> {
 
   // Add irregular castling moves for wild variants
   if(game.category.startsWith('wild')) {
-    var color = chess.turn();
-    var rank = (color === 'w' ? '1' : '8');
-    var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    var startChess = new Chess(game.history.first().fen);
-    for(const file of files) {
-      let square = file + rank;
-      let piece = startChess.get(square);
-      if(piece && piece.color === color && piece.type === 'r') {
-        if(!leftRook)
-          var leftRook = square;
-        else
-          var rightRook = square;      
-      }
-      piece = chess.get(square);
-      if(piece && piece.color === color && piece.type === 'k')
-        var king = square;
-    }
+    var cPieces = getCastlingPieces(game, chess.turn());
+    var king = cPieces.king;
+    var leftRook = cPieces.leftRook;
+    var rightRook = cPieces.rightRook;
 
     // Remove any castling moves already in dests
     var kingDests = dests.get(king);
@@ -1459,24 +1446,11 @@ function parseVariantMove(game: Game, fen: string, move: any) {
     }
     else if(san.toUpperCase() === 'O-O' || san.toUpperCase() === 'O-O-O') {
       // Parse irregular castling moves for fischer random and wild variants    
-      var kingFrom = '';
       var rank = (color === 'w' ? '1' : '8');
-      var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-      var startChess = new Chess(game.history.first().fen);
-      for(const file of files) {
-        let square = file + rank;
-        let piece = startChess.get(square);
-        if(piece && piece.color === color && piece.type === 'r') {
-          if(!leftRook)
-            var leftRook = square;
-          else
-            var rightRook = square;   
-        }
-
-        piece = chess.get(square);
-        if(piece && piece.color === color && piece.type === 'k')
-          kingFrom = square;
-      }
+      var cPieces = getCastlingPieces(game, color);
+      var kingFrom = cPieces.king;
+      var leftRook = cPieces.leftRook;
+      var rightRook = cPieces.rightRook;
 
       if(san.toUpperCase() === 'O-O') {
         if(category === 'wild/fr') {
@@ -1669,12 +1643,11 @@ function parseVariantMove(game: Game, fen: string, move: any) {
     }
   }
   if(category.startsWith('wild')) {
-    // Adjust castling rights after rook move
-    afterPost.castlingRights = adjustCastlingRights(game, outMove.from, afterPre.castlingRights);
+    // Adjust castling rights after rook or king move (not castling)
+    var cPieces = getCastlingPieces(game, color);
 
-    // Don't let chess.js change the castling rights erroneously
-    if(outMove.piece !== 'k' && outMove.piece !== 'r') 
-      afterPost.castlingRights = beforePre.castlingRights;
+    if(!san.toUpperCase().startsWith('O-O'))
+      afterPost.castlingRights = adjustCastlingRights(game, outMove.from, beforePre.castlingRights);
     else if(opponentRights) {
       // Restore opponent's castling rights (which were removed at the start so as not to confuse chess.js)
       var castlingRights = afterPost.castlingRights;
@@ -1695,12 +1668,10 @@ function parseVariantMove(game: Game, fen: string, move: any) {
   return {fen: outFen, move: outMove};
 }
 
-function adjustCastlingRights(game: Game, from: string, castlingRights: string): string {
-  var rank = from.charAt(1);
-  var color = (rank === '1' ? 'w' : 'b');
-
-  // Check if rook moved from starting position
+function getCastlingPieces(game: Game, color: string): { [key: string]: string } {
+  var oppositeColor = (color === 'w' ? 'b' : 'w');
   var startChess = new Chess(game.history.first().fen);
+  var rank = (color === 'w' ? '1' : '8');
   var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   var leftRook = '';
   var rightRook = '';
@@ -1708,17 +1679,53 @@ function adjustCastlingRights(game: Game, from: string, castlingRights: string):
     let square = file + rank;
     let p = startChess.get(square);
     if(p && p.type === 'r' && p.color === color) { // Get starting location of rooks
-      if(!leftRook) 
-        var leftRook = square;
-      else 
-        var rightRook = square;
+      if(game.category === 'wild/fr') {
+        // Note in weird cases where the starting position has more than 2 rooks on the back row
+        // We try to guess which are the real castling rooks. If a rook has an opposite coloured rook in 
+        // the equivalent position on the other side of the board, then it's more likely to be a genuine 
+        // castling rook. Otherwise we use the rook which is closest to the king on either side. 
+        var hasOppositeRook = false, oppositeLeftRookFound = false, oppositeRightRookFound = false;
+        let opSquare = file + (rank === '1' ? '8' : '1');
+        let opP = startChess.get(opSquare);
+        if(opP && opP.type === 'r' && p.color === oppositeColor) 
+          hasOppositeRook = true;
+        
+        if(!king && (hasOppositeRook || !oppositeLeftRookFound)) {
+          var leftRook = square;
+          if(hasOppositeRook)
+            oppositeLeftRookFound = true;
+        }
+        else if(!rightRook || (hasOppositeRook && !oppositeRightRookFound)) {
+          var rightRook = square;
+          if(hasOppositeRook)
+            oppositeRightRookFound = true;
+        }
+      }
+      else {
+        leftRook = (rank === '1' ? 'a1' : 'a8');
+        rightRook = (rank === '1' ? 'h1' : 'h8');
+      }
     }
     else if(p && p.type === 'k' && p.color === color) // Get starting location of king
       var king = square;
   }
 
+  return {king, leftRook, rightRook};
+}
+
+function adjustCastlingRights(game: Game, from: string, castlingRights: string): string {
+  if(!from)
+    return castlingRights;
+
+  var color = (from.charAt(1) === '1' ? 'w' : 'b');
+
+  var cPieces = getCastlingPieces(game, color);
+  var king = cPieces.king;
+  var leftRook = cPieces.leftRook;
+  var rightRook = cPieces.rightRook;
+
   if(from === king) 
-    var castlingRights = castlingRights.replace((color === 'w' ? 'KQ' : 'kq'), '');
+    var castlingRights = castlingRights.replace((color === 'w' ? /[KQ]/g : /[kq]/g), '');
 
   if(from === leftRook) 
     var leftRookMoved = true;
