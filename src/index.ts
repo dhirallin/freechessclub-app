@@ -1307,6 +1307,42 @@ function joinFEN(obj: any) {
   return Object.keys(obj).map(key => obj[key]).join(' ');
 }
 
+function validateFEN(fen: string, category: string): string {
+  var chess = new Chess(fen);
+  if(!chess)
+    return 'Invalid FEN format.';
+
+  var fenWords = splitFEN(fen);
+  var color = fenWords.color;
+  var board = fenWords.board;
+  var castlingRights = fenWords.castlingRights;
+
+  var oppositeColor = color === 'w' ? 'b' : 'w';
+  var tempFen = fen.replace(' ' + color + ' ', ' ' + oppositeColor + ' ');
+  chess.load(tempFen);
+  if(chess.in_check()) {
+    if(color === 'w')
+      return 'White\'s turn but black is in check.';
+    else
+      return 'Black\'s turn but white is in check.';
+  }
+  chess.load(fen);
+
+  if(!board.includes('K') || !board.includes('k'))
+    return 'Missing king.';
+
+  if(/(K.*K|k.*k)/.test(board)) 
+    return 'Too many kings.';
+
+  var match = board.match(/(\w+)(?:\/\w+){6}\/(\w+)/);
+  var rank8 = match[1];
+  var rank1 = match[2];
+  if(/[pP]/.test(rank1) || /[pP]/.test(rank8))
+    return 'Pawn on 1st or 8th rank.';
+
+  return null;
+}
+
 export function parseMove(game: Game, fen: string, move: any) {
   // Parse variant move
   var category = game.category;
@@ -6958,6 +6994,13 @@ $('#setup-done').on('click', (event) => {
 
 function setupDone(game: Game) {
   var fen = getSetupBoardFEN(game);
+
+  var err = validateFEN(fen, game.category);
+  if(err) {
+    showFixedDialog({type: 'Invalid Position', msg: err, btnSuccess: ['', 'OK']});
+    return;
+  }
+
   game.history.reset(fen);
   $('#game-pane-status').hide();
   leaveSetupBoard(game);
