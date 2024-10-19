@@ -1294,7 +1294,7 @@ function joinFEN(obj: any) {
   return Object.keys(obj).map(key => obj[key]).join(' ');
 }
 
-function validateFEN(fen: string, category: string): string {
+function validateFEN(game: Game, fen: string): string {
   var chess = new Chess(fen);
   if(!chess)
     return 'Invalid FEN format.';
@@ -1326,6 +1326,22 @@ function validateFEN(fen: string, category: string): string {
   var rank1 = match[2];
   if(/[pP]/.test(rank1) || /[pP]/.test(rank8))
     return 'Pawn on 1st or 8th rank.';
+
+  // Check castling rights
+  if(castlingRights.includes('K') || castlingRights.includes('Q')) {
+    var castlingPieces = getCastlingPieces(game, 'w', fen);
+    if(!castlingPieces.king 
+        || (!castlingPieces.leftRook && castlingRights.includes('Q'))
+        || (!castlingPieces.rightRook && castlingRights.includes('K')))
+      return 'White\'s king or rooks aren\'t in valid locations for castling.';
+  }
+  if(castlingRights.includes('k') || castlingRights.includes('q')) {
+    var castlingPieces = getCastlingPieces(game, 'b', fen);
+    if(!castlingPieces.king 
+        || (!castlingPieces.leftRook && castlingRights.includes('q'))
+        || (!castlingPieces.rightRook && castlingRights.includes('k')))
+      return 'Black\'s king or rooks aren\'t in valid locations for castling.';
+  }
 
   return null;
 }
@@ -1668,13 +1684,15 @@ function parseVariantMove(game: Game, fen: string, move: any) {
   return {fen: outFen, move: outMove};
 }
 
-function getCastlingPieces(game: Game, color: string): { [key: string]: string } {
+function getCastlingPieces(game: Game, color: string, startingFen?: string): { [key: string]: string } {
+  if(!startingFen)
+    startingFen = game.history.first().fen;
+  var startChess = new Chess(startingFen);
+
   var oppositeColor = (color === 'w' ? 'b' : 'w');
-  var startChess = new Chess(game.history.first().fen);
   var rank = (color === 'w' ? '1' : '8');
   var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  var leftRook = '';
-  var rightRook = '';
+  var leftRook = '', rightRook = '', king = '';
   for(const file of files) {
     let square = file + rank;
     let p = startChess.get(square);
@@ -1702,12 +1720,19 @@ function getCastlingPieces(game: Game, color: string): { [key: string]: string }
         }
       }
       else {
-        leftRook = (rank === '1' ? 'a1' : 'a8');
-        rightRook = (rank === '1' ? 'h1' : 'h8');
+        if(file === 'a')
+          leftRook = square;
+        else if(file === 'h')
+          rightRook = square;
       }
     }
-    else if(p && p.type === 'k' && p.color === color) // Get starting location of king
-      var king = square;
+    else if(p && p.type === 'k' && p.color === color) { // Get starting location of king
+      if(game.category === 'wild/fr' 
+          || (game.category === 'wild/0' && ((color === 'w' && file === 'e') || (color === 'b' && file === 'd')))
+          || (game.category === 'wild/1' && (file === 'd' || file === 'e'))
+          || file === 'e')
+        king = square;
+    }
   }
 
   return {king, leftRook, rightRook};
@@ -7002,7 +7027,7 @@ $('#setup-done').on('click', (event) => {
 function setupDone(game: Game) {
   var fen = getSetupBoardFEN(game);
 
-  var err = validateFEN(fen, game.category);
+  var err = validateFEN(game, fen);
   if(err) {
     showFixedDialog({type: 'Invalid Position', msg: err, btnSuccess: ['', 'OK']});
     return;
