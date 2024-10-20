@@ -6147,7 +6147,9 @@ function initGameTools(game: Game) {
         || game.category === 'wild/fr' || game.category === 'wild/0' // Due to a bug in 'bsetup' it's not possible to convert some wild variants to examine mode
         || game.category === 'wild/1' || game.category === 'bughouse');
   
-    $('#game-tools-setup-board').toggleClass('disabled', game.setupBoard || game.isPlaying() || game.isObserving());    
+    $('#game-tools-setup-board').toggleClass('disabled', game.setupBoard || game.isPlaying() || game.isObserving()
+        || (game.isExamining() && (game.category === 'wild/fr' || game.category === 'wild/0' 
+        || game.category === 'wild/1' || game.category === 'bughouse')));
   }
 }
 
