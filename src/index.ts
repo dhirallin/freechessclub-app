@@ -620,14 +620,17 @@ function boardChanged() {
 
   if(game.setupBoard) {
     // Remove castling rights if king or rooks move from initial position
-    var castlingRights = splitFEN(getSetupBoardFEN(game)).castlingRights;
-    var newCastlingRights = adjustCastlingRights(game, source, castlingRights);
+    var fen = getSetupBoardFEN(game);
+    var fenWords = splitFEN(fen);
+    var board = fenWords.board;
+    var castlingRights = fenWords.castlingRights;
+
+    var newCastlingRights = adjustCastlingRights(game, fen, castlingRights);
     if(newCastlingRights !== castlingRights)
       setupBoardCastlingRights(game, newCastlingRights);
 
-    if(game.isExamining()) {
-
-    }
+    if(game.isExamining()) 
+      session.send('bsetup fen ' + board);
   }
 }
 
@@ -639,18 +642,18 @@ export function movePiece(source: any, target: any, metadata: any) {
   // Show 'Analyze' button once any moves have been made on the board
   showAnalyzeButton();
 
-  var inMove = {from: source, to: target, promotion: (game.promotePiece ? game.promotePiece : 'q')}; 
-  // Crazyhouse/bughouse/bsetup piece placement
-  const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
-  if(cgRoles.hasOwnProperty(source)) { 
-    inMove['piece'] = cgRoles[source];
-    inMove.from = '';
-  }
-
   if(game.setupBoard) 
     return;
 
   if(game.isPlaying() || game.isExamining() || game.role === Role.NONE) {  
+    var inMove = {from: source, to: target, promotion: (game.promotePiece ? game.promotePiece : 'q')}; 
+    // Crazyhouse/bughouse/bsetup piece placement
+    const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
+    if(cgRoles.hasOwnProperty(source)) { 
+      inMove['piece'] = cgRoles[source];
+      inMove.from = '';
+    }
+
     if(game.isPlaying() || game.isExamining()) 
       var chess = game.chess;
     else
@@ -1672,11 +1675,11 @@ function parseVariantMove(game: Game, fen: string, move: any) {
     }
   }
   if(category.startsWith('wild')) {
+    if(!san.toUpperCase().startsWith('O-O')) {
     // Adjust castling rights after rook or king move (not castling)
-    var cPieces = getCastlingPieces(game, color);
-
-    if(!san.toUpperCase().startsWith('O-O'))
-      afterPost.castlingRights = adjustCastlingRights(game, outMove.from, beforePre.castlingRights);
+      outFen = adjustCastlingRights(game, outFen);
+      afterPost.castlingRights = splitFEN(outFen).castlingRights;
+    }
     else if(opponentRights) {
       // Restore opponent's castling rights (which were removed at the start so as not to confuse chess.js)
       var castlingRights = afterPost.castlingRights;
@@ -1751,36 +1754,40 @@ function getCastlingPieces(game: Game, color: string, startingFen?: string): { [
   return {king, leftRook, rightRook};
 }
 
-function adjustCastlingRights(game: Game, from: string, castlingRights: string): string {
-  if(!from)
-    return castlingRights;
+function adjustCastlingRights(game: Game, fen: string): string {
+  var fenWords = splitFEN(fen);
+  var castlingRights = fenWords.castlingRights;
+  var chess = new Chess(fen);
+  if(!chess)
+    return fen;
 
-  var color = (from.charAt(1) === '1' ? 'w' : 'b');
+  var cp = getCastlingPieces(game, 'w');
+  var piece = chess.get(cp.king);
+  if(piece.type !== 'k' && piece.color !== 'w')
+    castlingRights = castlingRights.replace(/[KQ]/g, '');
+  var piece = chess.get(cp.leftRook);
+  if(piece.type !== 'r' && piece.color !== 'w')
+    var castlingRights = castlingRights.replace('Q', '');
+  var piece = chess.get(cp.rightRook);
+  if(piece.type !== 'r' && piece.color !== 'w')
+    var castlingRights = castlingRights.replace('K', '');  
 
-  var cPieces = getCastlingPieces(game, color);
-  var king = cPieces.king;
-  var leftRook = cPieces.leftRook;
-  var rightRook = cPieces.rightRook;
-
-  if(from === king) 
-    var castlingRights = castlingRights.replace((color === 'w' ? /[KQ]/g : /[kq]/g), '');
-
-  if(from === leftRook) 
-    var leftRookMoved = true;
-  if(from === rightRook) 
-    var rightRookMoved = true;
-
-  if(leftRookMoved || rightRookMoved) {
-    if(leftRookMoved)
-      var castlingRights = castlingRights.replace((color === 'w' ? 'Q' : 'q'), '');
-    else
-      var castlingRights = castlingRights.replace((color === 'w' ? 'K' : 'k'), '');
-  }
+  var cp = getCastlingPieces(game, 'b');
+  var piece = chess.get(cp.king);
+  if(piece.type !== 'k' && piece.color !== 'b')
+    castlingRights = castlingRights.replace(/[kq]/g, '');
+  var piece = chess.get(cp.leftRook);
+  if(piece.type !== 'r' && piece.color !== 'b')
+    var castlingRights = castlingRights.replace('q', '');
+  var piece = chess.get(cp.rightRook);
+  if(piece.type !== 'r' && piece.color !== 'b')
+    var castlingRights = castlingRights.replace('k', '');  
   
   if(!castlingRights)
     castlingRights = '-';
 
-  return castlingRights;
+  fenWords.castlingRights = castlingRights;
+  return joinFEN(fenWords);
 }
 
 export function parseMovelist(game: Game, movelist: string) {
