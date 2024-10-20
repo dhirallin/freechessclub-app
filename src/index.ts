@@ -2727,6 +2727,7 @@ function messageHandler(data) {
             if(chatTab) 
               chat.updateGameDescription(chatTab);
             initAnalysis(game);
+            initGameTools(game);
           }
 
           game.gameStatusRequested = false;
