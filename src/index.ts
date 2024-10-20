@@ -2204,6 +2204,7 @@ function messageHandler(data) {
       // Make move
       if(game.setupBoard) {
         game.board.set({ fen: game.fen });
+        initSetupBoardControls(game, game.fen);
       }
       else if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
         const lastPly = getPlyFromFEN(game.chess.fen());
@@ -7040,10 +7041,13 @@ function leaveSetupBoard(game: Game, otherUserIssued: boolean = false) {
     session.send('bsetup done');
 }
 
-function initSetupBoardControls(game: Game) {
-  setupBoardColorToMove(game, game.history.current().turnColor);
-  var fen = game.history.current().fen;
-  setupBoardCastlingRights(game, splitFEN(fen).castlingRights);
+function initSetupBoardControls(game: Game, fen?: string) {
+  if(!fen)
+    fen = game.history.current().fen;
+  var fenWords = splitFEN(fen);
+
+  setupBoardColorToMove(game, fenWords.color);
+  setupBoardCastlingRights(game, fenWords.castlingRights);
 }
 
 $(document).on('click', '.reset-board', (event) => {
