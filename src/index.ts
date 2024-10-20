@@ -621,16 +621,15 @@ function boardChanged() {
   if(game.setupBoard) {
     // Remove castling rights if king or rooks move from initial position
     var fen = getSetupBoardFEN(game);
-    var fenWords = splitFEN(fen);
-    var board = fenWords.board;
-    var castlingRights = fenWords.castlingRights;
 
-    var newCastlingRights = adjustCastlingRights(game, fen, castlingRights);
-    if(newCastlingRights !== castlingRights)
-      setupBoardCastlingRights(game, newCastlingRights);
+    var newFEN = adjustCastlingRights(game, fen, game.setupBoardFEN);
+    if(newFEN !== fen)
+      setupBoardCastlingRights(game, splitFEN(newFEN).castlingRights);
 
     if(game.isExamining()) 
-      session.send('bsetup fen ' + board);
+      session.send('bsetup fen ' + game.board.getFen());
+
+    game.setupBoardFEN = newFEN;
   }
 }
 
@@ -1676,7 +1675,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
   }
   if(category.startsWith('wild')) {
     if(!san.toUpperCase().startsWith('O-O')) {
-    // Adjust castling rights after rook or king move (not castling)
+      // Adjust castling rights after rook or king move (not castling)
       outFen = adjustCastlingRights(game, outFen);
       afterPost.castlingRights = splitFEN(outFen).castlingRights;
     }
@@ -1754,34 +1753,46 @@ function getCastlingPieces(game: Game, color: string, startingFen?: string): { [
   return {king, leftRook, rightRook};
 }
 
-function adjustCastlingRights(game: Game, fen: string): string {
+function adjustCastlingRights(game: Game, fen: string, startFen?: string): string {
   var fenWords = splitFEN(fen);
   var castlingRights = fenWords.castlingRights;
   var chess = new Chess(fen);
   if(!chess)
     return fen;
 
-  var cp = getCastlingPieces(game, 'w');
-  var piece = chess.get(cp.king);
-  if(piece.type !== 'k' && piece.color !== 'w')
-    castlingRights = castlingRights.replace(/[KQ]/g, '');
-  var piece = chess.get(cp.leftRook);
-  if(piece.type !== 'r' && piece.color !== 'w')
-    var castlingRights = castlingRights.replace('Q', '');
-  var piece = chess.get(cp.rightRook);
-  if(piece.type !== 'r' && piece.color !== 'w')
-    var castlingRights = castlingRights.replace('K', '');  
+  var cp = getCastlingPieces(game, 'w', startFen);
+  if(cp.king) {
+    var piece = chess.get(cp.king);
+    if(!piece || piece.type !== 'k' || piece.color !== 'w') 
+      castlingRights = castlingRights.replace(/[KQ]/g, '');
+  }
+  if(cp.leftRook) {
+    var piece = chess.get(cp.leftRook);
+    if(!piece || piece.type !== 'r' || piece.color !== 'w')
+      var castlingRights = castlingRights.replace('Q', '');
+  }
+  if(cp.rightRook) {
+    var piece = chess.get(cp.rightRook);
+    if(!piece || piece.type !== 'r' || piece.color !== 'w')
+      var castlingRights = castlingRights.replace('K', '');  
+  }
 
-  var cp = getCastlingPieces(game, 'b');
-  var piece = chess.get(cp.king);
-  if(piece.type !== 'k' && piece.color !== 'b')
-    castlingRights = castlingRights.replace(/[kq]/g, '');
-  var piece = chess.get(cp.leftRook);
-  if(piece.type !== 'r' && piece.color !== 'b')
-    var castlingRights = castlingRights.replace('q', '');
-  var piece = chess.get(cp.rightRook);
-  if(piece.type !== 'r' && piece.color !== 'b')
-    var castlingRights = castlingRights.replace('k', '');  
+  var cp = getCastlingPieces(game, 'b', startFen);
+  if(cp.king) {
+    var piece = chess.get(cp.king);
+    if(!piece || piece.type !== 'k' || piece.color !== 'b')
+      castlingRights = castlingRights.replace(/[kq]/g, '');
+  }
+  if(cp.leftRook) {
+    var piece = chess.get(cp.leftRook);
+    if(!piece || piece.type !== 'r' || piece.color !== 'b')
+      var castlingRights = castlingRights.replace('q', '');
+  }
+  if(cp.rightRook) {
+    var piece = chess.get(cp.rightRook);
+    if(!piece || piece.type !== 'r' || piece.color !== 'b')
+      var castlingRights = castlingRights.replace('k', '');  
+  }
   
   if(!castlingRights)
     castlingRights = '-';
@@ -7010,6 +7021,7 @@ function setupBoard(game: Game, otherUserIssued: boolean = false) {
   updateBoard(game, false, false);
   if(game.isExamining() && !otherUserIssued)
     session.send('bsetup');
+  game.setupBoardFEN = game.history.current().fen;
 }
 
 function leaveSetupBoard(game: Game, otherUserIssued: boolean = false) {
