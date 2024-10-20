@@ -491,8 +491,12 @@ export function gotoMove(to: HEntry, playSound = false) {
 
 function sendMove(move: any) {
   var moveStr = '';
-  if(move.san.startsWith('O-O') || move.san.includes('@')) // support for variants
+  if(move.san && move.san.startsWith('O-O')) // support for variants
     moveStr = move.san;
+  else if(!move.from) 
+    moveStr = move.piece + '@' + move.to; // add piece in crazyhouse or bsetup mode
+  else if(!move.to)
+    moveStr = 'x' + move.from; // remove piece in bsetup mode
   else
     moveStr = move.from + '-' + move.to + (move.promotion ? '=' + move.promotion : ''); 
 
@@ -611,6 +615,22 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
   checkGameEnd(game); // Check whether game is over when playing against computer (offline mode)
 }
 
+function boardChanged() {
+  var game = gameWithFocus;
+
+  if(game.setupBoard) {
+    // Remove castling rights if king or rooks move from initial position
+    var castlingRights = splitFEN(getSetupBoardFEN(game)).castlingRights;
+    var newCastlingRights = adjustCastlingRights(game, source, castlingRights);
+    if(newCastlingRights !== castlingRights)
+      setupBoardCastlingRights(game, newCastlingRights);
+
+    if(game.isExamining()) {
+
+    }
+  }
+}
+
 export function movePiece(source: any, target: any, metadata: any) {
   let fen = '';
   let move = null;
@@ -619,30 +639,23 @@ export function movePiece(source: any, target: any, metadata: any) {
   // Show 'Analyze' button once any moves have been made on the board
   showAnalyzeButton();
 
-  if(game.setupBoard) {
-    // Remove castling rights if king or rooks move from initial position
-    var castlingRights = splitFEN(getSetupBoardFEN(game)).castlingRights;
-    var newCastlingRights = adjustCastlingRights(game, source, castlingRights);
-    if(newCastlingRights !== castlingRights)
-      setupBoardCastlingRights(game, newCastlingRights);
-    return;
+  var inMove = {from: source, to: target, promotion: (game.promotePiece ? game.promotePiece : 'q')}; 
+  // Crazyhouse/bughouse/bsetup piece placement
+  const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
+  if(cgRoles.hasOwnProperty(source)) { 
+    inMove['piece'] = cgRoles[source];
+    inMove.from = '';
   }
+
+  if(game.setupBoard) 
+    return;
 
   if(game.isPlaying() || game.isExamining() || game.role === Role.NONE) {  
     if(game.isPlaying() || game.isExamining()) 
       var chess = game.chess;
     else
       var chess = new Chess(game.history.current().fen);
-
-    var inMove = {from: source, to: target, promotion: (game.promotePiece ? game.promotePiece : 'q')};
-    
-    // Crazyhouse/bughouse piece placement
-    const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
-    if(cgRoles.hasOwnProperty(source)) { 
-      inMove['piece'] = cgRoles[source];
-      inMove.from = '';
-    }
-  
+ 
     var parsedMove = parseMove(game, chess.fen(), inMove);
     if(!parsedMove) {
       updateBoard(game);
@@ -2168,11 +2181,14 @@ function messageHandler(data) {
         gameStart(game);
 
       // Make move
-      if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
+      if(game.setupBoard) {
+        game.board.set({ fen: game.fen });
+      }
+      else if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
         const lastPly = getPlyFromFEN(game.chess.fen());
         const thisPly = getPlyFromFEN(game.fen);
  
-        if (game.move !== 'none' && thisPly === lastPly + 1) { // make sure the move no is right
+        if(game.move !== 'none' && thisPly === lastPly + 1) { // make sure the move no is right
           var parsedMove = parseMove(game, game.chess.fen(), game.move);
           game.chess.load(game.fen);
           movePieceAfter(game, (parsedMove ? parsedMove.move : {san: game.move}));
@@ -2833,6 +2849,27 @@ function messageHandler(data) {
       if (match != null && match.length > 1)
         return;
       
+      // Enter setup mode when another examiner issues 'bsetup' command
+      match = msg.match(/^Game (\d+): \w+ enters setup mode\./m);
+      if(match) {
+        var game = findGame(+match[1]);
+        if(game) {
+          game.setupBoard = true;
+          if(game.isExamining())
+            setupBoard(game, true);
+        }
+      }
+      // Leave setup mode when another examiner issues 'bsetup done' command
+      match = msg.match(/^Game (\d+): \w+ has validated the position. Entering examine mode\./m);
+      if(match) {
+        var game = findGame(+match[1]);
+        if(game) {
+          game.setupBoard = false;
+          if(game.isExamining())
+            leaveSetupBoard(game, true);
+        }
+      }
+
       // Suppress output when commiting a movelist in examine mode
       match = msg.match(/^Game \d+: \w+ commits the subvariation\./m);
       if(!match) 
@@ -4129,6 +4166,9 @@ function createBoard(element: any): any {
         set: preMovePiece,
         unset: hidePromotionPanel,
       }
+    },
+    events: {
+      change: boardChanged
     }
   });
 }
@@ -6949,9 +6989,10 @@ function setupGameInExamineMode(game: Game) {
 /** Triggered when 'Setup Board' menu option is selected */ 
 $('#game-tools-setup-board').on('click', (event) => {
   setupBoard(gameWithFocus);
+  scrollToBoard();
 });
 
-function setupBoard(game: Game) {
+function setupBoard(game: Game, otherUserIssued: boolean = false) {
   game.setupBoard = true;
   game.element.find('.status').hide();
   initSetupBoardControls(game);
@@ -6960,10 +7001,11 @@ function setupBoard(game: Game) {
   showPanel('#left-panel-setup-board');
   initGameTools(game);
   updateBoard(game, false, false);
-  scrollToBoard();
+  if(game.isExamining() && !otherUserIssued)
+    session.send('bsetup');
 }
 
-function leaveSetupBoard(game: Game) {
+function leaveSetupBoard(game: Game, otherUserIssued: boolean = false) {
   game.setupBoard = false;
   game.element.find('.setup-board-top').hide();
   game.element.find('.setup-board-bottom').hide();
@@ -6971,6 +7013,8 @@ function leaveSetupBoard(game: Game) {
   hidePanel('#left-panel-setup-board');
   initGameTools(game);
   updateBoard(game);
+  if(game.isExamining() && !otherUserIssued)
+    session.send('bsetup done');
 }
 
 function initSetupBoardControls(game: Game) {
