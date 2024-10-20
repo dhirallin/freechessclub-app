@@ -1675,11 +1675,14 @@ function parseVariantMove(game: Game, fen: string, move: any) {
   }
   if(category.startsWith('wild')) {
     if(!san.toUpperCase().startsWith('O-O')) {
+      // Restore castling rights which chess.js erroneously removes
+      afterPost.castlingRights = afterPre.castlingRights;
+      outFen = joinFEN(afterPost);
       // Adjust castling rights after rook or king move (not castling)
       outFen = adjustCastlingRights(game, outFen);
       afterPost.castlingRights = splitFEN(outFen).castlingRights;
     }
-    else if(opponentRights) {
+    if(opponentRights) {
       // Restore opponent's castling rights (which were removed at the start so as not to confuse chess.js)
       var castlingRights = afterPost.castlingRights;
       if(castlingRights === '-')
@@ -1768,13 +1771,13 @@ function adjustCastlingRights(game: Game, fen: string, startFen?: string): strin
   }
   if(cp.leftRook) {
     var piece = chess.get(cp.leftRook);
-    if(!piece || piece.type !== 'r' || piece.color !== 'w')
-      var castlingRights = castlingRights.replace('Q', '');
+    if(!piece || piece.type !== 'r' || piece.color !== 'w') 
+      castlingRights = castlingRights.replace('Q', '');
   }
   if(cp.rightRook) {
     var piece = chess.get(cp.rightRook);
     if(!piece || piece.type !== 'r' || piece.color !== 'w')
-      var castlingRights = castlingRights.replace('K', '');  
+      castlingRights = castlingRights.replace('K', '');  
   }
 
   var cp = getCastlingPieces(game, 'b', startFen);
@@ -1786,12 +1789,12 @@ function adjustCastlingRights(game: Game, fen: string, startFen?: string): strin
   if(cp.leftRook) {
     var piece = chess.get(cp.leftRook);
     if(!piece || piece.type !== 'r' || piece.color !== 'b')
-      var castlingRights = castlingRights.replace('q', '');
+      castlingRights = castlingRights.replace('q', '');
   }
   if(cp.rightRook) {
     var piece = chess.get(cp.rightRook);
     if(!piece || piece.type !== 'r' || piece.color !== 'b')
-      var castlingRights = castlingRights.replace('k', '');  
+      castlingRights = castlingRights.replace('k', '');  
   }
   
   if(!castlingRights)
