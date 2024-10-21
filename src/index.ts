@@ -66,6 +66,7 @@ let gamesRequested = false;
 let lobbyRequested = false;
 let channelListRequested = false;
 let computerListRequested = false;
+let setupBoardPending = false;
 let gameExitPending = [];
 let examineModeRequested: Game | null = null;
 let computerList = [];
@@ -2062,6 +2063,11 @@ function gameStart(game: Game) {
           session.send('back 999');
         session.send('for 999');
       }
+
+      if(setupBoardPending) {
+        setupBoard(game, true);
+        setupBoardPending = false;
+      }
     }
 
     if(game.isExamining() || ((game.isObserving() || game.isPlayingOnline()) && game.move !== 'none')) {        
@@ -2876,25 +2882,39 @@ function messageHandler(data) {
       match = msg.match(/^Game\s\d+: \w+ goes forward (\d+) moves?\./m);
       if (match != null && match.length > 1)
         return;
-      
-      // Enter setup mode when another examiner issues 'bsetup' command
-      match = msg.match(/^Game (\d+): \w+ enters setup mode\./m);
+
+      // Enter setup mode when server (other user or us) issues 'bsetup' command
+      match = msg.match(/^Entering setup mode\./m);
+      if(!match)
+        match = msg.match(/^Game (\d+): \w+ enters setup mode\./m);
       if(match) {
-        var game = findGame(+match[1]);
+        if(match.length > 1)
+          var game = findGame(+match[1]);
+        else
+          var game = getPlayingExaminingGame();
+
         if(game) {
-          game.setupBoard = true;
-          if(game.isExamining())
+          if(!game.setupBoard && game.isExamining())
             setupBoard(game, true);
+          game.setupBoard = true;
         }
+        else
+          setupBoardPending = true; // user issued 'bsetup' before 'examine'
       }
-      // Leave setup mode when another examiner issues 'bsetup done' command
-      match = msg.match(/^Game (\d+): \w+ has validated the position. Entering examine mode\./m);
+      // Leave setup mode when server (other user or us) issues 'bsetup done' command
+      match = msg.match(/^Game is validated - entering examine mode\./m);
+      if(!match)
+        match = msg.match(/^Game (\d+): \w+ has validated the position. Entering examine mode\./m);
       if(match) {
-        var game = findGame(+match[1]);
+        if(match.length > 1)
+          var game = findGame(+match[1]);
+        else
+          var game = getPlayingExaminingGame();
+
         if(game) {
-          game.setupBoard = false;
-          if(game.isExamining())
+          if(game.setupBoard && game.isExamining())
             leaveSetupBoard(game, true);
+          game.setupBoard = false;
         }
       }
 
@@ -7025,10 +7045,10 @@ $('#game-tools-setup-board').on('click', (event) => {
   scrollToBoard();
 });
 
-function setupBoard(game: Game, otherUserIssued: boolean = false) {
+function setupBoard(game: Game, serverIssued: boolean = false) {
   game.setupBoard = true;
   game.element.find('.status').hide();
-  if(game.isExamining() && !otherUserIssued)
+  if(game.isExamining() && !serverIssued)
     session.send('bsetup');
   initSetupBoardControls(game);
   game.element.find('.setup-board-top').css('display', 'flex');
@@ -7039,7 +7059,7 @@ function setupBoard(game: Game, otherUserIssued: boolean = false) {
   game.setupBoardFEN = game.history.current().fen;
 }
 
-function leaveSetupBoard(game: Game, otherUserIssued: boolean = false) {
+function leaveSetupBoard(game: Game, serverIssued: boolean = false) {
   game.setupBoard = false;
   game.element.find('.setup-board-top').hide();
   game.element.find('.setup-board-bottom').hide();
@@ -7047,17 +7067,17 @@ function leaveSetupBoard(game: Game, otherUserIssued: boolean = false) {
   hidePanel('#left-panel-setup-board');
   initGameTools(game);
   updateBoard(game);
-  if(game.isExamining() && !otherUserIssued)
+  if(game.isExamining() && !serverIssued)
     session.send('bsetup done');
 }
 
-function initSetupBoardControls(game: Game, fen?: string, otherUserIssued: boolean = false) {
+function initSetupBoardControls(game: Game, fen?: string, serverIssued: boolean = false) {
   if(!fen)
     fen = game.history.current().fen;
   var fenWords = splitFEN(fen);
 
-  setupBoardColorToMove(game, fenWords.color, otherUserIssued);
-  setupBoardCastlingRights(game, fenWords.castlingRights, otherUserIssued);
+  setupBoardColorToMove(game, fenWords.color, serverIssued);
+  setupBoardCastlingRights(game, fenWords.castlingRights, serverIssued);
 }
 
 $(document).on('click', '.reset-board', (event) => {
@@ -7095,7 +7115,7 @@ $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-whit
 (window as any).setupBoardColorToMove = (color: string) => {
   setupBoardColorToMove(gameWithFocus, color);
 };
-function setupBoardColorToMove(game: Game, color: string, otherUserIssued: boolean = false) {
+function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean = false) {
   var oldColor = splitFEN(getSetupBoardFEN(game)).color;
   
   var colorName = (color === 'w' ? 'White' : 'Black');
@@ -7108,11 +7128,11 @@ function setupBoardColorToMove(game: Game, color: string, otherUserIssued: boole
   button.text(label);
   button.attr('data-color', color);
 
-  if(game.isExamining() && !otherUserIssued && oldColor !== color)
+  if(game.isExamining() && !serverIssued && oldColor !== color)
     session.send('bsetup tomove ' + colorName);
 }
 
-function setupBoardCastlingRights(game: Game, castlingRights: string, otherUserIssued: boolean = false) { 
+function setupBoardCastlingRights(game: Game, castlingRights: string, serverIssued: boolean = false) { 
   var oldCastlingRights = splitFEN(getSetupBoardFEN(game)).castlingRights;
 
   game.element.find('.can-kingside-castle-white').prop('checked', castlingRights.includes('K'));
@@ -7120,7 +7140,7 @@ function setupBoardCastlingRights(game: Game, castlingRights: string, otherUserI
   game.element.find('.can-kingside-castle-black').prop('checked', castlingRights.includes('k'));
   game.element.find('.can-queenside-castle-black').prop('checked', castlingRights.includes('q'));
   
-  if(game.isExamining() && !otherUserIssued) {
+  if(game.isExamining() && !serverIssued) {
     if(oldCastlingRights.includes('K') !== castlingRights.includes('K')
         || oldCastlingRights.includes('Q') !== castlingRights.includes('Q')) 
       sendWhiteCastlingRights(castlingRights);
