@@ -2207,7 +2207,7 @@ function messageHandler(data) {
       // Make move
       if(game.setupBoard) {
         game.board.set({ fen: game.fen });
-        initSetupBoardControls(game, game.fen);
+        initSetupBoardControls(game, game.fen, true);
       }
       else if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
         const lastPly = getPlyFromFEN(game.chess.fen());
