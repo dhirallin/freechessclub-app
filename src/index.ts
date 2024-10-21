@@ -7080,6 +7080,17 @@ $(document).on('click', '.clear-board', (event) => {
   setupBoardColorToMove(gameWithFocus, 'w');
 });
 
+$(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-white, .can-kingside-castle-black, .can-queenside-castle-black', (event) => {
+  var game = gameWithFocus;
+  var castlingRights = splitFEN(getSetupBoardFEN(game)).castlingRights;
+  if(game.isExamining()) {
+    if($(event.target).hasClass('can-queenside-castle-white') || $(event.target).hasClass('can-kingside-castle-white')) 
+      sendWhiteCastlingRights(castlingRights);
+    else 
+      sendBlackCastlingRights(castlingRights);
+  }
+});
+
 /** Sets the color to move using the Setup Board dropdown button */
 (window as any).setupBoardColorToMove = (color: string) => {
   setupBoardColorToMove(gameWithFocus, color);
