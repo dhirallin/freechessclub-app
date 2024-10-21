@@ -621,6 +621,9 @@ function boardChanged() {
   if(game.setupBoard) {
     var fen = getSetupBoardFEN(game);
 
+    if(fen.split(/\s+/)[0] === game.setupBoardFEN.split(/\s+/)[0])
+      return;
+
     // Remove castling rights if king or rooks move from initial position
     var newFEN = adjustCastlingRights(game, fen, game.setupBoardFEN);
     if(newFEN !== fen)
@@ -7042,13 +7045,13 @@ function leaveSetupBoard(game: Game, otherUserIssued: boolean = false) {
     session.send('bsetup done');
 }
 
-function initSetupBoardControls(game: Game, fen?: string) {
+function initSetupBoardControls(game: Game, fen?: string, otherUserIssued: boolean = false) {
   if(!fen)
     fen = game.history.current().fen;
   var fenWords = splitFEN(fen);
 
-  setupBoardColorToMove(game, fenWords.color);
-  setupBoardCastlingRights(game, fenWords.castlingRights);
+  setupBoardColorToMove(game, fenWords.color, otherUserIssued);
+  setupBoardCastlingRights(game, fenWords.castlingRights, otherUserIssued);
 }
 
 $(document).on('click', '.reset-board', (event) => {
@@ -7056,18 +7059,22 @@ $(document).on('click', '.reset-board', (event) => {
   var fen = game.history.first().fen;
   game.board.set({ fen: fen });
   setupBoardCastlingRights(game, splitFEN(fen).castlingRights);
+  setupBoardColorToMove(game, splitFEN(fen).color);
 });
 
 $(document).on('click', '.clear-board', (event) => {
   gameWithFocus.board.set({ fen: '8/8/8/8/8/8/8/8 w - - 0 1' });
   setupBoardCastlingRights(gameWithFocus, '-');
+  setupBoardColorToMove(gameWithFocus, 'w');
 });
 
 /** Sets the color to move using the Setup Board dropdown button */
 (window as any).setupBoardColorToMove = (color: string) => {
   setupBoardColorToMove(gameWithFocus, color);
 };
-function setupBoardColorToMove(game: Game, color: string) {
+function setupBoardColorToMove(game: Game, color: string, otherUserIssued: boolean = false) {
+  var oldColor = splitFEN(getSetupBoardFEN(game)).color;
+  
   var colorName = (color === 'w' ? 'White' : 'Black');
   if(isSmallWindow())
     var label = colorName + `'s move`;
@@ -7078,16 +7085,19 @@ function setupBoardColorToMove(game: Game, color: string) {
   button.text(label);
   button.attr('data-color', color);
 
-  if(game.isExamining())
+  if(game.isExamining() && !otherUserIssued && oldColor !== color)
     session.send('bsetup tomove ' + colorName);
 }
 
-function setupBoardCastlingRights(game: Game, castlingRights: string) { 
+function setupBoardCastlingRights(game: Game, castlingRights: string, otherUserIssued: boolean = false) { 
+  var oldCastlingRights = splitFEN(getSetupBoardFEN(game)).castlingRights;
+
   game.element.find('.can-kingside-castle-white').prop('checked', castlingRights.includes('K'));
   game.element.find('.can-queenside-castle-white').prop('checked', castlingRights.includes('Q'));
   game.element.find('.can-kingside-castle-black').prop('checked', castlingRights.includes('k'));
   game.element.find('.can-queenside-castle-black').prop('checked', castlingRights.includes('q'));
-  if(game.isExamining()) 
+  
+  if(game.isExamining() && !otherUserIssued && oldCastlingRights !== castlingRights) 
     sendBSetupCastlingRights(castlingRights);
 }
 
