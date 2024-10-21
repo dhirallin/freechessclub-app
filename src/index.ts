@@ -619,9 +619,9 @@ function boardChanged() {
   var game = gameWithFocus;
 
   if(game.setupBoard) {
-    // Remove castling rights if king or rooks move from initial position
     var fen = getSetupBoardFEN(game);
 
+    // Remove castling rights if king or rooks move from initial position
     var newFEN = adjustCastlingRights(game, fen, game.setupBoardFEN);
     if(newFEN !== fen)
       setupBoardCastlingRights(game, splitFEN(newFEN).castlingRights);
@@ -3370,11 +3370,8 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
 
   setClocks(game);
 
-  if(setBoard) {
+  if(setBoard) 
     game.board.set({ fen });
-    if(game.setupBoard)
-      initSetupBoardControls(game);
-  }
 
   if(game.element.find('.promotion-panel').is(':visible')) {
     game.board.cancelPremove();
@@ -6949,24 +6946,7 @@ function setupGameInExamineMode(game: Game) {
 
   // castling rights
   var castlingRights = fenWords.castlingRights;
-  if(castlingRights.includes('K') && castlingRights.includes('Q'))
-    var wcastling = 'both';
-  else if(castlingRights.includes('K'))
-    var wcastling = 'kside';
-  else if(castlingRights.includes('Q'))
-    var wcastling = 'qside';
-  else
-    var wcastling = 'none';
-  if(castlingRights.includes('k') && castlingRights.includes('q'))
-    var bcastling = 'both';
-  else if(castlingRights.includes('k'))
-    var bcastling = 'kside';
-  else if(castlingRights.includes('q'))
-    var bcastling = 'qside';
-  else
-    var bcastling = 'none';    
-  session.send('bsetup wcastle ' + wcastling);
-  session.send('bsetup bcastle ' + bcastling);
+  sendBSetupCastlingRights(castlingRights);
 
   // en passant rights
   var enPassant = fenWords.enPassant;
@@ -7009,6 +6989,27 @@ function setupGameInExamineMode(game: Game) {
   }
 }
 
+function sendBSetupCastlingRights(castlingRights: string) {
+  if(castlingRights.includes('K') && castlingRights.includes('Q'))
+    var wcastling = 'both';
+  else if(castlingRights.includes('K'))
+    var wcastling = 'kside';
+  else if(castlingRights.includes('Q'))
+    var wcastling = 'qside';
+  else
+    var wcastling = 'none';
+  if(castlingRights.includes('k') && castlingRights.includes('q'))
+    var bcastling = 'both';
+  else if(castlingRights.includes('k'))
+    var bcastling = 'kside';
+  else if(castlingRights.includes('q'))
+    var bcastling = 'qside';
+  else
+    var bcastling = 'none';    
+  session.send('bsetup wcastle ' + wcastling);
+  session.send('bsetup bcastle ' + bcastling);
+}
+
 /** Triggered when 'Setup Board' menu option is selected */ 
 $('#game-tools-setup-board').on('click', (event) => {
   setupBoard(gameWithFocus);
@@ -7018,14 +7019,14 @@ $('#game-tools-setup-board').on('click', (event) => {
 function setupBoard(game: Game, otherUserIssued: boolean = false) {
   game.setupBoard = true;
   game.element.find('.status').hide();
+  if(game.isExamining() && !otherUserIssued)
+    session.send('bsetup');
   initSetupBoardControls(game);
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
   showPanel('#left-panel-setup-board');
   initGameTools(game);
   updateBoard(game, false, false);
-  if(game.isExamining() && !otherUserIssued)
-    session.send('bsetup');
   game.setupBoardFEN = game.history.current().fen;
 }
 
@@ -7076,6 +7077,9 @@ function setupBoardColorToMove(game: Game, color: string) {
   var button = game.element.find('.color-to-move-button');
   button.text(label);
   button.attr('data-color', color);
+
+  if(game.isExamining())
+    session.send('bsetup tomove ' + colorName);
 }
 
 function setupBoardCastlingRights(game: Game, castlingRights: string) { 
@@ -7083,6 +7087,8 @@ function setupBoardCastlingRights(game: Game, castlingRights: string) {
   game.element.find('.can-queenside-castle-white').prop('checked', castlingRights.includes('Q'));
   game.element.find('.can-kingside-castle-black').prop('checked', castlingRights.includes('k'));
   game.element.find('.can-queenside-castle-black').prop('checked', castlingRights.includes('q'));
+  if(game.isExamining()) 
+    sendBSetupCastlingRights(castlingRights);
 }
 
 document.addEventListener('touchstart', dragSetupBoardPiece, {passive: false});
