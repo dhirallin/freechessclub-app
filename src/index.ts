@@ -624,13 +624,13 @@ function boardChanged() {
     if(fen.split(/\s+/)[0] === game.setupBoardFEN.split(/\s+/)[0])
       return;
 
+    if(game.isExamining()) 
+      session.send('bsetup fen ' + game.board.getFen());
+
     // Remove castling rights if king or rooks move from initial position
     var newFEN = adjustCastlingRights(game, fen, game.setupBoardFEN);
     if(newFEN !== fen)
       setupBoardCastlingRights(game, splitFEN(newFEN).castlingRights);
-
-    if(game.isExamining()) 
-      session.send('bsetup fen ' + game.board.getFen());
 
     game.setupBoardFEN = newFEN;
   }
@@ -2206,6 +2206,8 @@ function messageHandler(data) {
 
       // Make move
       if(game.setupBoard) {
+        console.log('game.fen: ' + game.fen);
+        console.log('game.board.fen: ' + game.board.getFen());
         game.board.set({ fen: game.fen });
         initSetupBoardControls(game, game.fen, true);
       }
@@ -6949,7 +6951,8 @@ function setupGameInExamineMode(game: Game) {
 
   // castling rights
   var castlingRights = fenWords.castlingRights;
-  sendBSetupCastlingRights(castlingRights);
+  sendWhiteCastlingRights(castlingRights);
+  sendBlackCastlingRights(castlingRights);
 
   // en passant rights
   var enPassant = fenWords.enPassant;
@@ -6992,7 +6995,7 @@ function setupGameInExamineMode(game: Game) {
   }
 }
 
-function sendBSetupCastlingRights(castlingRights: string) {
+function sendWhiteCastlingRights(castlingRights: string) {
   if(castlingRights.includes('K') && castlingRights.includes('Q'))
     var wcastling = 'both';
   else if(castlingRights.includes('K'))
@@ -7001,6 +7004,10 @@ function sendBSetupCastlingRights(castlingRights: string) {
     var wcastling = 'qside';
   else
     var wcastling = 'none';
+  session.send('bsetup wcastle ' + wcastling);  
+}
+
+function sendBlackCastlingRights(castlingRights: string) {
   if(castlingRights.includes('k') && castlingRights.includes('q'))
     var bcastling = 'both';
   else if(castlingRights.includes('k'))
@@ -7009,7 +7016,6 @@ function sendBSetupCastlingRights(castlingRights: string) {
     var bcastling = 'qside';
   else
     var bcastling = 'none';    
-  session.send('bsetup wcastle ' + wcastling);
   session.send('bsetup bcastle ' + bcastling);
 }
 
@@ -7057,13 +7063,19 @@ function initSetupBoardControls(game: Game, fen?: string, otherUserIssued: boole
 $(document).on('click', '.reset-board', (event) => {
   var game = gameWithFocus;
   var fen = game.history.first().fen;
+  var fenWords = splitFEN(fen);
   game.board.set({ fen: fen });
-  setupBoardCastlingRights(game, splitFEN(fen).castlingRights);
-  setupBoardColorToMove(game, splitFEN(fen).color);
+  if(game.isExamining())
+    session.send('bsetup fen ' + fenWords.board);
+  setupBoardCastlingRights(game, fenWords.castlingRights);
+  setupBoardColorToMove(game, fenWords.color);
 });
 
 $(document).on('click', '.clear-board', (event) => {
-  gameWithFocus.board.set({ fen: '8/8/8/8/8/8/8/8 w - - 0 1' });
+  var game = gameWithFocus;
+  game.board.set({ fen: '8/8/8/8/8/8/8/8 w - - 0 1' });
+  if(game.isExamining())
+    session.send('bsetup clear');
   setupBoardCastlingRights(gameWithFocus, '-');
   setupBoardColorToMove(gameWithFocus, 'w');
 });
@@ -7097,8 +7109,14 @@ function setupBoardCastlingRights(game: Game, castlingRights: string, otherUserI
   game.element.find('.can-kingside-castle-black').prop('checked', castlingRights.includes('k'));
   game.element.find('.can-queenside-castle-black').prop('checked', castlingRights.includes('q'));
   
-  if(game.isExamining() && !otherUserIssued && oldCastlingRights !== castlingRights) 
-    sendBSetupCastlingRights(castlingRights);
+  if(game.isExamining() && !otherUserIssued) {
+    if(oldCastlingRights.includes('K') !== castlingRights.includes('K')
+        || oldCastlingRights.includes('Q') !== castlingRights.includes('Q')) 
+      sendWhiteCastlingRights(castlingRights);
+    if(oldCastlingRights.includes('k') !== castlingRights.includes('k')
+        || oldCastlingRights.includes('q') !== castlingRights.includes('q'))   
+      sendBlackCastlingRights(castlingRights);
+  }
 }
 
 document.addEventListener('touchstart', dragSetupBoardPiece, {passive: false});
