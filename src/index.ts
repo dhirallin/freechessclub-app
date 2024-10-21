@@ -230,6 +230,7 @@ export function cleanup() {
   lobbyRequested = false;
   channelListRequested = false;
   computerListRequested = false;
+  setupBoardPending = false;
   examineModeRequested = null;
   gameExitPending = [];
   clearMatchRequests();
@@ -2056,21 +2057,21 @@ function gameStart(game: Game) {
   } 
   else {
     if(game.isExamining()) {
-      if(game.wname === game.bname) 
-        game.history.scratch(true);
-      else {
-        if(game.move !== 'none')
-          session.send('back 999');
-        session.send('for 999');
-      }
-
       if(setupBoardPending) {
         setupBoard(game, true);
         setupBoardPending = false;
       }
+      
+      if(game.wname === game.bname) 
+        game.history.scratch(true);
+      else if(!game.setupBoard) {
+        if(game.move !== 'none')
+          session.send('back 999');
+        session.send('for 999');
+      }
     }
 
-    if(game.isExamining() || ((game.isObserving() || game.isPlayingOnline()) && game.move !== 'none')) {        
+    if(!game.setupBoard && (game.isExamining() || ((game.isObserving() || game.isPlayingOnline()) && game.move !== 'none'))) {        
       game.movelistRequested++;
       session.send('iset startpos 1'); // Show the initial board position before the moves list 
       session.send('moves ' + game.id);
@@ -2894,9 +2895,11 @@ function messageHandler(data) {
           var game = getPlayingExaminingGame();
 
         if(game) {
-          if(!game.setupBoard && game.isExamining())
-            setupBoard(game, true);
-          game.setupBoard = true;
+          if(!game.commitingMovelist) {
+            if(!game.setupBoard && game.isExamining())
+              setupBoard(game, true);
+            game.setupBoard = true;
+          }
         }
         else
           setupBoardPending = true; // user issued 'bsetup' before 'examine'
@@ -2911,7 +2914,7 @@ function messageHandler(data) {
         else
           var game = getPlayingExaminingGame();
 
-        if(game) {
+        if(game && !game.commitingMovelist) {
           if(game.setupBoard && game.isExamining())
             leaveSetupBoard(game, true);
           game.setupBoard = false;
