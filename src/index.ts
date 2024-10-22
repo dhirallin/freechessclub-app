@@ -440,8 +440,11 @@ export function gotoMove(to: HEntry, playSound = false) {
   var game = gameWithFocus;
   if(game.isExamining()) {
     if(game.setupBoard) {
-      var setupMode = true;
-      cancelSetup(game);
+      // Temporarily leave setup mode in order to reconstruct the move-list (on the server), 
+      // then re-enter setup mode again. This is because FICS doesn't have a 'bsetup cancel' command.
+      game.history.display(to, playSound);
+      cancelSetup(game); 
+      setupBoardPending = true;
     }
 
     var from = bufferedCurrentMove(game);
@@ -2063,8 +2066,8 @@ function gameStart(game: Game) {
   else {
     if(game.isExamining()) {
       if(setupBoardPending) {
-        setupBoard(game, true);
         setupBoardPending = false;
+        setupBoard(game, true);
       }
       
       if(game.wname === game.bname) 
@@ -2218,8 +2221,6 @@ function messageHandler(data) {
 
       // Make move
       if(game.setupBoard) {
-        console.log('game.fen: ' + game.fen);
-        console.log('game.board.fen: ' + game.board.getFen());
         game.board.set({ fen: game.fen });
         initSetupBoardControls(game, game.fen, true);
       }
