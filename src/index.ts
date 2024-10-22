@@ -439,6 +439,11 @@ export function gotoMove(to: HEntry, playSound = false) {
 
   var game = gameWithFocus;
   if(game.isExamining()) {
+    if(game.setupBoard) {
+      var setupMode = true;
+      cancelSetup(game);
+    }
+
     var from = bufferedCurrentMove(game);
     var curr = from;
     let i = 0;
@@ -2942,8 +2947,15 @@ function messageHandler(data) {
       if(match) {
         var game = getPlayingExaminingGame();
         if(game && game.commitingMovelist) {
-          if(match[0] === 'done: Command not found.') // This was sent by us to indicate when we are done
+          if(match[0] === 'done: Command not found.') { // This was sent by us to indicate when we are done
             game.commitingMovelist = false;
+            if(setupBoardPending) { 
+              // If the user navigates to a different move while in Setup Board mode then we temporarily
+              // leave setup board mode and then re-enter it after the move list is reconstructed
+              setupBoardPending = false;
+              setupBoard(game);
+            }
+          }
           return; 
         } 
       }
@@ -7179,14 +7191,19 @@ function setupDone(game: Game) {
   leaveSetupBoard(game);
 }
 
-$('#setup-cancel').on('click', (event) => {
-  var game = gameWithFocus;
+$('#cancel-setup').on('click', (event) => {
+  cancelSetup(gameWithFocus);
+});
+
+function cancelSetup(game: Game) {
   if(game.isExamining())
     session.send('bsetup start'); // Reset board so that it passes validation when sending 'bsetup done'  
-  leaveSetupBoard(gameWithFocus);
-  if(gameWithFocus.isExamining()) 
-    setupGameInExamineMode(gameWithFocus);
-});
+  leaveSetupBoard(game);
+  // FICS doesn't have a 'bsetup cancel' command, so in order to cancel the setup we need to manually
+  // reconstruct the move list (on the server), from before 'bsetup' was entered. 
+  if(game.isExamining()) 
+    setupGameInExamineMode(game);
+}
 
 function moveLeftPanelSetupBoard() {
   var setupBoardPanel = $('#left-panel-setup-board');
