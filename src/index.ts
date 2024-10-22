@@ -7180,7 +7180,12 @@ function setupDone(game: Game) {
 }
 
 $('#setup-cancel').on('click', (event) => {
+  var game = gameWithFocus;
+  if(game.isExamining())
+    session.send('bsetup start'); // Reset board so that it passes validation when sending 'bsetup done'  
   leaveSetupBoard(gameWithFocus);
+  if(gameWithFocus.isExamining()) 
+    setupGameInExamineMode(gameWithFocus);
 });
 
 function moveLeftPanelSetupBoard() {
