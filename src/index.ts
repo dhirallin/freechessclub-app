@@ -2220,7 +2220,7 @@ function messageHandler(data) {
         gameStart(game);
 
       // Make move
-      if(game.setupBoard) {
+      if(game.setupBoard && !game.commitingMovelist) {
         game.board.set({ fen: game.fen });
         initSetupBoardControls(game, game.fen, true);
       }
@@ -2901,11 +2901,8 @@ function messageHandler(data) {
           var game = getPlayingExaminingGame();
 
         if(game) {
-          if(!game.commitingMovelist) {
-            if(!game.setupBoard && game.isExamining())
-              setupBoard(game, true);
-            game.setupBoard = true;
-          }
+          if(!game.commitingMovelist && !game.setupBoard)
+            setupBoard(game, true);         
         }
         else
           setupBoardPending = true; // user issued 'bsetup' before 'examine'
@@ -2920,11 +2917,8 @@ function messageHandler(data) {
         else
           var game = getPlayingExaminingGame();
 
-        if(game && !game.commitingMovelist) {
-          if(game.setupBoard && game.isExamining())
-            leaveSetupBoard(game, true);
-          game.setupBoard = false;
-        }
+        if(game && !game.commitingMovelist && game.setupBoard)
+          leaveSetupBoard(game, true);
       }
 
       // Suppress output when commiting a movelist in examine mode
@@ -3411,7 +3405,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
 
   setClocks(game);
 
-  if(setBoard) 
+  if(setBoard && !game.setupBoard) 
     game.board.set({ fen });
 
   if(game.element.find('.promotion-panel').is(':visible')) {
@@ -6967,8 +6961,17 @@ $('#game-tools-examine').on('click', (event) => {
  */
 function setupGameInExamineMode(game: Game) {
   /** Setup the board */
-  
-  var fenWords = splitFEN(game.history.first().fen);
+  if(game.setupBoard) {
+    console.log('huh?');
+    var fen: string = getSetupBoardFEN(game);
+  }
+  else {
+    console.log('huh 2?');
+    var fen: string  = game.history.first().fen;
+  }
+  var fenWords = splitFEN(fen);
+
+  game.commitingMovelist = true;
   
   // starting FEN
   session.send('bsetup fen ' + fenWords.board);
@@ -6995,31 +6998,33 @@ function setupGameInExamineMode(game: Game) {
   if(enPassant !== '-')
     session.send('bsetup eppos ' + enPassant[0]);
 
-  session.send('bsetup done');
   session.send('wname ' + game.wname);
   session.send('bname ' + game.bname);
 
-  // Send and commit move list
-  game.commitingMovelist = true;
-  if(game.history.current() !== game.history.last())
-    var currMove = game.history.current();
-  game.history.goto(game.history.first());
-  var hEntry = game.history.first();
-  while(hEntry) {
-    if(hEntry.move)
-      sendMove(hEntry.move);
-    session.send('wclock ' + Clock.MSToHHMMSS(hEntry.wtime));
-    session.send('bclock ' + Clock.MSToHHMMSS(hEntry.btime));
-    var hEntry = hEntry.next;
-  }
-  if(!game.history.scratch() && game.history.length())  
-    session.send('commit');
-  game.history.goto(game.history.last());
+  if(!game.setupBoard) {
+    session.send('bsetup done');
 
-  // Navigate back to current move
-  if(currMove) {
-    gotoMove(currMove);
-    game.history.goto(currMove);
+    // Send and commit move list
+    if(game.history.current() !== game.history.last())
+      var currMove = game.history.current();
+    game.history.goto(game.history.first());
+    var hEntry = game.history.first();
+    while(hEntry) {
+      if(hEntry.move)
+        sendMove(hEntry.move);
+      session.send('wclock ' + Clock.MSToHHMMSS(hEntry.wtime));
+      session.send('bclock ' + Clock.MSToHHMMSS(hEntry.btime));
+      var hEntry = hEntry.next;
+    }
+    if(!game.history.scratch() && game.history.length())  
+      session.send('commit');
+    game.history.goto(game.history.last());
+
+    // Navigate back to current move
+    if(currMove) {
+      gotoMove(currMove);
+      game.history.goto(currMove);
+    }
   }
 
   // This is a hack just to indicate we are done
