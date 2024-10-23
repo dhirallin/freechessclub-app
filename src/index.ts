@@ -7115,7 +7115,7 @@ function updateSetupBoard(game: Game, fen?: string, serverIssued: boolean = fals
 }
 
 $(document).on('click', '.reset-board', (event) => {
-  updateSetupBoard(gameWithFocus, game.history.first().fen);
+  updateSetupBoard(gameWithFocus, gameWithFocus.history.first().fen);
 });
 
 $(document).on('click', '.clear-board', (event) => {
@@ -7137,8 +7137,9 @@ $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-whit
 
 /** Sets the color to move using the Setup Board dropdown button */
 (window as any).setupBoardColorToMove = (color: string) => {
-  setupBoardColorToMove(gameWithFocus, color);
-  gameWithFocus.fen = getSetupBoardFEN(game);
+  var game = gameWithFocus;
+  setupBoardColorToMove(game, color);
+  game.fen = getSetupBoardFEN(game);
   updateEngine();
 };
 function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean = false) {
