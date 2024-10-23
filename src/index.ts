@@ -495,8 +495,11 @@ export function gotoMove(to: HEntry, playSound = false) {
       game.bufferedHistoryCount++;
     }
   }
-  else
+  else {
     game.history.display(to, playSound);
+    if(game.setupBoard) 
+      updateSetupBoard(game);
+  }
 }
 
 function sendMove(move: any) {
