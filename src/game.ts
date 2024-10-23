@@ -93,13 +93,13 @@ export class Game extends GameData {
   bufferedHistoryCount: number = 0;
 
   removeMoveRequested: any = null;     // In examine mode, store a move to be deleted from the move-list until after we have navigated away from it
-  gameStatusRequested: boolean = false;
+  gameStatusRequested: boolean = false; // Sends the 'moves' command in order to retrieve the game info to display in teh status panel
+  bsetupStateRequested: boolean = false; // Uses the 'games <game_id>' command to determine if the game is in 'bsetup' mode or not 
   lastComputerMoveEval: string = null; // Keeps track of the current eval for a game against the Computer. Used for draw offers
   partnerGameId: number = null;        // bughouse partner's game id
   newVariationMode: number = NewVariationMode.ASK; 
   preserved: boolean = false;          // if true, prevents a game/board from being overwritten 
   setupBoard: boolean = false;         // in setup-board mode or not 
-  setupBoardFEN: string = '';          // Keeps track of the current position in setup board mode
   commitingMovelist = false;           // Used when entering examine mode and using 'commit' to submit a move list
   movelistRequested: number = 0;       // Used to keep track of move list requests
   gameListFilter: string = ''          // Stores the filter text for the game selector menu (when loading a PGN with multiple games)
