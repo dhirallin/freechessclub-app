@@ -7098,11 +7098,17 @@ function leaveSetupBoard(game: Game, serverIssued: boolean = false) {
 }
 
 function updateSetupBoard(game: Game, fen?: string, serverIssued: boolean = false) {
+  var oldFen = getSetupBoardFEN(game);
+  
   if(!fen)
     fen = game.history.current().fen;
-  var fenWords = splitFEN(fen);
 
-  if(game.board.getFen() !== splitFEN(fen).board) {
+  game.fen = fen;
+  if(fen === oldFen)
+    return;
+
+  var fenWords = splitFEN(fen);
+  if(splitFEN(oldFen).board !== fenWords.board) {
     game.board.set({ fen });    
     if(game.isExamining() && !serverIssued)
       session.send('bsetup fen ' + fenWords.board);
@@ -7110,7 +7116,6 @@ function updateSetupBoard(game: Game, fen?: string, serverIssued: boolean = fals
 
   setupBoardColorToMove(game, fenWords.color, serverIssued);
   setupBoardCastlingRights(game, fenWords.castlingRights, serverIssued);
-  game.fen = fen;
   updateEngine();
 }
 
