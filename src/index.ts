@@ -2222,9 +2222,7 @@ function messageHandler(data) {
 
       // Make move
       if(game.setupBoard && !game.commitingMovelist) {
-        game.board.set({ fen: game.fen });
-        initSetupBoardControls(game, game.fen, true);
-        updateEngine();
+        updateSetupBoard(game, game.fen, true);
       }
       else if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
         const lastPly = getPlyFromFEN(game.chess.fen());
@@ -7076,7 +7074,7 @@ function setupBoard(game: Game, serverIssued: boolean = false) {
   game.element.find('.status').hide();
   if(game.isExamining() && !serverIssued)
     session.send('bsetup');
-  initSetupBoardControls(game);
+  updateSetupBoard(game);
   game.element.find('.setup-board-top').css('display', 'flex');
   game.element.find('.setup-board-bottom').css('display', 'flex');
   showPanel('#left-panel-setup-board');
@@ -7096,35 +7094,29 @@ function leaveSetupBoard(game: Game, serverIssued: boolean = false) {
     session.send('bsetup done');
 }
 
-function initSetupBoardControls(game: Game, fen?: string, serverIssued: boolean = false) {
+function updateSetupBoard(game: Game, fen?: string, serverIssued: boolean = false) {
   if(!fen)
     fen = game.history.current().fen;
   var fenWords = splitFEN(fen);
 
+  if(game.board.getFen() !== splitFEN(fen).board) {
+    game.board.set({ fen });    
+    if(game.isExamining() && !serverIssued)
+      session.send('bsetup fen ' + fenWords.board);
+  }
+
   setupBoardColorToMove(game, fenWords.color, serverIssued);
   setupBoardCastlingRights(game, fenWords.castlingRights, serverIssued);
   game.fen = fen;
+  updateEngine();
 }
 
 $(document).on('click', '.reset-board', (event) => {
-  var game = gameWithFocus;
-  var fen = game.history.first().fen;
-  var fenWords = splitFEN(fen);
-  game.board.set({ fen });
-  if(game.isExamining())
-    session.send('bsetup fen ' + fenWords.board);
-  initSetupBoardControls(game, fen);
-  updateEngine();
+  updateSetupBoard(gameWithFocus, game.history.first().fen);
 });
 
 $(document).on('click', '.clear-board', (event) => {
-  var game = gameWithFocus;
-  var fen = '8/8/8/8/8/8/8/8 w - - 0 1';
-  game.board.set({ fen });
-  if(game.isExamining())
-    session.send('bsetup clear');
-  initSetupBoardControls(game, fen);
-  updateEngine();
+  updateSetupBoard(gameWithFocus, '8/8/8/8/8/8/8/8 w - - 0 1');
 });
 
 $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-white, .can-kingside-castle-black, .can-queenside-castle-black', (event) => {
