@@ -6961,14 +6961,11 @@ $('#game-tools-examine').on('click', (event) => {
  */
 function setupGameInExamineMode(game: Game) {
   /** Setup the board */
-  if(game.setupBoard) {
-    console.log('huh?');
+  if(game.setupBoard) 
     var fen: string = getSetupBoardFEN(game);
-  }
-  else {
-    console.log('huh 2?');
+  else 
     var fen: string  = game.history.first().fen;
-  }
+
   var fenWords = splitFEN(fen);
 
   game.commitingMovelist = true;
