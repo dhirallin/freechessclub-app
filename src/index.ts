@@ -643,6 +643,7 @@ function boardChanged() {
       setupBoardCastlingRights(game, splitFEN(newFEN).castlingRights);
 
     game.fen = newFEN;
+    updateEngine();
   }
 }
 
@@ -2223,6 +2224,7 @@ function messageHandler(data) {
       if(game.setupBoard && !game.commitingMovelist) {
         game.board.set({ fen: game.fen });
         initSetupBoardControls(game, game.fen, true);
+        updateEngine();
       }
       else if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
         const lastPly = getPlyFromFEN(game.chess.fen());
@@ -3508,13 +3510,17 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
     
     // create new imstance of Stockfish for each move, since waiting for new position/go commands is very slow (with current SF build)
     if(setBoard) {
-      if(engine) {
-        stopEngine();
-        startEngine();
-      }
+      updateEngine();
       if(evalEngine)
         evalEngine.evaluate();
     }
+  }
+}
+
+function updateEngine() {
+  if(engine) {
+    stopEngine();
+    startEngine();
   }
 }
 
@@ -3539,7 +3545,9 @@ function startEngine() {
       options['UCI_Variant'] = game.category;
     
     engine = new Engine(game, null, displayEnginePV, options);
-    if(!game.movelistRequested)
+    if(game.setupBoard)
+      engine.evaluateFEN(getSetupBoardFEN(game));
+    else if(!game.movelistRequested)
       engine.move(game.history.current());
   }
 }
@@ -7074,7 +7082,6 @@ function setupBoard(game: Game, serverIssued: boolean = false) {
   showPanel('#left-panel-setup-board');
   initGameTools(game);
   updateBoard(game, false, false);
-  game.fen = game.history.current().fen;
 }
 
 function leaveSetupBoard(game: Game, serverIssued: boolean = false) {
@@ -7107,7 +7114,7 @@ $(document).on('click', '.reset-board', (event) => {
     session.send('bsetup fen ' + fenWords.board);
   setupBoardCastlingRights(game, fenWords.castlingRights);
   setupBoardColorToMove(game, fenWords.color);
-  game.fen = getSetupBoardFEN(game);
+  updateEngine();
 });
 
 $(document).on('click', '.clear-board', (event) => {
@@ -7117,7 +7124,7 @@ $(document).on('click', '.clear-board', (event) => {
     session.send('bsetup clear');
   setupBoardCastlingRights(gameWithFocus, '-');
   setupBoardColorToMove(gameWithFocus, 'w');
-  game.fen = getSetupBoardFEN(game);
+  updateEngine();
 });
 
 $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-white, .can-kingside-castle-black, .can-queenside-castle-black', (event) => {
@@ -7130,11 +7137,13 @@ $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-whit
       sendBlackCastlingRights(castlingRights);
   }
   game.fen = getSetupBoardFEN(game);
+  updateEngine();
 });
 
 /** Sets the color to move using the Setup Board dropdown button */
 (window as any).setupBoardColorToMove = (color: string) => {
   setupBoardColorToMove(gameWithFocus, color);
+  updateEngine();
 };
 function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean = false) {
   var oldColor = splitFEN(getSetupBoardFEN(game)).color;
