@@ -7103,27 +7103,27 @@ function initSetupBoardControls(game: Game, fen?: string, serverIssued: boolean 
 
   setupBoardColorToMove(game, fenWords.color, serverIssued);
   setupBoardCastlingRights(game, fenWords.castlingRights, serverIssued);
+  game.fen = fen;
 }
 
 $(document).on('click', '.reset-board', (event) => {
   var game = gameWithFocus;
   var fen = game.history.first().fen;
   var fenWords = splitFEN(fen);
-  game.board.set({ fen: fen });
+  game.board.set({ fen });
   if(game.isExamining())
     session.send('bsetup fen ' + fenWords.board);
-  setupBoardCastlingRights(game, fenWords.castlingRights);
-  setupBoardColorToMove(game, fenWords.color);
+  initSetupBoardControls(game, fen);
   updateEngine();
 });
 
 $(document).on('click', '.clear-board', (event) => {
   var game = gameWithFocus;
-  game.board.set({ fen: '8/8/8/8/8/8/8/8 w - - 0 1' });
+  var fen = '8/8/8/8/8/8/8/8 w - - 0 1';
+  game.board.set({ fen });
   if(game.isExamining())
     session.send('bsetup clear');
-  setupBoardCastlingRights(gameWithFocus, '-');
-  setupBoardColorToMove(gameWithFocus, 'w');
+  initSetupBoardControls(game, fen);
   updateEngine();
 });
 
@@ -7143,6 +7143,7 @@ $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-whit
 /** Sets the color to move using the Setup Board dropdown button */
 (window as any).setupBoardColorToMove = (color: string) => {
   setupBoardColorToMove(gameWithFocus, color);
+  gameWithFocus.fen = getSetupBoardFEN(game);
   updateEngine();
 };
 function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean = false) {
@@ -7160,8 +7161,6 @@ function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean 
 
   if(game.isExamining() && !serverIssued && oldColor !== color)
     session.send('bsetup tomove ' + colorName);
-
-  game.fen = getSetupBoardFEN(game);
 }
 
 function setupBoardCastlingRights(game: Game, castlingRights: string, serverIssued: boolean = false) { 
@@ -7180,8 +7179,6 @@ function setupBoardCastlingRights(game: Game, castlingRights: string, serverIssu
         || oldCastlingRights.includes('q') !== castlingRights.includes('q'))   
       sendBlackCastlingRights(castlingRights);
   }
-
-  game.fen = getSetupBoardFEN(game);
 }
 
 document.addEventListener('touchstart', dragSetupBoardPiece, {passive: false});
