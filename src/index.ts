@@ -2958,6 +2958,36 @@ function messageHandler(data) {
         } 
       }
       
+      // Support for multiple examiners, we need to handle other users commiting or truncating moves from the main line
+      match = msg.match(/^Game (\d+): \w+ commits the subvariation\./m);
+      if(match) {
+        var game = findGame(+match[1]);
+        if(game) {
+          // An examiner has commited the current move to the mainline. So we need to also make it the mainline.
+          game.history.scratch(false);
+          var curr = game.history.current();
+          for(let i = 0; i < curr.depth(); i++) 
+            game.history.promoteSubvariation(curr); 
+          // Make the moves following the commited move a continuation (i.e. not mainline)
+          if(curr.next)
+            game.history.makeContinuation(curr.next);
+        }
+      }
+      match = msg.match(/^Game (\d+): \w+ truncates the game at halfmove (\d+)\./m);
+      if(match) {
+        var game = findGame(+match[1]);
+        if(game) {
+          var index = +match[2];
+          if(index === 0)
+            game.history.scratch(true); // The entire movelist was truncated so revert back to being a scratch game
+          else {
+            var entry = game.history.getByIndex(index)
+            if(entry && !entry.parent && entry.next) 
+              game.history.makeContinuation(entry.next);
+          }
+        }
+      }
+
       match = msg.match(/^Starting a game in examine \(scratch\) mode\./m);
       if(match && examineModeRequested)
         return;
