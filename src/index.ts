@@ -2966,7 +2966,7 @@ function messageHandler(data) {
           // An examiner has commited the current move to the mainline. So we need to also make it the mainline.
           game.history.scratch(false);
           var curr = game.history.current();
-          for(let i = 0; i < curr.depth(); i++) 
+          while(curr.depth() > 0)
             game.history.promoteSubvariation(curr); 
           // Make the moves following the commited move a continuation (i.e. not mainline)
           if(curr.next)
@@ -2982,7 +2982,7 @@ function messageHandler(data) {
             game.history.scratch(true); // The entire movelist was truncated so revert back to being a scratch game
           else {
             var entry = game.history.getByIndex(index)
-            if(entry && !entry.parent && entry.next) 
+            if(entry && entry.next) 
               game.history.makeContinuation(entry.next);
           }
         }
@@ -3256,9 +3256,15 @@ function updateHistory(game: Game, move?: any, fen?: string) {
         if(game.history.length() === 0) 
           game.history.scratch(true);
     
-        var newSubvariation = (game.newVariationMode === NewVariationMode.NEW_VARIATION) || 
-            (game.newVariationMode !== NewVariationMode.OVERWRITE_VARIATION && !game.history.scratch() && !game.history.current().isSubvariation());
-     
+        if(game.newVariationMode === NewVariationMode.NEW_VARIATION)
+          newSubvariation = true;
+        else if(game.newVariationMode === NewVariationMode.OVERWRITE_VARIATION)
+          newSubvariation = false;
+        else { // Either we aren't in edit mode, or the new move was received from the server (i.e. from another examiner)
+          newSubvariation = (!game.history.scratch() && !game.history.current().isSubvariation()) || // Make new subvariation if new move is on the mainline and we're not in scratch mode
+              (game.history.editMode && game.history.current() !== game.history.current().last); // Make new subvariation if we are in edit mode and receive a new move from the server. Note: we never overwrite in edit mode unless the user explicitly requests it.
+         }
+            
         game.newVariationMode = NewVariationMode.ASK;
       }
 
