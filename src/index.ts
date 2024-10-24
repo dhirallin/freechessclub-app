@@ -3510,19 +3510,17 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
       $('#exit-subvariation').addClass('disabled');
     
     // create new imstance of Stockfish for each move, since waiting for new position/go commands is very slow (with current SF build)
-    if(setBoard) {
-      updateEngine();
-      if(evalEngine)
-        evalEngine.evaluate();
-    }
+    updateEngine();
   }
 }
 
 function updateEngine() {
-  if(engine) {
+  if(engine) {   
     stopEngine();
     startEngine();
   }
+  if(evalEngine)
+    evalEngine.evaluate();
 }
 
 function startEngine() {
@@ -4535,7 +4533,7 @@ export function setGameWithFocus(game: Game) {
     setMovelistViewMode();
     initGameControls(game);
   
-    updateBoard(game, false, false);
+    updateBoard(game);
   }
 }
 
