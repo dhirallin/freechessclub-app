@@ -438,15 +438,7 @@ export function gotoMove(to: HEntry, playSound = false) {
     return;
 
   var game = gameWithFocus;
-  if(game.isExamining()) {
-    if(game.setupBoard) {
-      // Temporarily leave setup mode in order to reconstruct the move-list (on the server), 
-      // then re-enter setup mode again. This is because FICS doesn't have a 'bsetup cancel' command.
-      game.history.display(to, playSound);
-      cancelSetup(game); 
-      setupBoardPending = true;
-    }
-
+  if(game.isExamining() && !game.setupBoard) {
     var from = bufferedCurrentMove(game);
     var curr = from;
     let i = 0;
@@ -2945,15 +2937,8 @@ function messageHandler(data) {
       if(match) {
         var game = getPlayingExaminingGame();
         if(game && game.commitingMovelist) {
-          if(match[0] === 'done: Command not found.') { // This was sent by us to indicate when we are done
+          if(match[0] === 'done: Command not found.') // This was sent by us to indicate when we are done
             game.commitingMovelist = false;
-            if(setupBoardPending) { 
-              // If the user navigates to a different move while in Setup Board mode then we temporarily
-              // leave setup board mode and then re-enter it after the move list is reconstructed
-              setupBoardPending = false;
-              setupBoard(game);
-            }
-          }
           return; 
         } 
       }
@@ -3260,7 +3245,7 @@ function updateHistory(game: Game, move?: any, fen?: string) {
           newSubvariation = true;
         else if(game.newVariationMode === NewVariationMode.OVERWRITE_VARIATION)
           newSubvariation = false;
-        else { // Either we aren't in edit mode, or the new move was received from the server (i.e. from another examiner)
+        else { 
           newSubvariation = (!game.history.scratch() && !game.history.current().isSubvariation()) || // Make new subvariation if new move is on the mainline and we're not in scratch mode
               (game.history.editMode && game.history.current() !== game.history.current().last); // Make new subvariation if we are in edit mode and receive a new move from the server. Note: we never overwrite in edit mode unless the user explicitly requests it.
          }
