@@ -461,7 +461,6 @@ body {
 }
 #move-table a {
   display: inline-block;
-  overflow: hidden;
   vertical-align: top;
   padding-top: 1px;
   padding-bottom: 1px;
@@ -601,6 +600,7 @@ body {
   font-weight: normal;
   font-family: "Noto Sans Symbols 2", var(--bs-body-font-family);
   margin-left: -0.2rem;
+  margin-right: -0.02rem;
   line-height: 1rem; /* Ensure line-height is smaller than for regular text, so that it aligns to regular text's baseline */
 }
 .movelist .piece-glyph.black::before {
