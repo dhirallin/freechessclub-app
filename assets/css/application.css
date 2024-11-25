@@ -534,6 +534,12 @@ body {
   padding-top: 2px;
   padding-bottom: 2px;
 }
+.movelist .subvariation:not(:has(+ .subvariation)) {
+  padding-bottom: 3px;
+}
+.movelist .subvariation:not(.subvariation + .subvariation) {
+  padding-top: 3px;
+}
 .movelist .subvariation::before {
   content: "";
   position: absolute;
