@@ -296,7 +296,8 @@ function setPanelSizes() {
 
     var safeAreas = $('body').innerHeight() - $('body').height();
     var feature3Border = $('.feature3').outerHeight(true) - $('.feature3').height();
-    var cardMaxHeight = $(window).height() - feature3Border - safeAreas;
+    //var cardMaxHeight = $(window).height() - feature3Border - safeAreas;
+    var cardMaxHeight = $(window).height() - getRemainingHeight(maximizedGameCard);
     setGameCardSize(maximizedGame, cardMaxWidth, cardMaxHeight);
   }
   else
@@ -346,18 +347,11 @@ function setLeftColumnSizes() {
     if($('#left-panel').height() === 0)
       $('#left-panel-bottom').css('height', '');
 
-    var siblingsHeight = 0;
-    var siblings = $('#collapse-menus').siblings();
-    siblings.each(function() {
-      if($(this).is(':visible'))
-        siblingsHeight += $(this).outerHeight();
-    });
-    const leftPanelBorder = $('#left-panel').outerHeight() - $('#left-panel').height();
-
     if(isSmallWindow())
       $('#left-panel').css('height', ''); // Reset back to CSS defined height
     else {
-      var leftPanelHeight = boardHeight - leftPanelBorder - siblingsHeight;
+      var remHeight = $('#inner-left-panels').outerHeight() - $('#left-panel').height();
+      var leftPanelHeight = boardHeight - remHeight;
       $('#left-panel').height(Math.max(leftPanelHeight, 0));
       // If we've made the left panel height as small as possible, reduce size of status panel instead
       // Note leftPanelHeight is negative in that case
@@ -376,15 +370,8 @@ function setGameCardSize(game: Game, cardMaxWidth?: number, cardMaxHeight?: numb
     var boardMaxWidth = cardMaxWidth - cardBorderWidth;
     var cardBorderHeight = card.outerHeight() - card.height();
 
-    // Get height of card headers/footers
-    var siblings = card.find('.card-body').siblings();
-    var siblingsHeight = 0;
-    siblings.each((index, element) => {
-      if($(element).is(':visible'))
-        siblingsHeight += $(element).outerHeight();
-    });
-
-    var boardMaxHeight = cardMaxHeight - cardBorderHeight - siblingsHeight;
+    var remHeight = card.outerHeight() - card.find('.card-body').height();
+    var boardMaxHeight = cardMaxHeight - remHeight;
 
     if(!cardMaxWidth)
       boardMaxWidth = boardMaxHeight;
@@ -449,25 +436,15 @@ function setRightColumnSizes() {
   else
     $('#secondary-board-area').height($('#secondary-board-area > :first-child').outerHeight());
 
-  // set height of right panel inside collapsable
-  var siblingsHeight = 0;
-  var siblings = $('#collapse-chat').siblings();
-  siblings.each(function() {
-    if($(this).is(':visible'))
-      siblingsHeight += $(this).outerHeight();
-  });
-  const chatBodyBorder = $('#chat-panel .card-body').outerHeight() - $('#chat-panel .card-body').innerHeight();
-
   if(!isLargeWindow() || !boardHeight) {
-    var feature3Border = $('.feature3').outerHeight(true) - $('.feature3').height();
-    var rightCardBorder = $('#right-card').outerHeight(true) - $('#right-card').height();
-    var safeAreas = $('body').innerHeight() - $('body').height();
-    var borders = chatBodyBorder + rightCardBorder + feature3Border + safeAreas;
-    var headerHeight = (siblingsHeight ? 0 : $('#right-panel-header').outerHeight()); // If there are game boards in the right column, then don't try to fit the header and chat into the same screen height
-    $('#chat-panel').height($(window).height() - borders - headerHeight);
+    let hasSiblings = $('#collapse-chat').siblings(':visible').length > 0; // If there are game boards in the right column, then don't try to fit the header and chat into the same screen height
+    let border = $('#chat-panel').outerHeight(true) - $('#chat-panel').height();
+    $('#chat-panel').height($(window).height() - getRemainingHeight($('#chat-panel'), $('body'), '#collapse-chat' + (hasSiblings ? ', #inner-right-panels' : '')) - border);
   }
-  else
-    $('#chat-panel').height(boardHeight + $('#left-panel-footer').outerHeight() - chatBodyBorder - siblingsHeight);
+  else {
+    var remHeight = $('#inner-right-panels').outerHeight() - $('#chat-panel').height();
+    $('#chat-panel').height(boardHeight + $('#left-panel-footer').outerHeight() - remHeight);
+  }
 
   adjustInputTextHeight();
   if(chat)
@@ -7793,6 +7770,37 @@ function getScrollbarWidth(): number {
   if(!$('#scrollbar-measure').length) // For performance reasons only create once
     $('body').append(`<div id="scrollbar-measure" style="position: absolute; top: -9999px; overflow: scroll"></div>`);
   return $('#scrollbar-measure')[0].offsetWidth - $('#scrollbar-measure')[0].clientWidth;
+}
+
+/** 
+ * Calculates the height taken up by an ancestor element's contents after a specified descendant element's
+ * height is subtracted.
+ * Note 1: Contents includes the padding, margin and border of each element between the descendant and ancestor
+ * (including the ancestor), as well as the siblings of each element.
+ * Note 2: All the ancestors of the descendant element are assumed to have height equal to their contents
+ * @descendant Element whose outer height is subtracted
+ * @ancestor Element to get remaining height for
+ * @excludeSiblings A HTML selector string which specifies ancestors for which its siblings should be excluded
+ * from the remaining height. 
+ */
+function getRemainingHeight(descendant: JQuery<HTMLElement>, ancestor: JQuery<HTMLElement> = $('body'), excludeSiblings?: string): number {
+  var remHeight = 0;
+  var currElem = descendant;
+  while(!currElem.is(ancestor)) {
+    if(descendant !== currElem)
+      remHeight += currElem.outerHeight(true) - currElem.height();
+    if((!excludeSiblings || !currElem.is(excludeSiblings)) && !currElem.is('[class*="col-"]')) {
+      let siblings = currElem.siblings();
+      siblings.each(function() {
+        if($(this).is(':visible') && $(this).css('position') !== 'absolute' && $(this).css('position') !== 'fixed') 
+          remHeight += $(this).outerHeight(true);
+      });
+    }
+    currElem = currElem.parent();
+  }
+  remHeight += currElem.outerHeight(true) - currElem.height();
+
+  return remHeight;
 }
 
 /**
