@@ -491,6 +491,9 @@ body {
   color: #191970;
   font-weight: normal;
 }
+#move-table .subvariation a .piece-glyph.black::before {
+  color: color-mix(in srgb, currentColor 70%, white 30%); /* fancy new method for lightening/darkening colors */
+}
 #move-table .subvariation td {
   padding-right: 0;
 }
@@ -514,18 +517,12 @@ body {
   font-weight: bold;
 }
 
-.movelist {
-  --movelist-color: var(--bs-body-color);
-}
-
 .movelist .selected {
   background-color: rgba(0, 0, 0, 0.2);
-  --movelist-color: #000000;
-  color: var(--movelist-color);
+  color: #000000;
 }
 .movelist .subvariation {
-  --movelist-color: #5e4d3b;
-  color: var(--movelist-color);
+  color: #5e4d3b;
   display: block;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -557,20 +554,20 @@ body {
 }
 .movelist .subvariation .selected {
   background-color: rgba(0, 0, 0, 0.2);
-  --movelist-color: #2e2418;
-  color: var(--movelist-color);
+  color: #2e2418;
 }
 .movelist .move:hover,
 .movelist .move.hovered,
 .movelist .subvariation .move:hover,
 .movelist .subvariation .move.hovered {
-  --movelist-color: rgb(10, 88, 202);
-  color: var(--movelist-color);
+  color: rgb(10, 88, 202);
 }
 .movelist .selected:hover,
 .movelist .subvariation .selected:hover {
-  color: var(--movelist-color);
-  --movelist-color: rgb(10, 88, 202);
+  color: rgb(10, 88, 202);
+}
+.movelist .piece-glyph.black::before {
+  color: color-mix(in srgb, currentColor 70%, white 30%); /* fancy new method for lightening/darkening colors */
 }
 
 .comment {
@@ -608,9 +605,6 @@ body {
   margin-left: -0.2rem;
   margin-right: -0.02rem;
   line-height: 1rem; /* Ensure line-height is smaller than for regular text, so that it aligns to regular text's baseline */
-}
-.movelist .piece-glyph.black::before {
-  color: color-mix(in srgb, var(--movelist-color) 70%, white 30%); /* fancy new method for lightening/darkening colors */
 }
 .piece-glyph.white.king::before { content: "\2654"; }
 .piece-glyph.white.queen::before { content: "\2655"; }
