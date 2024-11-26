@@ -459,7 +459,8 @@ body {
   padding-top: 3px;
   padding-bottom: 3px;
 }
-#move-table a {
+#move-table .move {
+  color: #0d6efd;
   display: inline-block;
   vertical-align: top;
   padding-top: 1px;
@@ -472,7 +473,8 @@ body {
 #move-table .subvariation .selectable:hover {
   background-color: rgba(255, 255, 255, 0.25);
 }
-#move-table .selectable:hover a {
+#move-table .selectable:hover .move {
+  color: #0a58ca;
   font-weight: bold;
 }
 #move-table > tbody > .subvariation {
@@ -487,11 +489,11 @@ body {
 #move-table .subvariation .selected {
   background-color: rgba(0, 0, 0, 0.15);
 }
-#move-table .subvariation a {
+#move-table .subvariation .move {
   color: #191970;
   font-weight: normal;
 }
-#move-table .subvariation a .piece-glyph.black::before {
+#move-table .subvariation .move .piece-glyph.black::before {
   color: color-mix(in srgb, currentColor 70%, white 30%); /* fancy new method for lightening/darkening colors */
 }
 #move-table .subvariation td {

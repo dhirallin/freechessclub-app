@@ -707,12 +707,12 @@ export class History {
 
   public highlightMove() {
     var moveTable = this.game.moveTableElement;
-    moveTable.find('a').each(function () {
+    moveTable.find('.move').each(function () {
       $(this).removeClass('selected');
     });
     if(this.currEntry.move) {
       const cell = this.currEntry.moveTableCellElement;
-      cell.find('a').addClass('selected');
+      cell.find('.move').addClass('selected');
       this.scrollParentToChild($('#movelist-container'), cell);
     }
 
@@ -894,7 +894,7 @@ export class History {
     var color = entry.turnColor === 'w' ? 'b' : 'w';
     var moveNo = Math.floor(entry.ply / 2);
 
-    const cellBody = '<a class="move" class="annotation" href="javascript:void(0);" data-color="' + color + '" aria-label="' + san + '">' + glyphedSan + '</a>';
+    const cellBody = '<span class="move" class="annotation" data-color="' + color + '" aria-label="' + san + '">' + glyphedSan + '</a>';
 
     // Find previous td cell before the insertion point
 
@@ -1327,7 +1327,7 @@ export class History {
       }
 
       entry.moveListCellElement.find('.move').html(History.glyphifyHEntry(entry) + nagStr);
-      entry.moveTableCellElement.find('a').html(History.glyphifyHEntry(entry) + nagStr);
+      entry.moveTableCellElement.find('.move').html(History.glyphifyHEntry(entry) + nagStr);
     }
   }
 
@@ -1338,7 +1338,7 @@ export class History {
     if(entry.nags.length) {
       entry.nags = [];
       entry.moveListCellElement.find('.move').html(History.glyphifyHEntry(entry));
-      entry.moveTableCellElement.find('a').html(History.glyphifyHEntry(entry));
+      entry.moveTableCellElement.find('.move').html(History.glyphifyHEntry(entry));
     }
   }
 
