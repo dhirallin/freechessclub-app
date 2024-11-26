@@ -99,7 +99,7 @@ export class Chat {
   private chattabsToggle: boolean; // toggle for creating a window for chat
   private unviewedNum: number;
 
-  constructor(user: string) {
+  constructor() {
     this.unviewedNum = 0;
     this.timestampToggle = (storage.get('timestamp') !== 'false');
     this.chattabsToggle = (storage.get('chattabs') !== 'false');
@@ -108,9 +108,6 @@ export class Chat {
     loadEmojis().then(() => {
       this.emojisLoaded = true;
     });
-
-    this.user = user;
-    this.userRE = new RegExp('\\b' + user + '\\b', 'ig');
 
     // initialize tabs
     this.tabs = {};
@@ -132,9 +129,28 @@ export class Chat {
       chatText.scrollTop(chatText[0].scrollHeight);
     });
 
+    $('#collapse-chat').on('hidden.bs.collapse', () => {
+      if(!$('#collapse-chat').hasClass('collapse-init'))
+        scrollToBoard();
+      $('#collapse-chat').removeClass('collapse-init');
+    });
+    
     $('#collapse-chat').on('shown.bs.collapse', () => {
       var activeTab = $('#tabs button').filter('.active');
       activeTab.trigger('shown.bs.tab');
+      this.scrollToChat();
+    });
+    
+    $('#collapse-chat').on('show.bs.collapse', () => {
+      $('#chat-toggle-btn').addClass('toggle-btn-selected');
+    });
+    
+    $('#collapse-chat').on('hide.bs.collapse', () => {
+      $('#chat-toggle-btn').removeClass('toggle-btn-selected');
+    });
+    
+    $('#collapse-chat-arrow').on('click', () => {
+      $('#collapse-chat').collapse('hide');
     });
 
     $(document.body).on('click', '#tabs .closeTab', (event) => {
@@ -151,6 +167,29 @@ export class Chat {
     $('#chattabs-toggle').on('click', (event) => {
       this.chattabsToggle = !this.chattabsToggle;
       storage.set('chattabs', String(this.chattabsToggle));
+    });
+
+    $('#chat-maximize-btn').on('click', () => {
+      if (maximized) {
+        $('#chat-maximize-icon').removeClass('fa-toggle-right').addClass('fa-toggle-left');
+        $('#chat-maximize-btn').attr('aria-label', 'Maximize Chat');
+        $('#chat-maximize-btn .tooltip-overlay').attr('title', 'Maximize Chat');
+        createTooltip($('#chat-maximize-btn .tooltip-overlay'));
+        if($('#secondary-board-area > .game-card').length)
+          $('#secondary-board-area').css('display', 'flex');
+        maximized = false;
+      } else {
+        $('#chat-maximize-icon').removeClass('fa-toggle-left').addClass('fa-toggle-right');
+        $('#chat-maximize-btn').attr('aria-label', 'Unmaximize Chat');
+        $('#chat-maximize-btn .tooltip-overlay').attr('title', 'Unmaximize Chat');
+        createTooltip($('#chat-maximize-btn .tooltip-overlay'));
+        $('#collapse-chat').collapse('show');
+        $('#secondary-board-area').hide();
+        maximized = true;
+      }
+      $('#left-col').toggleClass('d-none');
+      $('#mid-col').toggleClass('d-none');
+      $(window).trigger('resize');
     });
   }
 
@@ -568,60 +607,15 @@ export class Chat {
       }
     });
   }
-}
 
-function scrollToChat() {
-  if(isSmallWindow()) {
-    if($('#secondary-board-area').is(':visible'))
-      scrollTo($('#chat-panel').offset().top);
-    else
-      scrollTo($('#right-panel-header').offset().top);
+  public scrollToChat() {
+    if(isSmallWindow()) {
+      if($('#secondary-board-area').is(':visible'))
+        scrollTo($('#chat-panel').offset().top);
+      else
+        scrollTo($('#right-panel-header').offset().top);
+    }
   }
 }
-
-$('#chat-maximize-btn').on('click', () => {
-  if (maximized) {
-    $('#chat-maximize-icon').removeClass('fa-toggle-right').addClass('fa-toggle-left');
-    $('#chat-maximize-btn').attr('aria-label', 'Maximize Chat');
-    $('#chat-maximize-btn .tooltip-overlay').attr('title', 'Maximize Chat');
-    createTooltip($('#chat-maximize-btn .tooltip-overlay'));
-    if($('#secondary-board-area > .game-card').length)
-      $('#secondary-board-area').css('display', 'flex');
-    maximized = false;
-  } else {
-    $('#chat-maximize-icon').removeClass('fa-toggle-left').addClass('fa-toggle-right');
-    $('#chat-maximize-btn').attr('aria-label', 'Unmaximize Chat');
-    $('#chat-maximize-btn .tooltip-overlay').attr('title', 'Unmaximize Chat');
-    createTooltip($('#chat-maximize-btn .tooltip-overlay'));
-    $('#collapse-chat').collapse('show');
-    $('#secondary-board-area').hide();
-    maximized = true;
-  }
-  $('#left-col').toggleClass('d-none');
-  $('#mid-col').toggleClass('d-none');
-  $(window).trigger('resize');
-});
-
-$('#collapse-chat').on('hidden.bs.collapse', () => {
-  if(!$('#collapse-chat').hasClass('collapse-init'))
-    scrollToBoard();
-  $('#collapse-chat').removeClass('collapse-init');
-});
-
-$('#collapse-chat').on('shown.bs.collapse', () => {
-  scrollToChat();
-});
-
-$('#collapse-chat').on('show.bs.collapse', () => {
-  $('#chat-toggle-btn').addClass('toggle-btn-selected');
-});
-
-$('#collapse-chat').on('hide.bs.collapse', () => {
-  $('#chat-toggle-btn').removeClass('toggle-btn-selected');
-});
-
-$('#collapse-chat-arrow').on('click', () => {
-  $('#collapse-chat').collapse('hide');
-});
 
 export default Chat;

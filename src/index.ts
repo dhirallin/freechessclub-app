@@ -115,6 +115,9 @@ jQuery(() => {
 });
 
 async function onDeviceReady() {
+  await storage.init();
+  initSettings();
+
   if((window as any).Capacitor !== undefined) {
     (window as any).Capacitor.Plugins.SafeArea.enable({
       config: {
@@ -123,9 +126,8 @@ async function onDeviceReady() {
     });
   }
 
-  await storage.init();
-  initSettings();
-
+  chat = new Chat();
+  
   var game = createGame();
   game.role = Role.NONE;
   game.category = 'untimed';
@@ -544,9 +546,6 @@ function messageHandler(data) {
         cleanup();
         disableOnlineInputs(false);
         session.setUser(data.control);
-        if (!chat) {
-          chat = new Chat(data.control);
-        }
         chat.setUser(data.control);
         session.send('set seek 0');
         session.send('set echo 1');
