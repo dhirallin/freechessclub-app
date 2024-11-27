@@ -87,10 +87,10 @@ export class Engine {
                 else prefix = '';
               }
 
-              scoreStr = prefix + '#' + score;
+              scoreStr = `${prefix}#${score}`;
             }
             else
-              scoreStr = prefix + (score / 100).toFixed(2);
+              scoreStr = `${prefix}${(score / 100).toFixed(2)}`;
           }
           else if(infoArr[i] === 'pv') {
             bPV = true;
@@ -125,10 +125,10 @@ export class Engine {
             var moveNumber = History.getMoveNoFromFEN(currFen);
             var moveNumStr = '';
             if(turnColor === 'w')
-              moveNumStr = moveNumber + '.';
+              moveNumStr = `${moveNumber}.`;
             else if(fen === currFen && turnColor === 'b')
-              moveNumStr = moveNumber + '...';
-            pv += moveNumStr + parsedMove.move.san + ' ';
+              moveNumStr = `${moveNumber}...`;
+            pv += `${moveNumStr}${parsedMove.move.san} `;
             currFen = parsedMove.fen;
           }
 
@@ -158,7 +158,7 @@ export class Engine {
       if(opt === 'MultiPV')
         this.numPVs = options[opt];  
 
-      this.uci('setoption name ' + opt + ' value ' + options[opt]);
+      this.uci(`setoption name ${opt} value ${options[opt]}`);
     }
 
     this.uci('ucinewgame');
@@ -178,8 +178,8 @@ export class Engine {
     
     var movesStr = this.movesToCoordinatesString(hEntry);
 
-    this.uci('position fen ' + this.game.history.first().fen + movesStr);
-    this.uci('go ' + this.moveParams);
+    this.uci(`position fen ${this.game.history.first().fen}${movesStr}`);
+    this.uci(`go ${this.moveParams}`);
   }
   
  /**
@@ -189,7 +189,7 @@ export class Engine {
   public movesToCoordinatesString(hEntry: HEntry): string {
     var movelist = [];
     while(hEntry.move) {
-      var move = hEntry.move.from + hEntry.move.to + (hEntry.move.promotion ? hEntry.move.promotion : '');
+      var move = `${hEntry.move.from}${hEntry.move.to}${hEntry.move.promotion ? hEntry.move.promotion : ''}`;
       if(!hEntry.move.from) // crazyhouse
         move = hEntry.move.san.replace(/[+#]/, ''); // Stockfish crazyhouse implementation doesn't like + or # chars for piece placement
 
@@ -199,20 +199,20 @@ export class Engine {
 
     var movesStr = '';
     if(movelist.length)
-      var movesStr = ' moves ' + movelist.reverse().join(' ');
+      var movesStr = ` moves ${movelist.reverse().join(' ')}`;
 
     return movesStr;
   }
 
   public evaluateFEN(fen: string) {
     this.currFen = fen;
-    this.uci('position fen ' + fen);
-    this.uci('go ' + this.moveParams);
+    this.uci(`position fen ${fen}`);
+    this.uci(`go ${this.moveParams}`);
   }
 
   public setNumPVs(num : any = 1) {
     this.numPVs = num;
-    this.uci('setoption name MultiPV value ' + this.numPVs);
+    this.uci(`setoption name MultiPV value ${this.numPVs}`);
   }
 
   private uci(cmd: string, ports?: any) {
@@ -270,8 +270,8 @@ export class EvalEngine extends Engine {
         const progress = Math.round(100 * completed / total);
         // update progress bar
         $('#eval-progress .progress-bar')
-          .css('width', progress + '%')
-          .text(progress + '%')
+          .css('width', `${progress}%`)
+          .text(`${progress}%`)
           .attr('aria-valuenow', progress);
         if(total > completed + 10) {
           $('#eval-graph-container').hide();
@@ -417,7 +417,7 @@ export class EvalEngine extends Engine {
             selectCircle.style('opacity', 0);
         })
         .append('g')
-        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+        .attr('transform', `translate(${margin.left},${margin.top})`);
 
       // Render y-axis
       const yAxis = svg.append('g')

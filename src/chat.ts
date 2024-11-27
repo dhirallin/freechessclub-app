@@ -219,7 +219,7 @@ export class Chat {
   public updateNumWatchers(tab: any): boolean {
     var watchers = this.getWatchers(tab);
     if(watchers != null) {
-      $(tab.attr('href')).find('.chat-watchers-text').text(watchers.length + ' Watchers');
+      $(tab.attr('href')).find('.chat-watchers-text').text(`${watchers.length} Watchers`);
       return true;
     }
     return false;
@@ -244,7 +244,7 @@ export class Chat {
         brating = '++++';
       else if(brating === '-')
         brating = '----';
-      var description = (wname || game.wname) + ' (' + wrating + ') ' + (bname || game.bname) + ' (' + brating + ')';
+      var description = `${wname || game.wname} (${wrating}) ${bname || game.bname} (${brating})`;
 
       $(tab.attr('href')).find('.chat-game-description').text(description);
       return true;
@@ -302,7 +302,7 @@ export class Chat {
     tab.parent().tooltip('dispose');
     tab.parent().remove();
     this.deleteTab(name);
-    $('#content-' + name).remove();
+    $(`#content-${name}`).remove();
   }
 
   public setUser(user: string): void {
@@ -314,7 +314,7 @@ export class Chat {
     }
 
     this.user = user;
-    this.userRE = new RegExp('\\b' + user + '\\b', 'ig');
+    this.userRE = new RegExp(`\\b${user}\\b`, 'ig');
   }
 
   public createTab(name: string, showTab = false) {
@@ -344,15 +344,15 @@ export class Chat {
         chName = channels[name];
       }
 
-      if(!$('#tabs').find('#tab-' + from).length) {
+      if(!$('#tabs').find(`#tab-${from}`).length) {
         var match = chName.match(/^Game (\d+)/);
         var tooltip = '';
         if(match && match.length > 1) {
           var game = findGame(+match[1]);
           if(game) {
             var tags = game.history.metatags;
-            var gameDescription = (tags.White || game.wname) + ' vs. ' + (tags.Black || game.bname);
-            tooltip = `data-bs-toggle="tooltip" data-tooltip-hover-only title="` + gameDescription + `" `;
+            var gameDescription = `${tags.White || game.wname} vs. ${tags.Black || game.bname}`;
+            tooltip = `data-bs-toggle="tooltip" data-tooltip-hover-only title="${gameDescription}" `;
 
             // Show Game chat room info bar
             var infoBar = $(`
@@ -367,16 +367,15 @@ export class Chat {
             </div>`);
           }
         }
-        var tabElement = $(`<li ` + tooltip + `class="nav-item position-relative">
-            <button class="text-sm-center nav-link" data-bs-toggle="tab" href="#content-` +
-                from + `" id="tab-` + from + `" role="tab" style="padding-right: 30px">` + chName + `
-            </button>
+        var tabElement = $(`<li ${tooltip}class="nav-item position-relative">
+            <button class="text-sm-center nav-link" data-bs-toggle="tab" href="#content-${from}" ` 
+              + `id="tab-${from}" role="tab" style="padding-right: 30px">${chName}</button>
             <container class="d-flex align-items-center h-100 position-absolute" style="top: 0; right: 12px; z-index: 10">
               <span class="closeTab btn btn-default btn-sm">×</span>
             </container>
           </li>`).appendTo('#tabs');
 
-        var tabContent = $(`<div class="tab-pane" id="content-` + from + `" role="tabpanel">
+        var tabContent = $(`<div class="tab-pane" id="content-${from}" role="tabpanel">
           <div class="d-flex flex-column chat-content-wrapper h-100">
             <div class="chat-text flex-grow-1 mt-3" style="min-height: 0"></div>
           </div>
@@ -395,11 +394,11 @@ export class Chat {
             if(watchers) {
               var description = watchers.join('<br>');
               var numWatchers = watchers.length;
-              var title = numWatchers + ' Watchers';
+              var title = `${numWatchers} Watchers`;
               if(!watchers.length)
-                var tooltipText = `<b>` + title + `</b>`;
+                var tooltipText = `<b>${title}</b>`;
               else
-                var tooltipText = `<b>` + title + `</b><hr class="tooltip-separator"><div>` + description + `</div>`;
+                var tooltipText = `<b>${title}</b><hr class="tooltip-separator"><div>${description}</div>`;
 
               curr.tooltip('dispose').tooltip({
                 title: tooltipText,
@@ -427,11 +426,11 @@ export class Chat {
           createTooltip(tabElement);
       }
 
-      this.tabs[from] = $('#content-' + from);
-      this.scrolledToBottom['content-' + from] = true;
+      this.tabs[from] = $(`#content-${from}`);
+      this.scrolledToBottom[`content-${from}`] = true;
 
       // Scroll event listener for auto scroll to bottom etc
-      $('#content-' + from).find('.chat-text').on('scroll', (e) => {
+      $(`#content-${from}`).find('.chat-text').on('scroll', (e) => {
         var panel = e.target;
         var tab = panel.closest('.tab-pane');
 
@@ -451,7 +450,7 @@ export class Chat {
 
     if(showTab) {
       const tabs = $('#tabs button').filter(function (index) {
-        return $(this).attr('id') === 'tab-' + from;
+        return $(this).attr('id') === `tab-${from}`;
       });
       tabs.first().tab('show');
     }
@@ -485,9 +484,8 @@ export class Chat {
         chName = channels[Number(ch)];
       }
       $('#chan-dropdown-menu').append(
-        '<a class="dropdown-item noselect" id="ch-' + ch +
-        '">' + chName + '</a>');
-      $('#ch-' + ch).on('click', (event) => {
+        `<a class="dropdown-item noselect" id="ch-${ch}">${chName}</a>`);
+      $(`#ch-${ch}`).on('click', (event) => {
         event.preventDefault();
         if (!this.chattabsToggle) {
           ch = 'console';
@@ -523,9 +521,9 @@ export class Chat {
       }
       let prompt = data.user;
       if (!this.chattabsToggle && data.channel !== undefined) {
-        prompt += '(' + data.channel + ')';
+        prompt += `(${data.channel})`;
       }
-      who = '<strong' + textclass + '>' + $('<span/>').text(prompt).html() + '</strong>: ';
+      who = `<strong${textclass}>${$('<span/>').text(prompt).html()}</strong>: `;
     }
 
     let text = data.message;
@@ -535,33 +533,33 @@ export class Chat {
       text = parseEmojis(text);
     }
 
-    text = text.replace(this.userRE, '<strong class="mention">' + this.user + '</strong>');
+    text = text.replace(this.userRE, `<strong class="mention">${this.user}</strong>`);
 
     // Suffix for whispers
     var suffixText = data.suffix;
     if(data.type === 'whisper' && !suffixText)
       suffixText = '(whispered)';
-    var suffix = (suffixText ? ' <span class="chat-text-suffix">' + suffixText + '</span>': '');
+    var suffix = (suffixText ? ` <span class="chat-text-suffix">${suffixText}</span>`: '');
 
-    text = autoLink(text, {
+    text = `${autoLink(text, {
       target: '_blank',
       rel: 'nofollow',
       callback: (url) => {
         return /\.(gif|png|jpe?g)$/i.test(url) ?
-          '<a href="' + url + '" target="_blank" rel="nofollow"><img width="60" src="' + url + '"></a>'
+          `<a href="${url}" target="_blank" rel="nofollow"><img width="60" src="' + url + '"></a>`
           : null;
       },
-    }) + suffix + '</br>';
+    })}${suffix}</br>`;
 
     let timestamp = '';
     if (this.timestampToggle) {
-      timestamp = '<span class="timestamp">[' + new Date().toLocaleTimeString() + ']</span> ';
+      timestamp = `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `;
     }
 
     var chatText = tab.find('.chat-text');
-    chatText.append(timestamp + who + text);
+    chatText.append(`${timestamp}${who}${text}`);
 
-    const tabheader = $('#tab-' + from.toLowerCase().replace(/\s/g, '-'));
+    const tabheader = $(`#tab-${from.toLowerCase().replace(/\s/g, '-')}`);
 
     if(this.user !== data.user)
       this.updateViewedState(tabheader, false, data.type !== 'whisper');
@@ -577,7 +575,7 @@ export class Chat {
   public newNotification(msg: string) {
     if(!msg.startsWith('Notification:') || notificationsToggle) {
       var currentTab = this.currentTab().toLowerCase().replace(/\s/g, '-');
-      msg = '<strong class="chat-notification">' + msg + '</strong>';
+      msg = `<strong class="chat-notification">${msg}</strong>`;
     }
     else
       var currentTab = 'console';

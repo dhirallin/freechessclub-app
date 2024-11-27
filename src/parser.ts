@@ -167,8 +167,8 @@ export class Parser {
         return [p1, p2, Reason.Draw];
       case 'adjourned':
       case 'adjourned by mutual agreement':
-      case 'courtesyadjourned by ' + p1:
-      case 'courtesyadjourned by ' + p2:
+      case `courtesyadjourned by ${p1}`:
+      case `courtesyadjourned by ${p2}`:
       case 'lost connection; game adjourned':
         return [p1, p2, Reason.Adjourn];
     }
@@ -259,21 +259,21 @@ export class Parser {
       fen += this.style12ToFEN(match[8]);
 
       // color whose turn it is to move ("B" or "W")
-      fen += ' ' + match[9].toLowerCase();
+      fen += ` ${match[9].toLowerCase()}`;
       // castling state
       let castleStr = '';
       castleStr += (+match[11] === 1 ? 'K' : ''); // can White still castle short? (0=no, 1=yes)
       castleStr += (+match[12] === 1 ? 'Q' : ''); // can White still castle long?
       castleStr += (+match[13] === 1 ? 'k' : ''); // can Black still castle short?
       castleStr += (+match[14] === 1 ? 'q' : ''); // can Black still castle long?
-      fen += ' ' + (castleStr === '' ? '-' : castleStr);
+      fen += ` ${castleStr === '' ? '-' : castleStr}`;
       // -1 if the previous move was NOT a double pawn push, otherwise the chess board file  (numbered 0--7 for a--h) in which the double push was made
-      fen += ' ' + (+match[10] === -1 ? '-' : String.fromCharCode('a'.charCodeAt(0) + +match[10]) + (match[9] === 'W' ? '6' : '3'));
+      fen += ` ${+match[10] === -1 ? '-' : `${String.fromCharCode('a'.charCodeAt(0) + +match[10])}${match[9] === 'W' ? '6' : '3'}`}`;
       // the number of moves made since the last irreversible move.
       // FICS sometimes erroneously sets this to 1 when the starting player is black on move 1.
-      fen += ' ' + (match[31] === 'none' ? '0' : match[15]);
+      fen += ` ${match[31] === 'none' ? '0' : match[15]}`;
       // the full move number
-      fen += ' ' + match[26];
+      fen += ` ${match[26]}`;
 
       // Parse move in long format (from, to, promotion)
       const moveMatches = match[27].match(/(\S+)\/(\S{2})-(\S{2})=?(\S?)/);
@@ -290,8 +290,8 @@ export class Parser {
       else if(match[31] === 'O-O' || match[31] === 'O-O-O') {
         moveVerbose = {
           piece: 'k',
-          from: 'e' + (match[9] === 'W' ? '8' : '1'),
-          to: (match[31] === 'O-O' ? 'g' : 'c') + (match[9] === 'W' ? '8' : '1'),
+          from: `e${match[9] === 'W' ? '8' : '1'}`,
+          to: `${match[31] === 'O-O' ? 'g' : 'c'}${match[9] === 'W' ? '8' : '1'}`,
           promotion: undefined,
           san: match[31]
         }
@@ -398,7 +398,7 @@ export class Parser {
         var type = 'whisper';
 
       return {
-        channel: 'Game ' + match[2],
+        channel: `Game ${match[2]}`,
         user: match[1],
         type: type,
         message: match[4].replace(/\n/g, ''),
