@@ -138,6 +138,7 @@ export class Chat {
     $('#collapse-chat').on('shown.bs.collapse', () => {
       var activeTab = $('#tabs button').filter('.active');
       activeTab.trigger('shown.bs.tab');
+      $(window).trigger('resize');
       this.scrollToChat();
     });
     

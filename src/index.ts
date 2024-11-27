@@ -352,8 +352,9 @@ function setLeftColumnSizes() {
     if(isSmallWindow())
       $('#left-panel').css('height', ''); // Reset back to CSS defined height
     else {
-      var remHeight = $('#inner-left-panels').outerHeight() - $('#left-panel').height();
-      var leftPanelHeight = boardHeight - remHeight;
+      var remHeight = Utils.getRemainingHeight($('#left-panel'), $('#inner-left-panels'));
+      var leftPanelBorder = $('#left-panel').outerHeight(true) - $('#left-panel').height();
+      var leftPanelHeight = boardHeight - remHeight - leftPanelBorder;
       $('#left-panel').height(Math.max(leftPanelHeight, 0));
       // If we've made the left panel height as small as possible, reduce size of status panel instead
       // Note leftPanelHeight is negative in that case
@@ -444,8 +445,9 @@ function setRightColumnSizes() {
     $('#chat-panel').height($(window).height() - getRemainingHeight($('#chat-panel'), $('body'), '#collapse-chat' + (hasSiblings ? ', #inner-right-panels' : '')) - border);
   }
   else {
-    var remHeight = $('#inner-right-panels').outerHeight() - $('#chat-panel').height();
-    $('#chat-panel').height(boardHeight + $('#left-panel-footer').outerHeight() - remHeight);
+    var remHeight = Utils.getRemainingHeight($('#chat-panel'), $('#inner-right-panels'));
+    var chatPanelBorder = $('#chat-panel').outerHeight(true) - $('#chat-panel').height();
+    $('#chat-panel').height(boardHeight + $('#left-panel-footer').outerHeight() - remHeight - chatPanelBorder);
   }
 
   adjustInputTextHeight();
@@ -3704,6 +3706,10 @@ $('#collapse-menus').on('show.bs.collapse', (event) => {
   $('#menus-toggle-icon').removeClass('fa-toggle-down').addClass('fa-toggle-up');
   scrollToTop();
   activeTab.tab('show');
+});
+
+$('#collapse-menus').on('shown.bs.collapse', (event) => {
+  setLeftColumnSizes();
 });
 
 $('#pills-tab button').on('click', function(event) {
