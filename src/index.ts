@@ -66,6 +66,7 @@ let soundTimer
 let showSentOffersTimer; // Delay showing new offers until the user has finished clicking buttons
 let newSentOffers = []; // New sent offers (match requests and seeks) that are waiting to be displayed
 let activeTab;
+let newTabShown = false;
 let newGameVariant = '';
 let lobbyEntries = new Map();
 let lobbyScrolledToBottom;
@@ -3712,14 +3713,25 @@ $('#collapse-menus').on('shown.bs.collapse', (event) => {
   setLeftColumnSizes();
 });
 
+$('#pills-tab button').on('shown.bs.tab', function(event) {
+  if($(this).attr('id') !== 'pills-placeholder-tab')
+    activeTab = $(this);
+  newTabShown = true;
+  setTimeout(() => { newTabShown = false; }, 0);
+});
+
 $('#pills-tab button').on('click', function(event) {
-  activeTab = $(this);
-  $('#collapse-menus').collapse('show');
-  scrollToTop();
+  if(!newTabShown)
+    $('#collapse-menus').collapse('hide');  
+  else {
+    $('#collapse-menus').collapse('show');
+    scrollToTop();
+    activeTab = $(this);
+  }
 });
 
 function showTab(tab: any) {
-  if($('#collapse-menus').hasClass('show'))
+  if($('#collapse-menus').hasClass('show')) 
     tab.tab('show');
   else
     activeTab = tab;
