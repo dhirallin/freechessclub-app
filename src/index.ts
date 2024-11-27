@@ -8,6 +8,7 @@ import { Color, Key } from 'chessground/types';
 import { Polyglot } from 'cm-polyglot/src/Polyglot.js';
 import PgnParser from '@mliebelt/pgn-parser';
 import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
+import * as Utils from './utils';
 import Chat from './chat';
 import { Clock } from './clock';
 import { Engine, EvalEngine } from './engine';
@@ -19,7 +20,6 @@ import { storage, CredentialStorage } from './storage';
 import { Reason } from './parser';
 import './ui';
 import packageInfo from '../package.json';
-import { createPopper, Placement } from '@popperjs/core';
 
 export const enum Layout {
   Desktop = 0,
@@ -74,7 +74,6 @@ let gameWithFocus: Game = null;
 let games: Game[] = [];
 let partnerGameId = null;
 let lastPointerCoords = {x: 0, y: 0}; // Stores the pointer coordinates from the last touch/mouse event
-let touchStarted = false; // Keeps track of whether a touch is in progress
 let credential: CredentialStorage = null; // The persistently stored username/password
 const mainBoard: any = createBoard($('#main-board-area').children().first().find('.board'));
 
@@ -138,13 +137,13 @@ async function onDeviceReady() {
 
   disableOnlineInputs(true);
 
-  if(isSmallWindow()) {
+  if(Utils.isSmallWindow()) {
     $('#collapse-chat').collapse('hide');
     $('#collapse-menus').collapse('hide');
     setViewModeList();
   }
   else {
-    createTooltips();
+    Utils.createTooltips();
     $('#pills-play-tab').tab('show');
     $('#collapse-menus').removeClass('collapse-init');
     $('#collapse-chat').removeClass('collapse-init');
@@ -152,7 +151,7 @@ async function onDeviceReady() {
   }
 
   $('input, textarea').each(function() {
-    selectOnFocus($(this));
+    Utils.selectOnFocus($(this));
   });
 
   // Change layout for mobile or desktop and resize panels
@@ -250,22 +249,11 @@ $(document).one('click', (event) => {
 
 // Used to keep track of the mouse coordinates for displaying menus at the mouse
 $(document).on('mouseup mousedown touchend touchcancel', (event) => {
-  lastPointerCoords = getTouchClickCoordinates(event);
+  lastPointerCoords = Utils.getTouchClickCoordinates(event);
 });
 document.addEventListener('touchstart', (event) => {
-  lastPointerCoords = getTouchClickCoordinates(event);
+  lastPointerCoords = Utils.getTouchClickCoordinates(event);
 }, {passive: true});
-
-// Keeps track of whether a touch is currently in progress. Used by createContextMenu.
-document.addEventListener('touchstart', (event) => {
-  touchStarted = true;
-}, {capture: true, passive: true});
-document.addEventListener('touchend', (event) => {
-  touchStarted = false;
-}, {capture: true});
-document.addEventListener('touchcancel', (event) => {
-  touchStarted = false;
-}, {capture: true});
 
 // Hide popover if user clicks anywhere outside
 $('body').on('click', function (e) {
@@ -305,15 +293,15 @@ $(window).on('resize', () => {
   else if(layout === Layout.ChatMaximized)
     layout = Layout.Desktop;
 
-  if(isSmallWindow() && layout === Layout.Desktop)
+  if(Utils.isSmallWindow() && layout === Layout.Desktop)
     useMobileLayout();
-  else if(!isSmallWindow() && layout === Layout.Mobile)
+  else if(!Utils.isSmallWindow() && layout === Layout.Mobile)
     useDesktopLayout();
 
   setPanelSizes();
   setFontSizes();
 
-  prevSizeCategory = getSizeCategory();
+  prevSizeCategory = Utils.getSizeCategory();
 
   if(evalEngine)
     evalEngine.redraw();
@@ -326,18 +314,18 @@ function setPanelSizes() {
   var topPanel = maximizedGameCard.find('.top-panel');
   var bottomPanel = maximizedGameCard.find('.bottom-panel');
 
-  if(!isSmallWindow() && prevSizeCategory === SizeCategory.Small) {
+  if(!Utils.isSmallWindow() && prevSizeCategory === Utils.SizeCategory.Small) {
     topPanel.css('height', '');
     bottomPanel.css('height', '');
   }
 
   // Make sure the board is smaller than the window height and also leaves room for the other columns' min-widths
-  if(!isSmallWindow()) {
-    var scrollBarWidth = getScrollbarWidth();
+  if(!Utils.isSmallWindow()) {
+    var scrollBarWidth = Utils.getScrollbarWidth();
 
     // Set board width a bit smaller in order to leave room for a scrollbar on <body>. This is because
     // we don't want to resize all the panels whenever a dropdown or something similar overflows the body.
-    if(isMediumWindow()) // display 2 columns on md (medium) display
+    if(Utils.isMediumWindow()) // display 2 columns on md (medium) display
       var cardMaxWidth = window.innerWidth - $('#left-col').outerWidth() - scrollBarWidth;
     else
       var cardMaxWidth = window.innerWidth - $('#left-col').outerWidth() - parseFloat($('#right-col').css('min-width')) - scrollBarWidth;
@@ -345,7 +333,7 @@ function setPanelSizes() {
     var safeAreas = $('body').innerHeight() - $('body').height();
     var feature3Border = $('.feature3').outerHeight(true) - $('.feature3').height();
     //var cardMaxHeight = $(window).height() - feature3Border - safeAreas;
-    var cardMaxHeight = $(window).height() - getRemainingHeight(maximizedGameCard);
+    var cardMaxHeight = $(window).height() - Utils.getRemainingHeight(maximizedGameCard);
     setGameCardSize(maximizedGame, cardMaxWidth, cardMaxHeight);
   }
   else
@@ -355,7 +343,7 @@ function setPanelSizes() {
   // Try to do it in a robust way that won't break if we add/remove elements later.
 
   // On mobile, slim down player status panels in order to fit everything within window height
-  if(isSmallWindow()) {
+  if(Utils.isSmallWindow()) {
     const originalStatusHeight = $('#left-panel-header').height();
     const cardBorders = maximizedGameCard.outerHeight() - maximizedGameCard.height()
       + Math.round(parseFloat($('#left-card').css('border-bottom-width')))
@@ -379,11 +367,11 @@ function setPanelSizes() {
   setRightColumnSizes();
 
   // Adjust Notifications drop-down width
-  if(isSmallWindow() && prevSizeCategory !== SizeCategory.Small)
+  if(Utils.isSmallWindow() && prevSizeCategory !== Utils.SizeCategory.Small)
     $('#notifications').css('width', '100%');
-  else if(isMediumWindow() && prevSizeCategory !== SizeCategory.Medium)
+  else if(Utils.isMediumWindow() && prevSizeCategory !== Utils.SizeCategory.Medium)
     $('#notifications').css('width', '50%');
-  else if(isLargeWindow())
+  else if(Utils.isLargeWindow())
     $('#notifications').width($(document).outerWidth(true) - $('#left-col').outerWidth(true) - $('#mid-col').outerWidth(true));
 }
 
@@ -395,7 +383,7 @@ function setLeftColumnSizes() {
     if($('#left-panel').height() === 0)
       $('#left-panel-bottom').css('height', '');
 
-    if(isSmallWindow())
+    if(Utils.isSmallWindow())
       $('#left-panel').css('height', ''); // Reset back to CSS defined height
     else {
       var remHeight = Utils.getRemainingHeight($('#left-panel'), $('#inner-left-panels'));
@@ -446,7 +434,7 @@ function setGameCardSize(game: Game, cardMaxWidth?: number, cardMaxHeight?: numb
 function setRightColumnSizes() {
   const boardHeight = $('#main-board-area .board').innerHeight();
    // Set chat panel height to 0 before resizing everything so as to remove scrollbar on window caused by chat overflowing
-  if(isLargeWindow())
+  if(Utils.isLargeWindow())
     $('#chat-panel').height(0);
 
   // Set width and height of game cards in the right board area
@@ -458,7 +446,7 @@ function setRightColumnSizes() {
 
   games.forEach((game) => {
     if(game.element.parent().is($('#secondary-board-area'))) {
-      if(isLargeWindow()) {
+      if(Utils.isLargeWindow()) {
         var cardsPerRow = Math.min(2, numCards);
         var cardHeight: any = boardHeight * 0.6;
       }
@@ -480,15 +468,15 @@ function setRightColumnSizes() {
       bottomPanel.css('--panel-width', bottomPanel.css('width'));
     }
   });
-  if(isSmallWindow())
+  if(Utils.isSmallWindow())
     $('#secondary-board-area').css('height', '');
   else
     $('#secondary-board-area').height($('#secondary-board-area > :first-child').outerHeight());
 
-  if(!isLargeWindow() || !boardHeight) {
+  if(!Utils.isLargeWindow() || !boardHeight) {
     let hasSiblings = $('#collapse-chat').siblings(':visible').length > 0; // If there are game boards in the right column, then don't try to fit the header and chat into the same screen height
     let border = $('#chat-panel').outerHeight(true) - $('#chat-panel').height();
-    $('#chat-panel').height($(window).height() - getRemainingHeight($('#chat-panel'), $('body'), `#collapse-chat ${hasSiblings ? ', #inner-right-panels' : ''}`) - border);
+    $('#chat-panel').height($(window).height() - Utils.getRemainingHeight($('#chat-panel'), $('body'), `#collapse-chat ${hasSiblings ? ', #inner-right-panels' : ''}`) - border);
   }
   else {
     var remHeight = Utils.getRemainingHeight($('#chat-panel'), $('#inner-right-panels'));
@@ -539,7 +527,7 @@ function useMobileLayout() {
   $('#viewing-games-buttons:visible:last').addClass('me-0'); // This is so visible buttons in the btn-toolbar center properly
   hidePanel('#left-panel-header-2');
 
-  createTooltips();
+  Utils.createTooltips();
   layout = Layout.Mobile;
 }
 
@@ -552,7 +540,7 @@ function useDesktopLayout() {
   if(gameWithFocus.isObserving() || gameWithFocus.isExamining())
     showPanel('#left-panel-header-2');
 
-  createTooltips();
+  Utils.createTooltips();
   layout = Layout.Desktop;
 }
 
@@ -568,7 +556,7 @@ function swapLeftRightPanelHeaders() {
   $('#left-panel-header').attr('class', rightHeaderClass);
   $('#right-panel-header').attr('class', leftHeaderClass);
 
-  if(isSmallWindow()) {
+  if(Utils.isSmallWindow()) {
     $('#chat-toggle-btn').appendTo($('#chat-collapse-toolbar').last());
     $('#menus-toggle-btn').appendTo($('#left-panel-header .btn-toolbar').last());
   }
@@ -1319,7 +1307,7 @@ function messageHandler(data) {
             game.element.find('.player-status .rating').text(game.brating);
           }
         }
-        data.message = msg = removeLine(msg, match[0]); // remove the matching line
+        data.message = msg = Utils.removeLine(msg, match[0]); // remove the matching line
         if(!msg)
           return;
       }
@@ -2027,7 +2015,7 @@ function dragPiece(event: any) {
   };
 
   if((game.isPlaying() && game.color === color) || game.isExamining() || game.role === Role.NONE) {
-    lockOverflow(); // Stop scrollbar appearing due to player dragging piece below the visible window
+    Utils.lockOverflow(); // Stop scrollbar appearing due to player dragging piece below the visible window
     game.board.dragNewPiece(piece, event);
     event.preventDefault();
   }
@@ -2237,6 +2225,24 @@ function boardChanged() {
 
     game.fen = newFEN;
     updateEngine();
+  }
+}
+
+/** 
+ * Scroll to the game board which currently has focus 
+ */ 
+export function scrollToBoard(game?: Game) {
+  if(Utils.isSmallWindow()) {
+    if(!game || game.element.parent().attr('id') === 'main-board-area') {
+      if($('#collapse-chat').hasClass('show')) {
+        $('#collapse-chat').collapse('hide'); // this will scroll to board after hiding chat
+        return;
+      }
+      const windowHeight = window.visualViewport ? window.visualViewport.height : $(window).height();
+      Utils.safeScrollTo($('#right-panel-header').offset().top + $('#right-panel-header').outerHeight() - windowHeight);
+    }
+    else
+      Utils.safeScrollTo(game.element.offset().top);
   }
 }
 
@@ -2548,9 +2554,9 @@ function createNewVariationMenu(game: Game) {
   }
 
   var x = lastPointerCoords.x;
-  var y = (isSmallWindow() ? lastPointerCoords.y : lastPointerCoords.y + 15);
+  var y = (Utils.isSmallWindow() ? lastPointerCoords.y : lastPointerCoords.y + 15);
 
-  createContextMenu(menu, x, y, itemSelectedCallback, closeMenuCallback, 'top', ['top-start', 'top-end', 'bottom-start', 'bottom-end']);
+  Utils.createContextMenu(menu, x, y, itemSelectedCallback, closeMenuCallback, 'top', ['top-start', 'top-end', 'bottom-start', 'bottom-end']);
 }
 
 function flipBoard(game: Game) {
@@ -3152,7 +3158,7 @@ function createGame(): Game {
     $('#secondary-board-area').css('display', 'flex');
     $('#collapse-chat-arrow').show();
     game.element.find('[data-bs-toggle="tooltip"]').each(function() {
-      createTooltip($(this));
+      Utils.createTooltip($(this));
     });
 
     game.statusElement = gameWithFocus.statusElement.clone();
@@ -3239,7 +3245,7 @@ function initGameControls(game: Game) {
   if(game !== gameWithFocus)
     return;
 
-  safeRemove($('.context-menu'));
+  Utils.removeWithTooltips($('.context-menu'));
   initAnalysis(game);
   initGameTools(game);
 
@@ -3270,7 +3276,7 @@ function initGameControls(game: Game) {
 
   $('#takeback').prop('disabled', game.role === Role.PLAYING_COMPUTER);
 
-  if((game.isExamining() || game.isObserving()) && !isSmallWindow())
+  if((game.isExamining() || game.isObserving()) && !Utils.isSmallWindow())
     showPanel('#left-panel-header-2');
   else
     hidePanel('#left-panel-header-2');
@@ -3281,14 +3287,14 @@ function initGameControls(game: Game) {
     hidePanel('#left-panel-setup-board');
 
   if(game.isExamining())
-    showButton($('#stop-examining'));
+    Utils.showButton($('#stop-examining'));
   else if(game.isObserving())
-    showButton($('#stop-observing'));
+    Utils.showButton($('#stop-observing'));
 
   if(!game.isExamining())
-    hideButton($('#stop-examining'));
+    Utils.hideButton($('#stop-examining'));
   if(!game.isObserving())
-    hideButton($('#stop-observing'));
+    Utils.hideButton($('#stop-observing'));
 
   if(game.isPlaying())
     showStatusPanel();
@@ -3507,8 +3513,8 @@ function cleanupGame(game: Game) {
   game.role = Role.NONE;
 
   if(game === gameWithFocus) {
-    hideButton($('#stop-observing'));
-    hideButton($('#stop-examining'));
+    Utils.hideButton($('#stop-observing'));
+    Utils.hideButton($('#stop-examining'));
     hidePanel('#left-panel-header-2');
     $('#takeback').prop('disabled', false);
     $('#play-computer').prop('disabled', false);
@@ -3765,7 +3771,7 @@ $('#collapse-menus').on('hidden.bs.collapse', (event) => {
 
 $('#collapse-menus').on('show.bs.collapse', (event) => {
   $('#menus-toggle-icon').removeClass('fa-toggle-down').addClass('fa-toggle-up');
-  scrollToTop();
+  Utils.scrollToTop();
   activeTab.tab('show');
 });
 
@@ -3787,7 +3793,7 @@ $('#pills-tab button').on('click', function(event) {
   else {
     activeTab = $(this);
     $('#collapse-menus').collapse('show');
-    scrollToTop();
+    Utils.scrollToTop();
   }
 });
 
@@ -4203,15 +4209,15 @@ $('#custom-control').on('submit', (event) => {
   event.preventDefault();
 
   $('#custom-control-go').trigger('focus');
-  const min: string = getValue('#custom-control-min');
-  const sec: string = getValue('#custom-control-inc');
+  const min: string = Utils.getValue('#custom-control-min');
+  const sec: string = Utils.getValue('#custom-control-inc');
   getGame(+min, +sec);
 
   return false;
 });
 
 function getGame(min: number, sec: number) {
-  let opponent = getValue('#opponent-player-name')
+  let opponent = Utils.getValue('#opponent-player-name')
   opponent = opponent.trim().split(/\s+/)[0];
   $('#opponent-player-name').val(opponent);
 
@@ -4397,7 +4403,7 @@ $('#observe-user').on('submit', (event) => {
 
 function observe(id?: string) {
   if(!id) {
-    id = getValue('#observe-username');
+    id = Utils.getValue('#observe-username');
     id = id.trim().split(/\s+/)[0];
     $('#observe-username').val(id);
   }
@@ -4449,7 +4455,7 @@ $(document).on('shown.bs.tab', 'button[data-bs-target="#pills-history"]', (e) =>
 function initHistoryPane() {
   historyRequested = 0;
   $('#history-table').html('');
-  let username = getValue('#history-username');
+  let username = Utils.getValue('#history-username');
   if (username === undefined || username === '') {
     if (session) {
       username = session.getUser();
@@ -4462,7 +4468,7 @@ function initHistoryPane() {
 $('#history-user').on('submit', (event) => {
   event.preventDefault();
   $('#history-go').trigger('focus');
-  const username = getValue('#history-username');
+  const username = Utils.getValue('#history-username');
   getHistory(username);
   return false;
 });
@@ -4492,7 +4498,7 @@ function showHistory(user: string, history: string) {
   $('#history-pane-status').hide();
   $('#history-table').html('');
 
-  const exUser = getValue('#history-username');
+  const exUser = Utils.getValue('#history-username');
   if (exUser.localeCompare(user, undefined, { sensitivity: 'accent' }) !== 0) {
     return;
   }
@@ -4548,7 +4554,7 @@ $('#movelists').on('click', '.comment', function() {
  * Create right-click and long press trigger events for displaying the context menu when right clicking a move
  * in the move list.
  */
-createContextMenuTrigger(function(event) {
+Utils.createContextMenuTrigger(function(event) {
   var target = $(event.target);
   return !!(target.closest('.selectable').length || target.closest('.move').length
       || (target.closest('.comment').length && event.type === 'contextmenu'));
@@ -4600,7 +4606,7 @@ function createMoveContextMenu(event: any) {
   annotationsHtml += `</div>`;
   contextMenu.append(annotationsHtml);
   contextMenu.find('[data-bs-toggle="tooltip"]').each((index, element) => {
-    createTooltip($(element));
+    Utils.createTooltip($(element));
   });
 
   /** Called when menu item is selected */
@@ -4667,8 +4673,8 @@ function createMoveContextMenu(event: any) {
     moveElement.find('.move').removeClass('hovered');
   }
 
-  var coords = getTouchClickCoordinates(event);
-  createContextMenu(contextMenu, coords.x, coords.y, moveContextMenuItemSelected, moveContextMenuClose);
+  var coords = Utils.getTouchClickCoordinates(event);
+  Utils.createContextMenu(contextMenu, coords.x, coords.y, moveContextMenuItemSelected, moveContextMenuClose);
 }
 
 /**
@@ -5325,7 +5331,7 @@ $('#game-list-button').on('show.bs.dropdown', function(event) {
  * updating the list, so that it doesn't update every time a character is typed, which would
  * be performance intensive
  */
-var gameListFilterHandler = debounce((event) => {
+var gameListFilterHandler = Utils.debounce((event) => {
   var game = gameWithFocus;
   game.gameListFilter = $(event.target).val() as string;
   addGameListItems(game);
@@ -5430,7 +5436,7 @@ $('#save-game-modal').on('show.bs.modal', function() {
   }
   pgnOutput.css('padding-right', '');
   if(numRows > +pgnOutput.attr('rows')) {
-    var scrollbarWidth = getScrollbarWidth();
+    var scrollbarWidth = Utils.getScrollbarWidth();
     var padding = pgnOutput.css('padding-right');
     pgnOutput.css('padding-right', `calc(${padding} + ${scrollbarWidth}px)`);
     $('#save-pgn-copy').css('right', `${scrollbarWidth}px`);
@@ -5439,19 +5445,19 @@ $('#save-game-modal').on('show.bs.modal', function() {
 
 /** Triggered when user clicks the FEN 'copy to clipboard' button in the 'Save Game' modal */
 $('#save-fen-copy').on('click', (event) => {
-  copyToClipboard($('#save-fen-output'), $(event.currentTarget));
+  Utils.copyToClipboard($('#save-fen-output'), $(event.currentTarget));
 });
 
 /** Triggered when user clicks the PGN 'copy to clipboard' button in the 'Save Game' modal */
 $('#save-pgn-copy').on('click', (event) => {
-  copyToClipboard($('#save-pgn-output'), $(event.currentTarget));
+  Utils.copyToClipboard($('#save-pgn-output'), $(event.currentTarget));
 });
 
 /**
  * Takes a game object and returns the game in PGN format
  */
 function gameToPGN(game: Game): string {
-  var movesStr = breakAtMaxLength(game.history.movesToString(), 80);
+  var movesStr = Utils.breakAtMaxLength(game.history.movesToString(), 80);
   return `${game.history.metatagsToString()}\n\n${movesStr ? `${movesStr} ` : ''}${game.history.metatags.Result}`;
 }
 
@@ -5760,7 +5766,7 @@ function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean 
   var oldColor = splitFEN(getSetupBoardFEN(game)).color;
 
   var colorName = (color === 'w' ? 'White' : 'Black');
-  if(isSmallWindow())
+  if(Utils.isSmallWindow())
     var label = `${colorName}'s move`;
   else
     var label = `${colorName} to move`;
@@ -5845,7 +5851,7 @@ function cancelSetup(game: Game) {
  */
 function moveLeftPanelSetupBoard() {
   var setupBoardPanel = $('#left-panel-setup-board');
-  if(isSmallWindow()) {
+  if(Utils.isSmallWindow()) {
     setupBoardPanel.removeClass('card-header');
     setupBoardPanel.addClass('card-footer');
     setupBoardPanel.removeClass('top-panel');
@@ -5950,6 +5956,14 @@ function hideStatusPanel() {
   $('#show-status-panel').show();
   stopEngine();
   hidePanel('#left-panel-bottom');
+}
+
+/**
+ * Scroll to the status/analysis panel
+ */
+function scrollToLeftPanelBottom() {
+  if(Utils.isSmallWindow())
+    Utils.safeScrollTo($('#left-panel-bottom').offset().top);
 }
 
 $('#left-panel-bottom').on('shown.bs.tab', '.nav-link', (e) => {
@@ -6312,13 +6326,13 @@ $('#draw').on('click', (event) => {
 /** CONNECT BUTTON FUNCTIONS **/
 
 $('#login-form').on('submit', (event) => {
-  const user: string = getValue('#login-user');
+  const user: string = Utils.getValue('#login-user');
   if(session && session.isConnected() && user === session.getUser()) {
     $('#login-user').addClass('is-invalid');
     event.preventDefault();
     return false;
   }
-  const pass: string = getValue('#login-pass');
+  const pass: string = Utils.getValue('#login-pass');
   if(session)
     session.disconnect();
   session = new Session(messageHandler, user, pass);
@@ -6506,7 +6520,7 @@ $('#multiboard-toggle').on('click', (event) => {
 $('#input-form').on('submit', (event) => {
   event.preventDefault();
   let text;
-  let val: string = getValue('#input-text');
+  let val: string = Utils.getValue('#input-text');
   val = val.replace(/[“‘”]/g, "'");
   val = val.replace(/[^\S ]/g, ' '); // replace other whitespace chars with space
   val = val.replace(/[\x00-\x1F\x7F-\x9F]/g, ''); // Strip out ascii and unicode control chars
@@ -6830,7 +6844,7 @@ function createNotification(params: DialogParams): any {
   dialog.addClass('notification-panel');
   $('#notifications-btn').prop('disabled', false);
   $('#notifications-btn').parent().prop('title', 'Notifications');
-  createTooltip($('#notifications-btn').parent());
+  Utils.createTooltip($('#notifications-btn').parent());
 
   $('#notifications-number').text($('.notification:not([data-remove="true"])').length);
   $('#notifications-bubble').show();
@@ -6853,7 +6867,7 @@ function removeNotification(element: any) {
   if(!$('.notification:not([data-remove="true"])').length) {
     $('#notifications-btn').prop('disabled', true);
     $('#notifications-btn').parent().prop('title', 'No notifications');
-    createTooltip($('#notifications-btn').parent());
+    Utils.createTooltip($('#notifications-btn').parent());
     $('#notifications-bubble').hide();
   }
   $('#notifications-number').text($('.notification:not([data-remove="true"])').length);
@@ -7030,10 +7044,10 @@ function notificationMouseDown(e) {
     }
   }).appendTo('body');
 
-  var swipeStart = getTouchClickCoordinates(e);
+  var swipeStart = Utils.getTouchClickCoordinates(e);
   var swipeLocked = '';
   const mouseMoveHandler = (e) => {
-    var mouse = getTouchClickCoordinates(e);
+    var mouse = Utils.getTouchClickCoordinates(e);
     if(swipeLocked) {
       var xMax = $('#notifications').outerWidth(true);
       var yMax = $('#notifications').outerHeight(true);
@@ -7064,7 +7078,7 @@ function notificationMouseDown(e) {
   $(document).on('mousemove touchmove', mouseMoveHandler);
 
   $(document).one('mouseup touchend touchcancel', (e) => {
-    var mouse = getTouchClickCoordinates(e);
+    var mouse = Utils.getTouchClickCoordinates(e);
     $('#mouse-capture-layer').remove();
     $(document).off('mousemove touchmove', mouseMoveHandler);
     if(swipeLocked === 'vertical') {

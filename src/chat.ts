@@ -4,7 +4,8 @@
 
 import { autoLink } from 'autolink-js';
 import { load as loadEmojis, parse as parseEmojis } from 'gh-emoji';
-import { findGame, setGameWithFocus, maximizeGame, createTooltip, notificationsToggle, scrollTo, scrollToBoard, isSmallWindow } from './index';
+import { createTooltip, safeScrollTo, isSmallWindow } from './utils';
+import { findGame, setGameWithFocus, maximizeGame, notificationsToggle, scrollToBoard } from './index';
 import { storage } from './storage';
 
 // list of channels
@@ -610,9 +611,9 @@ export class Chat {
   public scrollToChat() {
     if(isSmallWindow()) {
       if($('#secondary-board-area').is(':visible'))
-        scrollTo($('#chat-panel').offset().top);
+        safeScrollTo($('#chat-panel').offset().top);
       else
-        scrollTo($('#right-panel-header').offset().top);
+        safeScrollTo($('#right-panel-header').offset().top);
     }
   }
 }
