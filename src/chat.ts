@@ -5,7 +5,8 @@
 import { autoLink } from 'autolink-js';
 import { load as loadEmojis, parse as parseEmojis } from 'gh-emoji';
 import { createTooltip, safeScrollTo, isSmallWindow } from './utils';
-import { findGame, setGameWithFocus, maximizeGame, notificationsToggle, scrollToBoard } from './index';
+import { findGame, setGameWithFocus, maximizeGame, scrollToBoard } from './index';
+import { settings } from './settings';
 import { storage } from './storage';
 
 // list of channels
@@ -96,14 +97,12 @@ export class Chat {
   private scrolledToBottom: object;
   private emojisLoaded: boolean;
   private maximized: boolean;
-  private timestampToggle: boolean;
-  private chattabsToggle: boolean; // toggle for creating a window for chat
   private unviewedNum: number;
 
   constructor() {
     this.unviewedNum = 0;
-    this.timestampToggle = (storage.get('timestamp') !== 'false');
-    this.chattabsToggle = (storage.get('chattabs') !== 'false');
+    settings.timestampToggle = (storage.get('timestamp') !== 'false');
+    settings.chattabsToggle = (storage.get('chattabs') !== 'false');
     // load emojis
     this.emojisLoaded = false;
     loadEmojis().then(() => {
@@ -159,16 +158,16 @@ export class Chat {
       this.closeTab($(event.target).parent().siblings('.nav-link'));
     });
 
-    $('#timestamp-toggle').prop('checked', this.timestampToggle);
+    $('#timestamp-toggle').prop('checked', settings.timestampToggle);
     $('#timestamp-toggle').on('click', (event) => {
-      this.timestampToggle = !this.timestampToggle;
-      storage.set('timestamp', String(this.timestampToggle));
+      settings.timestampToggle = !settings.timestampToggle;
+      storage.set('timestamp', String(settings.timestampToggle));
     });
 
-    $('#chattabs-toggle').prop('checked', this.chattabsToggle);
+    $('#chattabs-toggle').prop('checked', settings.chattabsToggle);
     $('#chattabs-toggle').on('click', (event) => {
-      this.chattabsToggle = !this.chattabsToggle;
-      storage.set('chattabs', String(this.chattabsToggle));
+      settings.chattabsToggle = !settings.chattabsToggle;
+      storage.set('chattabs', String(settings.chattabsToggle));
     });
 
     $('#chat-maximize-btn').on('click', () => {
@@ -319,7 +318,7 @@ export class Chat {
   }
 
   public createTab(name: string, showTab = false) {
-    if(!this.chattabsToggle)
+    if(!settings.chattabsToggle)
       var from = "console";
     else
       var from = name.toLowerCase().replace(/\s/g, '-');
@@ -488,7 +487,7 @@ export class Chat {
         `<a class="dropdown-item noselect" id="ch-${ch}">${chName}</a>`);
       $(`#ch-${ch}`).on('click', (event) => {
         event.preventDefault();
-        if (!this.chattabsToggle) {
+        if (!settings.chattabsToggle) {
           ch = 'console';
         }
         this.createTab(ch, true);
@@ -508,7 +507,7 @@ export class Chat {
   }
 
   public newMessage(from: string, data: any, html: boolean = false) {
-    let tabName = this.chattabsToggle ? from : 'console';
+    let tabName = settings.chattabsToggle ? from : 'console';
 
     if(!/^[\w- ]+$/.test(from))
       return;
@@ -521,7 +520,7 @@ export class Chat {
         textclass = ' class="mine"';
       }
       let prompt = data.user;
-      if (!this.chattabsToggle && data.channel !== undefined) {
+      if (!settings.chattabsToggle && data.channel !== undefined) {
         prompt += `(${data.channel})`;
       }
       who = `<strong${textclass}>${$('<span/>').text(prompt).html()}</strong>: `;
@@ -553,7 +552,7 @@ export class Chat {
     })}${suffix}</br>`;
 
     let timestamp = '';
-    if (this.timestampToggle) {
+    if (settings.timestampToggle) {
       timestamp = `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `;
     }
 
@@ -574,7 +573,7 @@ export class Chat {
   }
 
   public newNotification(msg: string) {
-    if(!msg.startsWith('Notification:') || notificationsToggle) {
+    if(!msg.startsWith('Notification:') || settings.notificationsToggle) {
       var currentTab = this.currentTab().toLowerCase().replace(/\s/g, '-');
       msg = `<strong class="chat-notification">${msg}</strong>`;
     }

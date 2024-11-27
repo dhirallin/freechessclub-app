@@ -7,6 +7,7 @@ import { updateBoard } from './index';
 import { Role } from './game';
 import { Reason } from './parser';
 import { storage } from './storage';
+import { settings } from './settings';
 import { setCaretToEnd } from './utils';
 import { getPlyFromFEN, getMoveNoFromFEN, getTurnColorFromFEN } from './chess-helper';
 
@@ -190,7 +191,6 @@ export class History {
   private firstEntry: HEntry;
   private currEntry: HEntry;
   private _scratch: boolean;
-  private static pieceGlyphsToggle: boolean = true;
   public editMode: boolean;  // if true, allows adding multiple or nested subvariations to the move history
   public metatags: { [key: string]: any };
   public pgn: string; // The PGN associated with this History as a string, used for lazy loading the game
@@ -971,7 +971,7 @@ export class History {
    * Returns the SAN with the plain-text for the major pieces changed to chess-piece glyphs
    */
   public static glyphify(san: string, color: string): string {
-    if(!san || !History.pieceGlyphsToggle)
+    if(!san || !settings.pieceGlyphsToggle)
       return san;
 
     var piece = san.charAt(0);
@@ -1077,15 +1077,15 @@ export class History {
    * Load in settings from persistent storage.
    */
   public static initSettings() {
-    this.pieceGlyphsToggle = (storage.get('pieceglyphs') !== 'false');
-    $('#piece-glyphs-toggle').prop('checked', this.pieceGlyphsToggle);
+    settings.pieceGlyphsToggle = (storage.get('pieceglyphs') !== 'false');
+    $('#piece-glyphs-toggle').prop('checked', settings.pieceGlyphsToggle);
 
     $('#piece-glyphs-toggle').on('click', (event) => {
-      this.pieceGlyphsToggle = !this.pieceGlyphsToggle;
-      storage.set('pieceglyphs', String(this.pieceGlyphsToggle));
+      settings.pieceGlyphsToggle = !settings.pieceGlyphsToggle;
+      storage.set('pieceglyphs', String(settings.pieceGlyphsToggle));
 
       $('#movelist-container .move').each((index, element) => {
-        if(this.pieceGlyphsToggle)
+        if(settings.pieceGlyphsToggle)
           this.glyphifyElement($(element));
         else
           this.unglyphifyElement($(element));

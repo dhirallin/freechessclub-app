@@ -10,6 +10,7 @@ import PgnParser from '@mliebelt/pgn-parser';
 import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
 import * as Utils from './utils';
 import * as ChessHelper from './chess-helper';
+import * as Dialogs from './dialogs';
 import Chat from './chat';
 import { Clock } from './clock';
 import { Engine, EvalEngine } from './engine';
@@ -18,6 +19,7 @@ import { History, HEntry } from './history';
 import { GetMessageType, MessageType, Session } from './session';
 import * as Sounds from './sounds';
 import { storage, CredentialStorage } from './storage';
+import { settings } from './settings';
 import { Reason } from './parser';
 import './ui';
 import packageInfo from '../package.json';
@@ -52,7 +54,6 @@ let examineModeRequested: Game | null = null;
 let mexamineRequested: Game | null = null;
 let mexamineGame: Game | null = null;
 let computerList = [];
-let dialogCounter = 0;
 let numPVs = 1;
 let matchRequested = 0;
 let prevSizeCategory = null;
@@ -77,25 +78,6 @@ let partnerGameId = null;
 let lastPointerCoords = {x: 0, y: 0}; // Stores the pointer coordinates from the last touch/mouse event
 let credential: CredentialStorage = null; // The persistently stored username/password
 const mainBoard: any = createBoard($('#main-board-area').children().first().find('.board'));
-
-// toggle game sounds
-let soundToggle: boolean;
-// toggle for auto-promote to queen
-let autoPromoteToggle: boolean;
-// toggle for showing Computer opponents in the lobby
-let lobbyShowComputersToggle: boolean;
-// toggle for showing Rated games in the lobby
-let lobbyShowUnratedToggle: boolean;
-// toggle for automatically showing new slide-down notifications or notifications in chat channels
-export let notificationsToggle: boolean;
-// toggle for showing highlights/graphics on the board
-let highlightsToggle: boolean;
-// toggle for showing highlights/graphics on the board
-let wakelockToggle: boolean;
-// toggle for multi-board mode / single-board mode
-let multiboardToggle: boolean;
-// toggle for remembering user's login and password between sessions
-let rememberMeToggle: boolean;
 
 /**
  * Used to call session.send() from inline JS.
@@ -160,7 +142,7 @@ async function onDeviceReady() {
   setTimeout(() => { $(window).trigger('resize'); }, 0);
 
   credential = new CredentialStorage();
-  if(rememberMeToggle) 
+  if(settings.rememberMeToggle) 
     await credential.retrieve(); // Get the username/password from secure storage (if the user has previously ticked Remember Me)
   else {
     $('#login-user').val('');
@@ -243,7 +225,7 @@ $(window).on('beforeunload', () => {
 
 // Prevent screen dimming, must be enabled in a user input event handler
 $(document).one('click', (event) => {
-  if(wakelockToggle) {
+  if(settings.wakelockToggle) {
     noSleep.enable();
   }
 });
@@ -628,7 +610,7 @@ function messageHandler(data) {
         break;
 
       // If in single-board mode, check we are not examining/observing another game already
-      if(!multiboardToggle) {
+      if(!settings.multiboardToggle) {
         var game = getMainGame();
         if(game.isPlayingOnline() && game.id !== data.id) {
           if(data.role === Role.OBSERVING || data.role === Role.OBS_EXAMINED)
@@ -656,7 +638,7 @@ function messageHandler(data) {
       if((examineModeRequested || mexamineRequested) && data.role === Role.EXAMINING) {
         // Converting a game to examine mode
         game = examineModeRequested || mexamineRequested;
-        if(game.role !== Role.NONE && multiboardToggle)
+        if(game.role !== Role.NONE && settings.multiboardToggle)
           game = cloneGame(game);
         game.id = data.id;
         if(!game.wname)
@@ -666,7 +648,7 @@ function messageHandler(data) {
         game.role = Role.EXAMINING;
       }
       else {
-        if(multiboardToggle) {
+        if(settings.multiboardToggle) {
           // Get game object
           var game = findGame(data.id);
           if(!game)
@@ -716,14 +698,14 @@ function messageHandler(data) {
         // player won
         game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-win-color)');
         game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-lose-color)');
-        if (game === gameWithFocus && soundToggle) {
+        if (game === gameWithFocus && settings.soundToggle) {
           Sounds.winSound.play();
         }
       } else if (data.reason <= 4 && game.element.find('.player-status .name').text() === data.loser) {
         // opponent won
         game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-lose-color)');
         game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-win-color)');
-        if (game === gameWithFocus && soundToggle) {
+        if (game === gameWithFocus && settings.soundToggle) {
           Sounds.loseSound.play();
         }
       } else {
@@ -749,7 +731,7 @@ function messageHandler(data) {
         if(data.reason !== Reason.Adjourn && data.reason !== Reason.Abort && game.history.length()) {
           analyze = ['analyze();', 'Analyze'];
         }
-        showBoardDialog({type: 'Match Result', msg: data.message, btnFailure: rematch, btnSuccess: analyze, icons: false});
+        Dialogs.showBoardDialog({type: 'Match Result', msg: data.message, btnFailure: rematch, btnSuccess: analyze, icons: false});
       }
       game.history.setMetatags({Result: data.score, Termination: data.reason});
 
@@ -773,9 +755,9 @@ function messageHandler(data) {
       var seeks = offers.filter((item) => item.type === 's');
       if(seeks.length && lobbyRequested) {
         seeks.forEach((item) => {
-          if(!lobbyShowComputersToggle && item.title === 'C')
+          if(!settings.lobbyShowComputersToggle && item.title === 'C')
             return;
-          if(!lobbyShowUnratedToggle && item.ratedUnrated === 'u')
+          if(!settings.lobbyShowUnratedToggle && item.ratedUnrated === 'u')
             return;
 
           var lobbyEntryText = formatLobbyEntry(item);
@@ -878,9 +860,9 @@ function messageHandler(data) {
 
         if(displayType) {
           if(displayType === 'notification')
-            var dialog = createNotification({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
+            var dialog = Dialogs.createNotification({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
           else if(displayType === 'dialog')
-            var dialog = showBoardDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
+            var dialog = Dialogs.showBoardDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
           dialog.attr('data-offer-id', item.id);
         }
       });
@@ -890,7 +872,7 @@ function messageHandler(data) {
       var removals = offers.filter((item) => item.type === 'pr' || item.type === 'sr');
       removals.forEach((item) => {
         item.ids.forEach((id) => {
-          removeNotification($(`.notification[data-offer-id="${id}"]`)); // If match request was not ours, remove the Notification
+          Dialogs.removeNotification($(`.notification[data-offer-id="${id}"]`)); // If match request was not ours, remove the Notification
           $(`.board-dialog[data-offer-id="${id}"]`).toast('hide'); // if in-game request, hide the dialog
           $(`.sent-offer[data-offer-id="${id}"]`).remove(); // If offer, match request or seek was sent by us, remove it from the Play pane
           $(`.lobby-entry[data-offer-id="${id}"]`).remove(); // Remove seek from lobby
@@ -962,7 +944,7 @@ function messageHandler(data) {
         var game = findGame(+match[1]);
         if(game && game.isPlaying()) {
           var bodyText = `${match[2]} has lagged for 30 seconds.<br>You may courtesy adjourn the game.<br><br>If you believe your opponent has intentionally disconnected, you can request adjudication of an adjourned game. Type 'help adjudication' in the console for more info.`;
-          var dialog = showBoardDialog({type: 'Opponent Lagging', msg: bodyText, btnFailure: ['', 'Wait'], btnSuccess: ['adjourn', 'Adjourn'], useSessionSend: true});
+          var dialog = Dialogs.showBoardDialog({type: 'Opponent Lagging', msg: bodyText, btnFailure: ['', 'Wait'], btnSuccess: ['adjourn', 'Adjourn'], useSessionSend: true});
           dialog.attr('data-game-id', game.id);
         }
         chat.newMessage('console', data);
@@ -1067,7 +1049,7 @@ function messageHandler(data) {
 
       match = msg.match(/(?:^|\n)(\d+ players?, who (?:has|have) an adjourned game with you, (?:is|are) online:)\n(.*)/);
       if(match && match.length > 2) {
-        var n = createNotification({type: 'Resume Game', title: `${match[1]}<br>${match[2]}`, btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
+        var n = Dialogs.createNotification({type: 'Resume Game', title: `${match[1]}<br>${match[2]}`, btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
         n.attr('data-adjourned-list', "true");
         chat.newMessage('console', data);
         return;
@@ -1075,7 +1057,7 @@ function messageHandler(data) {
       match = msg.match(/^Notification: ((\S+), who has an adjourned game with you, has arrived\.)/m);
       if(match && match.length > 2) {
         if(!$(`.notification[data-adjourned-arrived="${match[2]}"]`).length) {
-          var n = createNotification({type: 'Resume Game', title: match[1], btnSuccess: [`resume ${match[2]}`, 'Resume Game'], useSessionSend: true});
+          var n = Dialogs.createNotification({type: 'Resume Game', title: match[1], btnSuccess: [`resume ${match[2]}`, 'Resume Game'], useSessionSend: true});
           n.attr('data-adjourned-arrived', match[2]);
         }
         return;
@@ -1109,13 +1091,13 @@ function messageHandler(data) {
       if(match && match.length > 1) {
         let headerTitle = 'Partnership Declined';
         let bodyTitle = match[1];
-        createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
+        Dialogs.createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
       }
       match = msg.match(/^(\w+ agrees to be your partner\.)/m);
       if(match && match.length > 1) {
         let headerTitle = 'Partnership Accepted';
         let bodyTitle = match[1];
-        createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
+        Dialogs.createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
       }
 
       match = msg.match(/^You are now observing game \d+\./m);
@@ -1265,7 +1247,7 @@ function messageHandler(data) {
 
       match = msg.match(/^Your partner is playing game (\d+)/m);
       if (match != null && match.length > 1) {
-        if(multiboardToggle)
+        if(settings.multiboardToggle)
           session.send('pobserve');
 
         partnerGameId = +match[1];
@@ -1278,7 +1260,7 @@ function messageHandler(data) {
 
       match = msg.match(/^(Creating|Game\s(\d+)): (\S+) \(([\d\+\-\s]+)\) (\S+) \(([\d\-\+\s]+)\) \S+ (\S+).+/m);
       if (match != null && match.length > 7) {
-        if(!multiboardToggle)
+        if(!settings.multiboardToggle)
           var game = getMainGame();
         else {
           var game = findGame(+match[2]);
@@ -1288,7 +1270,7 @@ function messageHandler(data) {
             game = createGame();
         }
 
-        if(multiboardToggle || !game.isPlaying() || +match[2] === game.id) {
+        if(settings.multiboardToggle || !game.isPlaying() || +match[2] === game.id) {
           game.wrating = (isNaN(match[4]) || match[4] === '0') ? '' : match[4];
           game.brating = (isNaN(match[6]) || match[6] === '0') ? '' : match[6];
           game.category = match[7];
@@ -1342,7 +1324,7 @@ function messageHandler(data) {
         var index = gameExitPending.indexOf(+match[1]);
         if(index !== -1) {
           gameExitPending.splice(index, 1);
-          if(!gameExitPending.length && !multiboardToggle)
+          if(!gameExitPending.length && !settings.multiboardToggle)
             session.send('refresh');
         }
         return;
@@ -1592,7 +1574,7 @@ function gameStart(game: Game) {
   if(game.isPlaying() || game.isExamining()) {
     clearMatchRequests();
     $('#game-requests').html('');
-    hideAllNotifications();
+    Dialogs.hideAllNotifications();
   }
 
   if(game.role !== Role.PLAYING_COMPUTER && game.role !== Role.NONE) {
@@ -1676,7 +1658,7 @@ function gameStart(game: Game) {
     // Adjust settings for game category (variant)
     // When examining we do this after requesting the movelist (since the category is told to us by the 'moves' command)
     if(game.isPlaying()) {
-      if (soundToggle) {
+      if (settings.soundToggle) {
         Sounds.startSound.play();
       }
 
@@ -1823,7 +1805,7 @@ function showSentOffers(offers: any) {
  */
 function removeAdjournNotification(opponent: string) {
   var n = $(`.notification[data-adjourned-arrived="${opponent}"]`);
-  removeNotification(n);
+  Dialogs.removeNotification(n);
 
   var n = $(`.notification[data-adjourned-list="true"]`);
   if(n.length) {
@@ -1835,7 +1817,7 @@ function removeAdjournNotification(opponent: string) {
       var players = match[2].trim().split(/\s+/);
       players = players.filter(item => item !== opponent);
       if(!players.length)
-        removeNotification(n);
+        Dialogs.removeNotification(n);
       else
         bodyTextElement.html(`${players.length}${msg}${players.join(' ')}`);
     }
@@ -1856,7 +1838,7 @@ export function cleanup() {
   mexamineRequested = null;
   gameExitPending = [];
   clearMatchRequests();
-  clearNotifications();
+  Dialogs.clearNotifications();
   games.forEach((game) => {
     if(game.role !== Role.PLAYING_COMPUTER)
       cleanupGame(game);
@@ -2151,7 +2133,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
   movable = {
     color: movableColor,
     dests,
-    showDests: highlightsToggle,
+    showDests: settings.highlightsToggle,
     rookCastle: game.category === 'wild/fr',
     free: game.setupBoard || !categorySupported
   };
@@ -2163,8 +2145,8 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
       deleteOnDropOff: game.setupBoard
     },
     highlight: {
-      lastMove: highlightsToggle,
-      check: highlightsToggle
+      lastMove: settings.highlightsToggle,
+      check: settings.highlightsToggle
     },
     predroppable: { enabled: game.category === 'crazyhouse' || game.category === 'bughouse' },
     check: !game.setupBoard && /[+#]/.test(move?.san) ? color : false,
@@ -2176,7 +2158,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
   showOpeningName(game);
   setFontSizes();
 
-  if(playSound && soundToggle && game === gameWithFocus) {
+  if(playSound && settings.soundToggle && game === gameWithFocus) {
     clearTimeout(soundTimer);
     soundTimer = setTimeout(() => {
       if(/[+#]/.test(move?.san)) {
@@ -2302,7 +2284,7 @@ export function movePiece(source: any, target: any, metadata: any) {
   game.movePieceMetadata = metadata;
   var nextMove = game.history.next();
 
-  if(promotePiece && !game.promotePiece && !autoPromoteToggle) {
+  if(promotePiece && !game.promotePiece && !settings.autoPromoteToggle) {
     showPromotionPanel(game, false);
     game.board.set({ movable: { color: undefined } });
     return;
@@ -3402,7 +3384,7 @@ function getMainGame(): Game {
   return games.find(g => g.element.parent().is('#main-board-area'));
 }
 
-function getPlayingExaminingGame(): Game {
+export function getPlayingExaminingGame(): Game {
   return games.find(g => g.isPlayingOnline() || g.isExamining());
 }
 
@@ -3450,7 +3432,7 @@ function closeGameDialog(game: Game) {
   var button1 = [`closeGameClickHandler(event)`, 'OK'];
   var button2 = ['', 'Cancel'];
   var showIcons = true;
-  showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
+  Dialogs.showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
 }
 
 function closeGame(game: Game) {
@@ -3926,7 +3908,7 @@ function playComputer(params: any) {
     cleanupGame(computerGame);
     var game = computerGame;
   }
-  else if(!multiboardToggle)
+  else if(!settings.multiboardToggle)
     var game = getMainGame();
   else {
     var game = getFreeGame();
@@ -4298,7 +4280,7 @@ function initLobbyPane() {
     else
       $('#lobby-show-unrated').parent().hide();
 
-    if(lobbyShowComputersToggle) {
+    if(settings.lobbyShowComputersToggle) {
       $('#lobby-show-computers-icon').removeClass('fa-eye-slash');
       $('#lobby-show-computers-icon').addClass('fa-eye');
     }
@@ -4307,7 +4289,7 @@ function initLobbyPane() {
       $('#lobby-show-computers-icon').addClass('fa-eye-slash');
     }
 
-    if(lobbyShowUnratedToggle) {
+    if(settings.lobbyShowUnratedToggle) {
       $('#lobby-show-unrated-icon').removeClass('fa-eye-slash');
       $('#lobby-show-unrated-icon').addClass('fa-eye');
     }
@@ -4316,8 +4298,8 @@ function initLobbyPane() {
       $('#lobby-show-unrated-icon').addClass('fa-eye-slash');
     }
 
-    $('#lobby-show-computers').prop('checked', lobbyShowComputersToggle);
-    $('#lobby-show-unrated').prop('checked', lobbyShowUnratedToggle);
+    $('#lobby-show-computers').prop('checked', settings.lobbyShowComputersToggle);
+    $('#lobby-show-unrated').prop('checked', settings.lobbyShowUnratedToggle);
     $('#lobby').show();
     $('#lobby-table').html('');
     lobbyScrolledToBottom = true;
@@ -4345,14 +4327,14 @@ function leaveLobbyPane() {
 }
 
 $('#lobby-show-computers').on('change', function (e) {
-  lobbyShowComputersToggle = $(this).is(':checked');
-  storage.set('lobbyshowcomputers', String(lobbyShowComputersToggle));
+  settings.lobbyShowComputersToggle = $(this).is(':checked');
+  storage.set('lobbyshowcomputers', String(settings.lobbyShowComputersToggle));
   initLobbyPane();
 });
 
 $('#lobby-show-unrated').on('change', function (e) {
-  lobbyShowUnratedToggle = $(this).is(':checked');
-  storage.set('lobbyshowunrated', String(lobbyShowUnratedToggle));
+  settings.lobbyShowUnratedToggle = $(this).is(':checked');
+  storage.set('lobbyshowunrated', String(settings.lobbyShowUnratedToggle));
   initLobbyPane();
 });
 
@@ -4719,7 +4701,7 @@ function clearAnalysisDialog(game: Game) {
   var button1 = [`clearAnalysisClickHandler(event)`, 'OK'];
   var button2 = ['', 'Cancel'];
   var showIcons = true;
-  showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
+  Dialogs.showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
 }
 
 /** GAME PANEL TOOLBAR AND TOOL MENU FUNCTIONS **/
@@ -4732,7 +4714,7 @@ function initGameTools(game: Game) {
   if(game === gameWithFocus) {
     updateGamePreserved(game);
     updateEditMode(game);
-    $('#game-tools-clone').parent().toggle(multiboardToggle); // Only show 'Duplicate GAme' option in multiboard mode
+    $('#game-tools-clone').parent().toggle(settings.multiboardToggle); // Only show 'Duplicate GAme' option in multiboard mode
     $('#game-tools-clone').toggleClass('disabled', game.isPlaying()); // Don't allow cloning of a game while playing (could allow cheating)
 
     var mainGame = getPlayingExaminingGame();
@@ -4838,7 +4820,7 @@ function updateGamePreserved(game: Game, preserved?: boolean) {
     game.preserved = preserved;
 
   var label = $('label[for="game-preserved"]');
-  if(multiboardToggle) {
+  if(settings.multiboardToggle) {
     $('#game-preserved').show();
     label.show();
     $('#game-preserved').attr('aria-checked', String(game.preserved));
@@ -4895,10 +4877,10 @@ function newGameDialog(category: string = 'untimed') {
   };
 
   var button1: any, button2: any;
-  if(gameWithFocus.role === Role.NONE || (category === 'wild/fr' && multiboardToggle)) {
+  if(gameWithFocus.role === Role.NONE || (category === 'wild/fr' && settings.multiboardToggle)) {
     var headerTitle = 'Create new game';
     var bodyTitle = '';
-    if(gameWithFocus.role === Role.NONE && multiboardToggle) {
+    if(gameWithFocus.role === Role.NONE && settings.multiboardToggle) {
       var bodyText = `${bodyText}Overwrite existing game or open new board?`;
       button1 = [overwriteHandler, 'Overwrite'];
       button2 = [newBoardHandler, 'New Board'];
@@ -4910,14 +4892,14 @@ function newGameDialog(category: string = 'untimed') {
       button2 = ['', 'Cancel'];
       var showIcons = true;
     }
-    else if(category === 'wild/fr' && multiboardToggle) {
+    else if(category === 'wild/fr' && settings.multiboardToggle) {
       button1 = [newBoardHandler, 'OK'];
       button2 = ['', 'Cancel'];
       var showIcons = true;
     }
-    showFixedDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
+    Dialogs.showFixedDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
   }
-  else if(multiboardToggle)
+  else if(settings.multiboardToggle)
     newGame(true, category);
 }
 
@@ -5025,7 +5007,7 @@ function openGamesOverwriteDialog(fileStrings: string[]) {
     if(gameWithFocus.history.length()) {
       var headerTitle = 'Open Games';
       var bodyTitle = '';
-      if(gameWithFocus.role === Role.NONE && multiboardToggle) {
+      if(gameWithFocus.role === Role.NONE && settings.multiboardToggle) {
         var bodyText = `${bodyText}Overwrite existing game or open new board?`;
         button1 = [overwriteHandler, 'Overwrite'];
         button2 = [newBoardHandler, 'New Board'];
@@ -5037,12 +5019,12 @@ function openGamesOverwriteDialog(fileStrings: string[]) {
         button2 = ['', 'Cancel'];
         var showIcons = true;
       }
-      showFixedDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
+      Dialogs.showFixedDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
     }
     else
       parseGameFiles(game, fileStrings, false);
   }
-  else if(multiboardToggle)
+  else if(settings.multiboardToggle)
     parseGameFiles(game, fileStrings, true);
 }
 
@@ -5067,7 +5049,7 @@ async function openGameFiles(files: any): Promise<string[]> {
           let errorMessage = 'An unknown error occurred';
           if(error)
             errorMessage = `${error.name} - ${error.message}`;
-          showFixedDialog({type: 'Failed to open game file', msg: errorMessage, btnSuccess: ['', 'OK']});
+          Dialogs.showFixedDialog({type: 'Failed to open game file', msg: errorMessage, btnSuccess: ['', 'OK']});
           reject(error);
         };
         reader.readAsText(file);
@@ -5129,7 +5111,7 @@ async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBo
                 fenCount++;
               }
               else {
-                showFixedDialog({type: 'Invalid FEN', msg: err, btnSuccess: ['', 'OK']});
+                Dialogs.showFixedDialog({type: 'Invalid FEN', msg: err, btnSuccess: ['', 'OK']});
                 return;
               }
             }
@@ -5154,7 +5136,7 @@ async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBo
     var pgn = PgnParser.parse(pgnStr, {startRule: "tags"}) as PgnParser.ParseTree;
   }
   catch(err) {
-    showFixedDialog({type: 'Failed to parse PGN', msg: err.message, btnSuccess: ['', 'OK']});
+    Dialogs.showFixedDialog({type: 'Failed to parse PGN', msg: err.message, btnSuccess: ['', 'OK']});
     return;
   }
   return pgn.tags;
@@ -5168,7 +5150,7 @@ async function parsePGNMoves(game: Game, pgnStr: string) {
     var pgn = PgnParser.parse(pgnStr, {startRule: "pgn"}) as PgnParser.ParseTree;
   }
   catch(err) {
-    showFixedDialog({type: 'Failed to parse PGN', msg: err.message, btnSuccess: ['', 'OK']});
+    Dialogs.showFixedDialog({type: 'Failed to parse PGN', msg: err.message, btnSuccess: ['', 'OK']});
     return;
   }
 
@@ -5819,7 +5801,7 @@ function setupDone(game: Game) {
 
   var err = ChessHelper.validateFEN(fen, game.category);
   if(err) {
-    showFixedDialog({type: 'Invalid Position', msg: err, btnSuccess: ['', 'OK']});
+    Dialogs.showFixedDialog({type: 'Invalid Position', msg: err, btnSuccess: ['', 'OK']});
     return;
   }
 
@@ -5896,7 +5878,7 @@ $('#game-tools-properties').on('click', (event) => {
       var pgn = PgnParser.parse(metatagsStr, {startRule: "tags"}) as PgnParser.ParseTree;
     }
     catch(err) {
-      showFixedDialog({type: 'Failed to update properties', msg: err.message, btnSuccess: ['', 'OK']});
+      Dialogs.showFixedDialog({type: 'Failed to update properties', msg: err.message, btnSuccess: ['', 'OK']});
       return;
     }
     gameWithFocus.history.setMetatags(pgn.tags, true);
@@ -5909,7 +5891,7 @@ $('#game-tools-properties').on('click', (event) => {
       + `${gameWithFocus.history.metatagsToString()}</textarea>`;
   var button1 = [okHandler, 'Keep Changes'];
   var button2 = ['', 'Cancel'];
-  showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, htmlMsg: true});
+  Dialogs.showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, htmlMsg: true});
 });
 
 /**
@@ -6311,7 +6293,7 @@ $('#draw').on('click', (event) => {
         messageHandler(gameEndData);
       }
       else
-        showBoardDialog({type: 'Draw Offer Declined', msg: 'Computer declines the draw offer'});
+        Dialogs.showBoardDialog({type: 'Draw Offer Declined', msg: 'Computer declines the draw offer'});
     }
     else
       session.send('draw');
@@ -6337,9 +6319,9 @@ $('#login-form').on('submit', (event) => {
   if(session)
     session.disconnect();
   session = new Session(messageHandler, user, pass);
-  rememberMeToggle = $('#remember-me').prop('checked');
-  storage.set('rememberme', String(rememberMeToggle));
-  if(rememberMeToggle) 
+  settings.rememberMeToggle = $('#remember-me').prop('checked');
+  storage.set('rememberme', String(settings.rememberMeToggle));
+  if(settings.rememberMeToggle) 
     credential.set(user, pass);
   else 
     credential.clear();
@@ -6363,7 +6345,7 @@ $('#login-screen').on('show.bs.modal', async (e) => {
   if(credential.password) 
     $('#login-pass').val(credential.password);
 
-  $('#remember-me').prop('checked', rememberMeToggle);
+  $('#remember-me').prop('checked', settings.rememberMeToggle);
 
   $('#login-user').removeClass('is-invalid');
 });
@@ -6382,7 +6364,7 @@ $('#login-user').on('change', () => {
  */ 
 $('#login-pass').on('change', () => {
   if(!$('#login-form').is(':visible') && $('#login-pass').val() as string) { 
-    if(rememberMeToggle && credential && credential.password == null) {
+    if(settings.rememberMeToggle && credential && credential.password == null) {
       credential.set($('#login-user').val() as string, $('#login-pass').val() as string);
       if(session) {
         session.disconnect();
@@ -6428,29 +6410,29 @@ $('#disconnect').on('click', (event) => {
  * This must be done after 'storage' is initialised in onDeviceReady
  */
 function initSettings() {
-  soundToggle = (storage.get('sound') !== 'false');
+  settings.soundToggle = (storage.get('sound') !== 'false');
   updateDropdownSound();
 
-  autoPromoteToggle = (storage.get('autopromote') === 'true');
-  $('#autopromote-toggle').prop('checked', autoPromoteToggle);
+  settings.autoPromoteToggle = (storage.get('autopromote') === 'true');
+  $('#autopromote-toggle').prop('checked', settings.autoPromoteToggle);
 
-  notificationsToggle = (storage.get('notifications') !== 'false');
-  $('#notifications-toggle').prop('checked', notificationsToggle);
+  settings.notificationsToggle = (storage.get('notifications') !== 'false');
+  $('#notifications-toggle').prop('checked', settings.notificationsToggle);
 
-  highlightsToggle = (storage.get('highlights') !== 'false');
-  $('#highlights-toggle').prop('checked', highlightsToggle);
+  settings.highlightsToggle = (storage.get('highlights') !== 'false');
+  $('#highlights-toggle').prop('checked', settings.highlightsToggle);
 
-  wakelockToggle = (storage.get('wakelock') !== 'false');
-  $('#wakelock-toggle').prop('checked', wakelockToggle);
+  settings.wakelockToggle = (storage.get('wakelock') !== 'false');
+  $('#wakelock-toggle').prop('checked', settings.wakelockToggle);
 
-  multiboardToggle = (storage.get('multiboard') !== 'false');
-  $('#multiboard-toggle').prop('checked', multiboardToggle);
+  settings.multiboardToggle = (storage.get('multiboard') !== 'false');
+  $('#multiboard-toggle').prop('checked', settings.multiboardToggle);
 
-  rememberMeToggle = (storage.get('rememberme') === 'true');
-  $('#remember-me').prop('checked', rememberMeToggle);
+  settings.rememberMeToggle = (storage.get('rememberme') === 'true');
+  $('#remember-me').prop('checked', settings.rememberMeToggle);
 
-  lobbyShowComputersToggle = (storage.get('lobbyshowcomputers') === 'true');
-  lobbyShowUnratedToggle = (storage.get('lobbyshowunrated') !== 'false');
+  settings.lobbyShowComputersToggle = (storage.get('lobbyshowcomputers') === 'true');
+  settings.lobbyShowUnratedToggle = (storage.get('lobbyshowunrated') !== 'false');
 
   History.initSettings();
 }
@@ -6460,45 +6442,44 @@ $('#flip-toggle').on('click', (event) => {
 });
 
 $('#sound-toggle').on('click', (event) => {
-  soundToggle = !soundToggle;
+  settings.soundToggle = !settings.soundToggle;
   updateDropdownSound();
-  storage.set('sound', String(soundToggle));
+  storage.set('sound', String(settings.soundToggle));
 });
 function updateDropdownSound() {
-  const iconClass = `dropdown-icon fa fa-volume-${soundToggle ? 'up' : 'off'}`;
+  const iconClass = `dropdown-icon fa fa-volume-${settings.soundToggle ? 'up' : 'off'}`;
   $('#sound-toggle').html(`<span id="sound-toggle-icon" class="${iconClass}" aria-hidden="false"></span>`
-      + `Sounds ${soundToggle ? 'ON' : 'OFF'}`);
+      + `Sounds ${settings.soundToggle ? 'ON' : 'OFF'}`);
 }
 
 $('#notifications-toggle').on('click', (event) => {
-  notificationsToggle = !notificationsToggle;
-  storage.set('notifications', String(notificationsToggle));
+  settings.notificationsToggle = !settings.notificationsToggle;
+  storage.set('notifications', String(settings.notificationsToggle));
 });
 
 $('#autopromote-toggle').on('click', (event) => {
-  autoPromoteToggle = !autoPromoteToggle;
-  storage.set('autopromote', String(autoPromoteToggle));
+  settings.autoPromoteToggle = !settings.autoPromoteToggle;
+  storage.set('autopromote', String(settings.autoPromoteToggle));
 });
 
 $('#highlights-toggle').on('click', (event) => {
-  highlightsToggle = !highlightsToggle;
+  settings.highlightsToggle = !settings.highlightsToggle;
   updateBoard(gameWithFocus, false, false);
-  storage.set('highlights', String(highlightsToggle));
+  storage.set('highlights', String(settings.highlightsToggle));
 });
 
 $('#wakelock-toggle').on('click', (event) => {
-  wakelockToggle = !wakelockToggle;
-  if (wakelockToggle) {
+  settings.wakelockToggle = !settings.wakelockToggle;
+  if(settings.wakelockToggle)
     noSleep.enable();
-  } else {
+  else 
     noSleep.disable();
-  }
-  storage.set('wakelock', String(wakelockToggle));
+  storage.set('wakelock', String(settings.wakelockToggle));
 });
 
 $('#multiboard-toggle').on('click', (event) => {
-  multiboardToggle = !multiboardToggle;
-  if(!multiboardToggle) {
+  settings.multiboardToggle = !settings.multiboardToggle;
+  if(!settings.multiboardToggle) {
     // close all games except one
     var game = getMostImportantGame();
     setGameWithFocus(game);
@@ -6511,7 +6492,7 @@ $('#multiboard-toggle').on('click', (event) => {
     }
   }
   initGameTools(gameWithFocus);
-  storage.set('multiboard', String(multiboardToggle));
+  storage.set('multiboard', String(settings.multiboardToggle));
 });
 
 /********************************
@@ -6691,448 +6672,5 @@ function splitMessage(text: string, maxLength: number): string[] {
 function unicodeToHTMLEncoding(text) {
   return text.replace(/[\u0080-\uffff]/g, function(match) {
     return `&#${match.charCodeAt(0)};`;
-  });
-}
-
-/************************************** 
- * DIALOGS AND NOTIFICATONS FUNCTIONS *
- **************************************/
-
-/** DIALOG FUNCTIONS **/
-
-function showBoardDialog(params: DialogParams): any {
-  var dialog = createDialog(params);
-  dialog.appendTo($('#game-requests'));
-  dialog.addClass('board-dialog');
-  dialog.toast('show');
-
-  dialog.on('hidden.bs.toast', function () {
-    $(this).remove();
-  });
-
-  return dialog;
-}
-
-export function showFixedDialog(params: DialogParams): any {
-  var dialog = createDialog(params);
-  var container = $('<div class="toast-container position-fixed top-50 start-50 translate-middle" style="z-index: 101">');
-  container.appendTo('body');
-  dialog.appendTo(container);
-  dialog.toast('show');
-
-  dialog.on('hidden.bs.toast', function () {
-    $(this).parent().remove();
-  });
-
-  return dialog;
-}
-
-interface DialogParams {
-  type?: string;
-  title?: string;
-  msg?: string;
-  btnFailure?: (string | ((event: any) => void))[];
-  btnSuccess?: (string | ((event: any) => void))[];
-  useSessionSend?: boolean;
-  icons?: boolean;
-  progress?: boolean;
-  htmlMsg?: boolean;
-}
-
-function createDialog({type = '', title = '', msg = '', btnFailure, btnSuccess, useSessionSend = false, icons = true, progress = false, htmlMsg = false}: DialogParams): JQuery<HTMLElement> {
-  const dialogId = `dialog${dialogCounter++}`;
-  let req = `
-  <div id="${dialogId}" class="toast" data-bs-autohide="false" role="status" aria-live="polite" aria-atomic="true">
-    <div class="toast-header">
-      <strong class="header-text me-auto">${type}</strong>
-      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-    <div class="toast-body">`;
-
-  if(htmlMsg)
-    req += msg;
-  else {
-    req += `<div class="d-flex align-items-center">
-          <strong class="body-text text-primary my-auto">${title} ${msg}</strong>`;
-    if (progress) {
-      req += `<div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>`;
-    }
-    req += `</div>`;
-  }
-
-  if((btnSuccess && btnSuccess.length === 2) || (btnFailure && btnFailure.length === 2)) {
-    req += `<div class="mt-2 pt-2 border-top center">`;
-    if(btnSuccess && btnSuccess.length === 2) {
-      var successCmd = '';
-      if(typeof btnSuccess[0] === 'function')
-        var btnSuccessHandler = btnSuccess[0];
-      if(typeof btnSuccess[0] === 'string') {
-        var successCmd = `onclick="`;
-        if(useSessionSend)
-          successCmd += `sessionSend('${btnSuccess[0]}');`;
-        else
-          successCmd += btnSuccess[0];
-        successCmd += `" `;
-      }
-
-      req += `<button type="button" ${successCmd}class="button-success btn btn-sm btn-outline-success`
-          + `${btnFailure && btnFailure.length === 2 ? ` me-4` : ``}" data-bs-dismiss="toast">`
-          + `${icons ? `<span class="fa fa-check-circle-o" aria-hidden="false"></span> ` : ``}`
-          + `${btnSuccess[1]}</button>`;
-    }
-    if (btnFailure && btnFailure.length === 2) {
-      var failureCmd = '';
-      if(typeof btnFailure[0] === 'function')
-        var btnFailureHandler = btnFailure[0];
-      if(typeof btnFailure[0] === 'string') {
-        var failureCmd = `onclick="`;
-        if(useSessionSend)
-          failureCmd += `sessionSend('${btnFailure[0]}');`;
-        else
-          failureCmd += btnFailure[0];
-        failureCmd += `" `;
-      }
-
-      req += `<button type="button" ${failureCmd}" class="button-failure `
-          + `btn btn-sm btn-outline-danger" data-bs-dismiss="toast">`
-          + `${icons ? `<span class="fa fa-times-circle-o" aria-hidden="false"></span> ` : ``}`
-          + `${btnFailure[1]}</button>`;
-    }
-    req += `</div>`;
-  }
-
-  req += `</div></div>`;
-
-  var dialog = $(req);
-
-  if(btnSuccessHandler)
-    dialog.find('.button-success').on('click', btnSuccessHandler);
-  if(btnFailureHandler)
-    dialog.find('.button-failure').on('click', btnFailureHandler);
-
-  return dialog;
-}
-
-/** NOTIFICATIONS FUNCTIONS **/
-
-$('#notifications-header .btn-close').on('click', (event) => {
-  hideAllNotifications();
-});
-
-$('#notifications-show-all').on('click', (event) => {
-  showAllNotifications();
-});
-
-$('#notifications-clear-all').on('click', (event) => {
-  clearNotifications();
-});
-
-$('#notifications-btn').on('click', function(event) {
-  if($(this).hasClass('active'))
-    showAllNotifications();
-  else
-    hideAllNotifications();
-});
-
-function createNotification(params: DialogParams): any {
-  var dialog = createDialog(params);
-  dialog.insertBefore($('#notifications-footer'));
-  dialog.find('[data-bs-dismiss="toast"]').removeAttr('data-bs-dismiss');
-  dialog.on('click', 'button', (event) => {
-    removeNotification(dialog);
-  });
-  dialog.addClass('notification');
-  dialog.addClass('notification-panel');
-  $('#notifications-btn').prop('disabled', false);
-  $('#notifications-btn').parent().prop('title', 'Notifications');
-  Utils.createTooltip($('#notifications-btn').parent());
-
-  $('#notifications-number').text($('.notification:not([data-remove="true"])').length);
-  $('#notifications-bubble').show();
-
-  var game = getPlayingExaminingGame();
-  var playingGame = (game && game.isPlayingOnline() ? true : false); // Don't show notifications if playing a game
-  if((notificationsToggle && !playingGame) || $('#notifications-header').attr('data-show'))
-    showNotifications(dialog);
-
-  return dialog;
-}
-
-function removeNotification(element: any) {
-  if(!element.length || element.attr('data-remove'))
-    return;
-
-  element.removeAttr('data-show');
-  element.attr('data-remove', 'true');
-
-  if(!$('.notification:not([data-remove="true"])').length) {
-    $('#notifications-btn').prop('disabled', true);
-    $('#notifications-btn').parent().prop('title', 'No notifications');
-    Utils.createTooltip($('#notifications-btn').parent());
-    $('#notifications-bubble').hide();
-  }
-  $('#notifications-number').text($('.notification:not([data-remove="true"])').length);
-
-  if($('#notifications-header').attr('data-show') && !$('.notification[data-show="true"]').length) {
-    $('#notifications-header').removeAttr('data-show');
-    $('#notifications-header').toast('hide');
-    if($('#notifications-btn').hasClass('active'))
-      $('#notifications-btn').button('toggle');
-  }
-  if($('#notifications-footer').attr('data-show') && (!$('.notification[data-show="true"]').length || $('.notification:not([data-remove="true"])').length <= 1)) {
-    $('#notifications-footer').removeAttr('data-show');
-    $('#notifications-footer').toast('hide');
-  }
-
-  // Remove notification half way through its slide, because remove() takes a while.
-  setTimeout(() => element.remove(), 400);
-
-  var transformMatrix = element.css('transform');
-  var matrix = transformMatrix.replace(/[^0-9\-.,]/g, '').split(',');
-  var x = matrix[12] || matrix[4]; // translate x
-  slideNotification(element, (x < 0 ? 'left' : 'right'));
-}
-
-function showNotifications(dialogs: any) {
-  if(!dialogs.length)
-    return;
-
-  // If not all notifications are displayed, add a 'Show All' button to the footer
-  var allShown = true;
-  $('.notification').each((index, element) => {
-    if(!$(element).attr('data-show') && !$(element).attr('data-remove') && dialogs.index($(element)) === -1)
-      allShown = false;
-  });
-  if(allShown)
-    $('#notifications-show-all').hide();
-  else
-    $('#notifications-show-all').show();
-
-  if(!$('#notifications-header').attr('data-show')) {
-    $('#notifications-header').attr('data-show', 'true');
-    $('#notifications-header').toast('show');
-    slideNotification($('#notifications-header'), 'down');
-  }
-
-  dialogs.each((index, element) => {
-    if(!$(element).attr('data-show')) {
-      $(element).attr('data-show', 'true');
-      $(element).toast('show');
-      slideNotification($(element), 'down');
-    }
-  });
-
-  if($('.notification:not([data-remove="true"])').length > 1 && !$('#notifications-footer').attr('data-show')) {
-    $('#notifications-footer').attr('data-show', 'true');
-    $('#notifications-footer').toast('show');
-    slideNotification($('#notifications-footer'), 'down');
-  }
-}
-
-/* Perform slide transition (animation) on Notification panel */
-function slideNotification(element: any, direction: 'down' | 'up' | 'left' | 'right') {
-  if(direction === 'down') {
-    // Set initial state before transition
-    resetSlide(element);
-    $('#notifications').css('opacity', '');
-    $('#notifications').css('transform', '');
-    $('#notifications').show();
-    element.css('margin-top', -element[0].getBoundingClientRect().height);
-    element.css('z-index', '-1');
-    element.css('opacity', '0');
-    // Trigger transition after toast is shown
-    element.one('shown.bs.toast', (event) => {
-      // Add transition (animation)
-      $(event.target).addClass('slide-down');
-      $(event.target).css('margin-top', '');
-      $(event.target).css('z-index', '');
-      $(event.target).css('opacity', '');
-      $(event.target).one('transitionend', (event) => {
-        $(event.target).removeClass('slide-down');
-        $(event.target).height($(event.target).height()); // Fixes a layout glitch from the transition
-      });
-    });
-  }
-  else if(direction === 'up') {
-    // Set initial state before transition
-    element.addClass('slide-up');
-    element.css('margin-top', -element[0].getBoundingClientRect().height);
-    element.css('opacity', '0');
-    element.one('transitionend', (event) => {
-      if(!$(event.target).attr('data-show'))
-        $(event.target).toast('hide');
-      $(event.target).removeClass('slide-up');
-      $(event.target).css('opacity', '');
-      $(event.target).css('margin-top', '');
-    });
-  }
-  else if(direction === 'left' || direction === 'right') {
-    // Set initial state before transition
-    element.css('z-index', '-1');
-    element.addClass('slide-sideways');
-    element.css('transform', `translateX(${direction === 'left' ? '-' : ''}100%)`);
-    element.css('opacity', '0');
-    element.one('transitionend', (event) => {
-      $(event.target).removeClass('slide-sideways');
-      $(event.target).toast('hide');
-      $(event.target).css('z-index', '');
-      $(event.target).css('transform', '');
-      $(event.target).css('opacity', '');
-    });
-  }
-}
-
-function slideUpAllNotifications() {
-  $('#notifications').children().each((index, element) => resetSlide($(element)));
-  $('#notifications').addClass('slide-up');
-  $('#notifications').css('opacity', 0);
-  $('#notifications').css('transform', 'translateY(-100%)');
-  $('#notifications').one('transitionend', (event) => {
-    $(event.currentTarget).removeClass('slide-up');
-    var shown = false;
-    $(event.currentTarget).children().each((index, element) => {
-      if(!$(element).attr('data-show'))
-        $(element).toast('hide');
-      else
-        shown = true;
-    });
-    if(!shown)
-      $('#notifications').hide();
-    $(event.currentTarget).css('transform', '');
-    $(event.currentTarget).css('opacity', '');
-  });
-}
-
-function resetSlide(element: any) {
-  element.removeClass('slide-sideways');
-  element.removeClass('slide-down');
-  element.removeClass('slide-up');
-  element.css('z-index', '');
-  element.css('transform', '');
-  element.css('opacity', '');
-  element.css('margin-top', '');
-}
-
-$('#notifications')[0].addEventListener('mousedown', notificationMouseDown);
-$('#notifications')[0].addEventListener('touchstart', notificationMouseDown, {passive: false});
-function notificationMouseDown(e) {
-  if(!$(e.target).is('div'))
-    return;
-
-  if($(':focus').length > 0)
-      $(':focus').trigger('blur');
-
-  if(window.getSelection)
-    window.getSelection().removeAllRanges();
-
-  $('#notifications').css('--dragX', 0);
-  $('#notifications').css('--dragY', 0);
-  $('#notifications').css('--opacityY', 1);
-  $('#notifications').css('--opacityX', 1);
-
-  var dialog = $(e.target).closest('.toast');
-  dialog.css('transition', 'none');
-
-  // Prevent mouse pointer events on webpage while dragging panel
-  jQuery('<div/>', {
-    id: 'mouse-capture-layer',
-    css: {'z-index': '9999',
-      'top': '0',
-      'left': '0',
-      'position': 'fixed',
-      'height': '100%',
-      'width': '100%'
-    }
-  }).appendTo('body');
-
-  var swipeStart = Utils.getTouchClickCoordinates(e);
-  var swipeLocked = '';
-  const mouseMoveHandler = (e) => {
-    var mouse = Utils.getTouchClickCoordinates(e);
-    if(swipeLocked) {
-      var xMax = $('#notifications').outerWidth(true);
-      var yMax = $('#notifications').outerHeight(true);
-      var xOffset = Math.min(xMax, Math.max(-xMax, mouse.x - swipeStart.x));
-      var yOffset = Math.min(0, mouse.y - swipeStart.y);
-      $('#notifications').css('--dragX', `${xOffset}px`);
-      $('#notifications').css('--dragY', `${yOffset}px`);
-      $('#notifications').css('--opacityY', (yMax - Math.abs(yOffset)) / yMax);
-      $('#notifications').css('--opacityX', (xMax - Math.abs(xOffset)) / xMax);
-    }
-    else {
-      if(swipeStart.y - mouse.y > 20 && Math.abs(swipeStart.y - mouse.y) > Math.abs(swipeStart.x - mouse.x)) {
-        // Perform vertical swipe
-        swipeStart = mouse;
-        swipeLocked = 'vertical';
-        $('#notifications').css('transform', 'translateY(var(--dragY))');
-        $('#notifications').css('opacity', 'var(--opacityY)');
-      }
-      else if(dialog.hasClass('notification') && Math.abs(swipeStart.x - mouse.x) > 20 && Math.abs(swipeStart.x - mouse.x) > Math.abs(swipeStart.y - mouse.y)) {
-        // Perform horizontal swipe
-        swipeStart = mouse;
-        swipeLocked = 'horizontal';
-        dialog.css('transform', 'translateX(var(--dragX))');
-        dialog.css('opacity', 'var(--opacityX)');
-      }
-    }
-  };
-  $(document).on('mousemove touchmove', mouseMoveHandler);
-
-  $(document).one('mouseup touchend touchcancel', (e) => {
-    var mouse = Utils.getTouchClickCoordinates(e);
-    $('#mouse-capture-layer').remove();
-    $(document).off('mousemove touchmove', mouseMoveHandler);
-    if(swipeLocked === 'vertical') {
-      if(swipeStart.y - mouse.y > 30 && e.type !== 'touchcancel')
-        hideAllNotifications();
-      else {
-        $('#notifications').css('transform', '');
-        $('#notifications').css('opacity', '');
-      }
-    }
-    else if(swipeLocked === 'horizontal') {
-      if(Math.abs(mouse.x - swipeStart.x) > 50 && e.type !== 'touchcancel')
-        removeNotification(dialog);
-      else {
-        dialog.css('transform', '');
-        dialog.css('opacity', '');
-      }
-    }
-    swipeLocked = '';
-    swipeStart = null;
-    dialog.css('transition', '');
-  });
-
-  e.preventDefault();
-}
-
-function showAllNotifications() {
-  showNotifications($('.notification:not([data-show="true"])'));
-}
-
-function hideAllNotifications() {
-  if($('.notification[data-remove="true"').length) {
-    setTimeout(hideAllNotifications, 400);
-    return;
-  }
-
-  $('#notifications').children('[data-show="true"]').each((index, element) => {
-    $(element).removeAttr('data-show');
-  });
-  if($('#notifications-btn').hasClass('active'))
-    $('#notifications-btn').button('toggle');
-  slideUpAllNotifications();
-}
-
-function clearNotifications() {
-  var delay = 0;
-  $('.notification').each((index, element) => {
-    $(element).removeAttr('data-show');
-    if($(element).hasClass('show')) {
-      setTimeout(() => removeNotification($(element)), delay);
-      delay += 100;
-    }
-    else
-      removeNotification($(element));
   });
 }
