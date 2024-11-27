@@ -155,60 +155,7 @@ async function onDeviceReady() {
     session = new Session(messageHandler);
   }
 
-  initDropdownSubmenus();
-}
-
-function initDropdownSubmenus() { 
-  let toggleSubmenu = function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if(e.type === 'click')
-      return;
-
-    let container = $(e.target).parent();
-    let dropdown = window.bootstrap.Dropdown.getInstance(e.target);
-    if(!dropdown) {
-      dropdown = new window.bootstrap.Dropdown(e.target, {
-        popperConfig: {
-          modifiers: [
-            {
-              name: 'preventOverflow',
-              options: {
-                boundary: 'viewport', // Prevent overflow relative to the viewport
-              },
-            },
-            {
-              name: 'flip',
-              options: {
-                boundary: 'viewport',
-              },
-            },
-          ]
-        } 
-      });
-
-      container.on('mouseleave.closeSubmenu', function(e) {
-        setTimeout(() => {
-          if(!container.is(':hover')) {
-            dropdown.hide();
-            dropdown.dispose();
-            $(this).off('mouseleave.closeSubmenu');
-          }
-        }, 200);
-      });
-
-      dropdown.show();
-    }
-    else if(e.type === 'touchstart') {
-      dropdown.hide();
-      dropdown.dispose();
-    }
-  };
-
-  $('.dropdown-submenu').each(function() {
-    $(this).prev().on('mouseenter click', toggleSubmenu);
-  });
+  Utils.initDropdownSubmenus();
 }
 
 $(window).on('load', function() {
@@ -3305,7 +3252,7 @@ function makeSecondaryBoard(game: Game) {
 
 export function maximizeGame(game: Game) {
   if(getMainGame() !== game) {
-    animateBoundingRects(game.element, $('#main-board-area'), game.element.css('--border-expand-color'), game.element.css('--border-expand-width'));
+    Utils.animateBoundingRects(game.element, $('#main-board-area'), game.element.css('--border-expand-color'), game.element.css('--border-expand-width'));
 
     // Move currently maximized game card to secondary board area
     var prevMaximized = getMainGame();
@@ -3319,61 +3266,6 @@ export function maximizeGame(game: Game) {
     setFontSizes();
   }
   scrollToBoard(game);
-}
-
-function animateBoundingRects(fromElement: any, toElement: any, color: string = '#000000', width: string = '1px', numRects: number = 3) {
-  var fromTop = fromElement.offset().top;
-  var fromLeft = fromElement.offset().left;
-  var fromWidth = fromElement.outerWidth();
-  var fromHeight = fromElement.outerHeight();
-
-  var toTop = toElement.offset().top;
-  var toLeft = toElement.offset().left;
-  var toWidth = toElement.outerWidth();
-  var toHeight = toElement.outerHeight();
-
-  var distance = Math.sqrt((toTop - fromTop) ** 2 + (toLeft - fromLeft) ** 2);
-  var speed = 0.015 * Math.sqrt(distance);
-
-  // Create bounding div
-  var boundingDiv = $('<div></div>');
-  boundingDiv.css({
-    position: 'absolute',
-    top: fromTop,
-    left: fromLeft,
-    width: fromWidth,
-    height: fromHeight,
-    zIndex: 3,
-    'transition-property': 'width, height, top, left',
-    'transition-duration': `${speed}s`,
-    'transition-timing-function': 'ease'
-  });
-  boundingDiv.appendTo($('body'));
-
-  // Create animated rects
-  var rect = boundingDiv;
-  for(let i = 0; i < numRects; i++) {
-    var childRect = $('<div></div>');
-    childRect.css({
-      width: '100%',
-      height: '100%',
-      padding: `calc(50% / ${numRects - i})`,
-      border: `${width} solid ${color}`
-    });
-    var rect = childRect.appendTo(rect);
-  }
-
-  boundingDiv.one('transitionend', () => {
-    boundingDiv.remove();
-  });
-  setTimeout(() => {
-    boundingDiv.css({
-      top: toTop,
-      left: toLeft,
-      width: toWidth,
-      height: toHeight
-    });
-  }, 0);
 }
 
 export function findGame(id: number): Game {
@@ -6556,8 +6448,8 @@ $('#input-form').on('submit', (event) => {
     if(message.length > maxLength)
       message = message.slice(0, maxLength);
 
-    message = unicodeToHTMLEncoding(message);
-    var messages = splitMessage(message, maxLength); // if message is now bigger than maxLength chars due to html encoding split it
+    message = Utils.unicodeToHTMLEncoding(message);
+    var messages = Utils.splitText(message, maxLength); // if message is now bigger than maxLength chars due to html encoding split it
 
     for(let msg of messages) {
       if(('xtell'.startsWith(chatCmd) || 'tell'.startsWith(chatCmd)) && !/^\d+$/.test(recipient)) {
@@ -6571,7 +6463,7 @@ $('#input-form').on('submit', (event) => {
     }
   }
   else
-    session.send(unicodeToHTMLEncoding(text));
+    session.send(Utils.unicodeToHTMLEncoding(text));
 
   $('#input-text').val('');
   updateInputText();
@@ -6644,33 +6536,3 @@ function adjustInputTextHeight() {
     chat.fixScrollPosition();
 }
 
-function splitMessage(text: string, maxLength: number): string[] {
-  let result = [];
-  let currentMessage = '';
-  let currentLength = 0;
-  const regex = /&#\d+;|./g; // Match HTML entities or any character
-
-  text.replace(regex, (match) => {
-    const matchLength = match.length;
-    if (currentLength + matchLength > maxLength) {
-      result.push(currentMessage);
-      currentMessage = match;
-      currentLength = matchLength;
-    }
-    else {
-      currentMessage += match;
-      currentLength += matchLength;
-    }
-    return match;
-  });
-  if (currentMessage)
-    result.push(currentMessage);
-
-  return result;
-}
-
-function unicodeToHTMLEncoding(text) {
-  return text.replace(/[\u0080-\uffff]/g, function(match) {
-    return `&#${match.charCodeAt(0)};`;
-  });
-}

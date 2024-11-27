@@ -80,6 +80,62 @@ export function removeWithTooltips(element: JQuery<HTMLElement>) {
 /** MISC HELPER FUNCTIONS **/
 
 /**
+ * Initialize the event listeners used to create and destroy dropdown submenus
+ */
+export function initDropdownSubmenus() { 
+  let toggleSubmenu = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if(e.type === 'click')
+      return;
+
+    let container = $(e.target).parent();
+    let dropdown = window.bootstrap.Dropdown.getInstance(e.target);
+    if(!dropdown) {
+      dropdown = new window.bootstrap.Dropdown(e.target, {
+        popperConfig: {
+          modifiers: [
+            {
+              name: 'preventOverflow',
+              options: {
+                boundary: 'viewport', // Prevent overflow relative to the viewport
+              },
+            },
+            {
+              name: 'flip',
+              options: {
+                boundary: 'viewport',
+              },
+            },
+          ]
+        } 
+      });
+
+      container.on('mouseleave.closeSubmenu', function(e) {
+        setTimeout(() => {
+          if(!container.is(':hover')) {
+            dropdown.hide();
+            dropdown.dispose();
+            $(this).off('mouseleave.closeSubmenu');
+          }
+        }, 200);
+      });
+
+      dropdown.show();
+    }
+    else if(e.type === 'touchstart') {
+      dropdown.hide();
+      dropdown.dispose();
+    }
+  };
+
+  $('.dropdown-submenu').each(function() {
+    $(this).prev().on('mouseenter click', toggleSubmenu);
+  });
+}
+
+/**
  * Return true if window size is 'sm'.
  */
 export function isSmallWindow() {
