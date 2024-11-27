@@ -9,6 +9,7 @@ import { Polyglot } from 'cm-polyglot/src/Polyglot.js';
 import PgnParser from '@mliebelt/pgn-parser';
 import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
 import * as Utils from './utils';
+import * as ChessHelper from './chess-helper';
 import Chat from './chat';
 import { Clock } from './clock';
 import { Engine, EvalEngine } from './engine';
@@ -688,8 +689,8 @@ function messageHandler(data) {
       }
       else if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
         var lastFen = currentGameMove(game).fen;
-        const lastPly = getPlyFromFEN(lastFen);
-        const thisPly = getPlyFromFEN(game.fen);
+        const lastPly = ChessHelper.getPlyFromFEN(lastFen);
+        const thisPly = ChessHelper.getPlyFromFEN(game.fen);
 
         if(game.move !== 'none' && thisPly === lastPly + 1) { // make sure the move no is right
           var parsedMove = parseMove(game, lastFen, game.move);
@@ -1231,7 +1232,7 @@ function messageHandler(data) {
                   let curr = game.history.first().next;
                   let forwardNum = 0;
                   for(let move of game.mexamineMovelist) {
-                    if(curr && History.moveToCoordinateString(curr.move) === move) {
+                    if(curr && ChessHelper.moveToCoordinateString(curr.move) === move) {
                       forwardNum++;
                       curr = curr.next;
                     }
@@ -1714,7 +1715,7 @@ function gameStart(game: Game) {
           let moves = [];
           let curr = game.history.current();
           while(curr.move) {
-            moves.push(History.moveToCoordinateString(curr.move));            
+            moves.push(ChessHelper.moveToCoordinateString(curr.move));            
             curr = curr.prev;
           }
           game.mexamineMovelist = moves.reverse();
@@ -2104,7 +2105,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
 
   const move = game.history.current().move;
   const fen = game.history.current().fen;
-  const color = (History.getTurnColorFromFEN(fen) === 'w' ? 'white' : 'black');
+  const color = (ChessHelper.getTurnColorFromFEN(fen) === 'w' ? 'white' : 'black');
 
   setClocks(game);
 
@@ -2212,16 +2213,16 @@ function boardChanged() {
   if(game.setupBoard) {
     var fen = getSetupBoardFEN(game);
 
-    if(splitFEN(fen).board === splitFEN(game.fen).board)
+    if(ChessHelper.splitFEN(fen).board === ChessHelper.splitFEN(game.fen).board)
       return;
 
     if(game.isExamining())
       session.send(`bsetup fen ${game.board.getFen()}`);
 
     // Remove castling rights if king or rooks move from initial position
-    var newFEN = adjustCastlingRights(game, fen, game.fen);
+    var newFEN = ChessHelper.adjustCastlingRights(fen, game.fen, game.category);
     if(newFEN !== fen)
-      setupBoardCastlingRights(game, splitFEN(newFEN).castlingRights);
+      setupBoardCastlingRights(game, ChessHelper.splitFEN(newFEN).castlingRights);
 
     game.fen = newFEN;
     updateEngine();
@@ -2428,7 +2429,7 @@ function variantToDests(game: Game): Map<Key, Key[]> {
 
   // Add irregular castling moves for wild variants
   if(game.category.startsWith('wild')) {
-    var cPieces = getCastlingPieces(game.history.first().fen, chess.turn(), game.category);
+    var cPieces = ChessHelper.getCastlingPieces(game.history.first().fen, chess.turn(), game.category);
     var king = cPieces.king;
     var leftRook = cPieces.leftRook;
     var rightRook = cPieces.rightRook;
@@ -2636,7 +2637,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
     san = move;
 
   // Pre-processing of FEN before calling chess.move()
-  var beforePre = splitFEN(fen); // Stores FEN components from before pre-processing of FEN starts
+  var beforePre = ChessHelper.splitFEN(fen); // Stores FEN components from before pre-processing of FEN starts
   var afterPre = Object.assign({}, beforePre); // Stores FEN components for after pre-procesisng is finished
 
   if(category.startsWith('wild')) {
@@ -2653,7 +2654,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
       castlingRights = '-';
 
     afterPre.castlingRights = castlingRights;
-    fen = joinFEN(afterPre);
+    fen = ChessHelper.joinFEN(afterPre);
     chess.load(fen);
   }
 
@@ -2705,7 +2706,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
     else if(san.toUpperCase() === 'O-O' || san.toUpperCase() === 'O-O-O') {
       // Parse irregular castling moves for fischer random and wild variants
       var rank = (color === 'w' ? '1' : '8');
-      var cPieces = getCastlingPieces(game.history.first().fen, color, game.category);
+      var cPieces = ChessHelper.getCastlingPieces(game.history.first().fen, color, game.category);
       var kingFrom = cPieces.king;
       var leftRook = cPieces.leftRook;
       var rightRook = cPieces.rightRook;
@@ -2782,7 +2783,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
         if(square !== kingFrom && square !== rookFrom && chess.get(square))
           return null;
         // square under attack?
-        if(isAttacked(fen, square, color))
+        if(ChessHelper.isAttacked(fen, square, color))
           return null;
       }
       // Can rook pass through all squares between start and end squares?
@@ -2844,7 +2845,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
   }
 
   // Post-processing on FEN after calling chess.move()
-  var beforePost = splitFEN(outFen); // Stores FEN components before post-processing starts
+  var beforePost = ChessHelper.splitFEN(outFen); // Stores FEN components before post-processing starts
   var afterPost = Object.assign({}, beforePost); // Stores FEN components after post-processing is completed
 
   if(category === 'crazyhouse' || category === 'bughouse') {
@@ -2863,7 +2864,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
       }
       // place a pawn on every adjacent square to the king and check if it blocks the checkmate
       // If so the checkmate can potentially be blocked by a held piece
-      var adjacent = getAdjacentSquares(kingSquare);
+      var adjacent = ChessHelper.getAdjacentSquares(kingSquare);
       var blockingSquare = null;
       for(let adj of adjacent) {
         if(!chess.get(adj)) {
@@ -2904,10 +2905,10 @@ function parseVariantMove(game: Game, fen: string, move: any) {
     if(!san.toUpperCase().startsWith('O-O')) {
       // Restore castling rights which chess.js erroneously removes
       afterPost.castlingRights = afterPre.castlingRights;
-      outFen = joinFEN(afterPost);
+      outFen = ChessHelper.joinFEN(afterPost);
       // Adjust castling rights after rook or king move (not castling)
-      outFen = adjustCastlingRights(game, outFen);
-      afterPost.castlingRights = splitFEN(outFen).castlingRights;
+      outFen = ChessHelper.adjustCastlingRights(outFen, game.history.first().fen, game.category);
+      afterPost.castlingRights = ChessHelper.splitFEN(outFen).castlingRights;
     }
     if(opponentRights) {
       // Restore opponent's castling rights (which were removed at the start so as not to confuse chess.js)
@@ -2920,7 +2921,7 @@ function parseVariantMove(game: Game, fen: string, move: any) {
         afterPost.castlingRights = `${castlingRights}${opponentRights}`;
     }
   }
-  outFen = joinFEN(afterPost);
+  outFen = ChessHelper.joinFEN(afterPost);
 
   // Move was not made, something went wrong
   if(afterPost.board === beforePre.board)
@@ -3745,7 +3746,7 @@ export function gotoMove(to: HEntry, playSound = false) {
 }
 
 function sendMove(move: any) {
-  session.send(History.moveToCoordinateString(move));
+  session.send(ChessHelper.moveToCoordinateString(move));
 }
 
 /**
@@ -3882,17 +3883,17 @@ $('#play-computer-form').on('submit', (event) => {
       params.fen = getSetupBoardFEN(game);
     else {
       var fen: string = game.history.current().fen;
-      var fenWords = splitFEN(fen);
+      var fenWords = ChessHelper.splitFEN(fen);
       fenWords.plyClock = '0';
       fenWords.moveNo = '1';
-      params.fen = joinFEN(fenWords);
+      params.fen = ChessHelper.joinFEN(fenWords);
     }
 
     var category = params.gameType.toLowerCase();
     if(params.gameType === 'Chess960')
       category = 'wild/fr';
 
-    var err = validateFEN(params.fen, category);
+    var err = ChessHelper.validateFEN(params.fen, category);
     if(err) {
       $('#play-computer-start-from-pos').addClass('is-invalid');
       return;
@@ -3902,7 +3903,7 @@ $('#play-computer-form').on('submit', (event) => {
       leaveSetupBoard(game);
   }
   else if(params.gameType === 'Chess960')
-    params.fen = generateChess960FEN();
+    params.fen = ChessHelper.generateChess960FEN();
 
   $('#play-computer-modal').modal('hide');
 
@@ -3951,7 +3952,7 @@ function playComputer(params: any) {
   if(params.gameType === 'Chess960')
     category = 'wild/fr';
 
-  var turnColor = History.getTurnColorFromFEN(params.fen);
+  var turnColor = ChessHelper.getTurnColorFromFEN(params.fen);
 
   var data = {
     fen: params.fen,                        // game state
@@ -4034,10 +4035,10 @@ function playComputerBestMove(game: Game, bestMove: string, score: string = '=0.
     role: Role.PLAYING_COMPUTER,                      // game mode
     id: -1,                                           // game id, always -1 for playing computer
     fen: parsedMove.fen,                              // board/game state
-    turn: History.getTurnColorFromFEN(parsedMove.fen), // color whose turn it is to move ("B" or "W")
+    turn: ChessHelper.getTurnColorFromFEN(parsedMove.fen), // color whose turn it is to move ("B" or "W")
     wtime: game.clock.getWhiteTime(),                      // White's remaining time
     btime: game.clock.getBlackTime(),                      // Black's remaining time
-    moveNo: History.getMoveNoFromFEN(parsedMove.fen), // the number of the move about to be made
+    moveNo: ChessHelper.getMoveNoFromFEN(parsedMove.fen), // the number of the move about to be made
     moveVerbose: parsedMove,                          // verbose coordinate notation for the previous move ("none" if there werenone) [note this used to be broken for examined games]
     move: parsedMove.move.san,                        // pretty notation for the previous move ("none" if there is none)
   }
@@ -4049,7 +4050,7 @@ async function getComputerMove(game: Game) {
   var bookMove = '';
   if(game.category === 'standard') { // only use opening book with normal chess
     var fen = game.history.last().fen;
-    var moveNo = History.getMoveNoFromFEN(fen);
+    var moveNo = ChessHelper.getMoveNoFromFEN(fen);
     // Cool-down function for deviating from the opening book. The chances of staying in book
     // decrease with each move
     var coolDownParams = [
@@ -4937,7 +4938,7 @@ function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: st
   }
 
   if(category === 'wild/fr' && !fen)
-    var fen = generateChess960FEN(chess960idn ? +chess960idn : null);
+    var fen = ChessHelper.generateChess960FEN(chess960idn ? +chess960idn : null);
 
   if(!fen)
     fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -5120,7 +5121,7 @@ async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBo
             }
             else { // match is a FEN
               var fen = match[1].trim();
-              var err = validateFEN(fen);
+              var err = ChessHelper.validateFEN(fen);
               if(!err) {
                 var history = new History(game, fen);
                 history.setMetatags({Event: `FEN ${fenCount}`});
@@ -5556,7 +5557,7 @@ function setupGameInExamineMode(game: Game) {
   else
     var fen: string  = game.history.first().fen;
 
-  var fenWords = splitFEN(fen);
+  var fenWords = ChessHelper.splitFEN(fen);
 
   game.commitingMovelist = true;
 
@@ -5712,8 +5713,8 @@ function updateSetupBoard(game: Game, fen?: string, serverIssued: boolean = fals
   if(fen === oldFen)
     return;
 
-  var fenWords = splitFEN(fen);
-  if(splitFEN(oldFen).board !== fenWords.board) {
+  var fenWords = ChessHelper.splitFEN(fen);
+  if(ChessHelper.splitFEN(oldFen).board !== fenWords.board) {
     game.board.set({ fen });
     if(game.isExamining() && !serverIssued)
       session.send(`bsetup fen ${fenWords.board}`); // Transmit the board position to the server when in examine mode
@@ -5744,7 +5745,7 @@ $(document).on('click', '.clear-board', (event) => {
 /** Triggered when user checks/unchecks the castling rights controls in Setup Board mode */
 $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-white, .can-kingside-castle-black, .can-queenside-castle-black', (event) => {
   var game = gameWithFocus;
-  var castlingRights = splitFEN(getSetupBoardFEN(game)).castlingRights;
+  var castlingRights = ChessHelper.splitFEN(getSetupBoardFEN(game)).castlingRights;
   if(game.isExamining()) {
     if($(event.target).hasClass('can-queenside-castle-white') || $(event.target).hasClass('can-kingside-castle-white'))
       sendWhiteCastlingRights(castlingRights);
@@ -5763,7 +5764,7 @@ $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-whit
   updateEngine();
 };
 function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean = false) {
-  var oldColor = splitFEN(getSetupBoardFEN(game)).color;
+  var oldColor = ChessHelper.splitFEN(getSetupBoardFEN(game)).color;
 
   var colorName = (color === 'w' ? 'White' : 'Black');
   if(Utils.isSmallWindow())
@@ -5780,7 +5781,7 @@ function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean 
 }
 
 function setupBoardCastlingRights(game: Game, castlingRights: string, serverIssued: boolean = false) {
-  var oldCastlingRights = splitFEN(getSetupBoardFEN(game)).castlingRights;
+  var oldCastlingRights = ChessHelper.splitFEN(getSetupBoardFEN(game)).castlingRights;
 
   game.element.find('.can-kingside-castle-white').prop('checked', castlingRights.includes('K'));
   game.element.find('.can-queenside-castle-white').prop('checked', castlingRights.includes('Q'));
@@ -5816,7 +5817,7 @@ $('#setup-done').on('click', (event) => {
 function setupDone(game: Game) {
   var fen = getSetupBoardFEN(game);
 
-  var err = validateFEN(fen, game.category);
+  var err = ChessHelper.validateFEN(fen, game.category);
   if(err) {
     showFixedDialog({type: 'Invalid Position', msg: err, btnSuccess: ['', 'OK']});
     return;
@@ -7135,339 +7136,3 @@ function clearNotifications() {
       removeNotification($(element));
   });
 }
-
-/** FEN and chess helper functions **/
-
-function splitFEN(fen: string) {
-  var words = fen.split(/\s+/);
-  return {
-    board: words[0],
-    color: words[1],
-    castlingRights: words[2],
-    enPassant: words[3],
-    plyClock: words[4],
-    moveNo: words[5]
-  };
-}
-
-function joinFEN(obj: any) {
-  return Object.keys(obj).map(key => obj[key]).join(' ');
-}
-
-function getPlyFromFEN(fen: string) {
-  const turn_color = fen.split(/\s+/)[1];
-  const move_no = +fen.split(/\s+/).pop();
-  const ply = move_no * 2 - (turn_color === 'w' ? 1 : 0);
-
-  return ply;
-}
-
-function getMoveNoFromFEN(fen: string) {
-  return +fen.split(/\s+/).pop();
-}
-
-/**
- * Checks if a fen is in a valid format and represents a valid position.
- * @returns null if fen is valid, otherwise an error string
- */
-function validateFEN(fen: string, category?: string): string {
-  var chess = new Chess(fen);
-  if(!chess)
-    return 'Invalid FEN format.';
-
-  var fenWords = splitFEN(fen);
-  var color = fenWords.color;
-  var board = fenWords.board;
-  var castlingRights = fenWords.castlingRights;
-
-  var oppositeColor = color === 'w' ? 'b' : 'w';
-  var tempFen = fen.replace(` ${color} `, ` ${oppositeColor} `);
-  chess.load(tempFen);
-  if(chess.in_check()) {
-    if(color === 'w')
-      return 'White\'s turn but black is in check.';
-    else
-      return 'Black\'s turn but white is in check.';
-  }
-  chess.load(fen);
-
-  if(!board.includes('K') || !board.includes('k'))
-    return 'Missing king.';
-
-  if(/(K.*K|k.*k)/.test(board))
-    return 'Too many kings.';
-
-  var match = board.match(/(\w+)(?:\/\w+){6}\/(\w+)/);
-  var rank8 = match[1];
-  var rank1 = match[2];
-  if(/[pP]/.test(rank1) || /[pP]/.test(rank8))
-    return 'Pawn on 1st or 8th rank.';
-
-  // Check castling rights
-  if(castlingRights.includes('K') || castlingRights.includes('Q')) {
-    var castlingPieces = getCastlingPieces(fen, 'w', category);
-    if(!castlingPieces.king
-        || (!castlingPieces.leftRook && castlingRights.includes('Q'))
-        || (!castlingPieces.rightRook && castlingRights.includes('K')))
-      return 'White\'s king or rooks aren\'t in valid locations for castling.';
-  }
-  if(castlingRights.includes('k') || castlingRights.includes('q')) {
-    var castlingPieces = getCastlingPieces(fen, 'b', category);
-    if(!castlingPieces.king
-        || (!castlingPieces.leftRook && castlingRights.includes('q'))
-        || (!castlingPieces.rightRook && castlingRights.includes('k')))
-      return 'Black\'s king or rooks aren\'t in valid locations for castling.';
-  }
-
-  return null;
-}
-
-/**
- * Gets the positions of the 'castle-able' kings and rooks from the starting position for the given color.
- * @param fen starting position
- * @param color 'w' or 'b'
- * @returns An object in the form { king: '<square>', leftRook: '<square>', rightRook: '<square>' }
- */
-function getCastlingPieces(fen: string, color: string, category?: string): { [key: string]: string } {
-  var chess = new Chess(fen);
-
-  var oppositeColor = (color === 'w' ? 'b' : 'w');
-  var rank = (color === 'w' ? '1' : '8');
-  var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  var leftRook = '', rightRook = '', king = '';
-  for(const file of files) {
-    let square = `${file}${rank}`;
-    let p = chess.get(square);
-    if(p && p.type === 'r' && p.color === color) { // Get starting location of rooks
-      if(category === 'wild/fr') {
-        // Note in weird cases where the starting position has more than 2 rooks on the back row
-        // We try to guess which are the real castling rooks. If a rook has an opposite coloured rook in
-        // the equivalent position on the other side of the board, then it's more likely to be a genuine
-        // castling rook. Otherwise we use the rook which is closest to the king on either side.
-        var hasOppositeRook = false, oppositeLeftRookFound = false, oppositeRightRookFound = false;
-        let opSquare = `${file}${rank === '1' ? '8' : '1'}`;
-        let opP = chess.get(opSquare);
-        if(opP && opP.type === 'r' && p.color === oppositeColor)
-          hasOppositeRook = true;
-
-        if(!king && (hasOppositeRook || !oppositeLeftRookFound)) {
-          var leftRook = square;
-          if(hasOppositeRook)
-            oppositeLeftRookFound = true;
-        }
-        else if(!rightRook || (hasOppositeRook && !oppositeRightRookFound)) {
-          var rightRook = square;
-          if(hasOppositeRook)
-            oppositeRightRookFound = true;
-        }
-      }
-      else {
-        if(file === 'a')
-          leftRook = square;
-        else if(file === 'h')
-          rightRook = square;
-      }
-    }
-    else if(p && p.type === 'k' && p.color === color) { // Get starting location of king
-      if(category === 'wild/fr'
-          || (category === 'wild/0' && ((color === 'w' && file === 'e') || (color === 'b' && file === 'd')))
-          || (category === 'wild/1' && (file === 'd' || file === 'e'))
-          || file === 'e')
-        king = square;
-    }
-  }
-
-  return {king, leftRook, rightRook};
-}
-
-/**
- * Determines if castling rights need to be removed for a given fen, based on
- * the initial positions of the kings and rooks from the starting position. I.e. If the king or
- * rooks are no longer in their starting positions.
- * @param fen the fen being inspected
- * @param startFen the starting position of the game. If not specified, gets the starting position
- * from the Game's move list.
- * @returns the fen with some castling rights possibly removed
- */
-function adjustCastlingRights(game: Game, fen: string, startFen?: string): string {
-  if(!startFen)
-    startFen = game.history.first().fen;
-
-  var fenWords = splitFEN(fen);
-  var castlingRights = fenWords.castlingRights;
-  var chess = new Chess(fen);
-  if(!chess)
-    return fen;
-
-  var cp = getCastlingPieces(startFen, 'w', game.category); // Gets the initial locations of the 'castle-able' king and rooks
-  if(cp.king) {
-    var piece = chess.get(cp.king);
-    if(!piece || piece.type !== 'k' || piece.color !== 'w')
-      castlingRights = castlingRights.replace(/[KQ]/g, '');
-  }
-  if(cp.leftRook) {
-    var piece = chess.get(cp.leftRook);
-    if(!piece || piece.type !== 'r' || piece.color !== 'w')
-      castlingRights = castlingRights.replace('Q', '');
-  }
-  if(cp.rightRook) {
-    var piece = chess.get(cp.rightRook);
-    if(!piece || piece.type !== 'r' || piece.color !== 'w')
-      castlingRights = castlingRights.replace('K', '');
-  }
-
-  var cp = getCastlingPieces(startFen, 'b', game.category);
-  if(cp.king) {
-    var piece = chess.get(cp.king);
-    if(!piece || piece.type !== 'k' || piece.color !== 'b')
-      castlingRights = castlingRights.replace(/[kq]/g, '');
-  }
-  if(cp.leftRook) {
-    var piece = chess.get(cp.leftRook);
-    if(!piece || piece.type !== 'r' || piece.color !== 'b')
-      castlingRights = castlingRights.replace('q', '');
-  }
-  if(cp.rightRook) {
-    var piece = chess.get(cp.rightRook);
-    if(!piece || piece.type !== 'r' || piece.color !== 'b')
-      castlingRights = castlingRights.replace('k', '');
-  }
-
-  if(!castlingRights)
-    castlingRights = '-';
-
-  fenWords.castlingRights = castlingRights;
-  return joinFEN(fenWords);
-}
-
-export function swapColor(color: string): string {
-  return (color === 'w') ? 'b' : 'w';
-}
-
-function toColor(chess: any): Color {
-  return (chess.turn() === 'w') ? 'white' : 'black';
-}
-
-function inCheck(san: string) {
-  return (san.slice(-1) === '+');
-}
-
-// Check if square is under attack. We can remove this after upgrading to latest version of chess.js,
-// since it has its own version of the function
-function isAttacked(fen: string, square: string, color: string) : boolean {
-  var oppositeColor = color === 'w' ? 'b' : 'w';
-
-  // Switch to the right turn
-  if(History.getTurnColorFromFEN(fen) !== color)
-    fen = fen.replace(` ${oppositeColor} `, ` ${color} `);
-
-  var chess = new Chess(fen);
-
-  // Find king and replace it with a placeholder pawn
-  for(const s in Chess.SQUARES) {
-    var piece = chess.get(s);
-    if(piece && piece.type === 'k' && piece.color === color) {
-      chess.remove(s);
-      chess.put({type: 'p', color: color}, s);
-      break;
-    }
-  }
-
-  // Place king on square we want to test and see if it's in check
-  chess.remove(square);
-  chess.put({type: 'k', color: color}, square);
-  return chess.in_check() ? true : false;
-}
-
-// Helper function which returns an array of square coordinates which are adjacent (including diagonally) to the given square
-function getAdjacentSquares(square: string) : string[] {
-  var adjacent = [];
-  var file = square[0];
-  var rank = square[1];
-  if(rank !== '1')
-    adjacent.push(`${file}${+rank - 1}`);
-  if(rank !== '8')
-    adjacent.push(`${file}${+rank + 1}`);
-  if(file !== 'a') {
-    var prevFile = String.fromCharCode(file.charCodeAt(0) - 1);
-    adjacent.push(`${prevFile}${rank}`);
-    if(rank !== '1')
-      adjacent.push(`${prevFile}${+rank - 1}`);
-    if(rank !== '8')
-      adjacent.push(`${prevFile}${+rank + 1}`);
-  }
-  if(file !== 'h') {
-    var nextFile = String.fromCharCode(file.charCodeAt(0) + 1);
-    adjacent.push(`${nextFile}${rank}`);
-    if(rank !== '1')
-      adjacent.push(`${nextFile}${+rank - 1}`);
-    if(rank !== '8')
-      adjacent.push(`${nextFile}${+rank + 1}`);
-  }
-  return adjacent;
-}
-
-function generateChess960FEN(idn?: number): string {
-  // Generate random Chess960 starting position using Scharnagl's method.
-
-  const kingsTable = {
-    0: 'QNNRKR',   192: 'QNRKNR',   384: 'QRNNKR',   576: 'QRNKRN',   768: 'QRKNRN',
-    16: 'NQNRKR',   208: 'NQRKNR',   400: 'RQNNKR',   592: 'RQNKRN',   784: 'RQKNRN',
-    32: 'NNQRKR',   224: 'NRQKNR',   416: 'RNQNKR',   608: 'RNQKRN',   800: 'RKQNRN',
-    48: 'NNRQKR',   240: 'NRKQNR',   432: 'RNNQKR',   624: 'RNKQRN',   816: 'RKNQRN',
-    64: 'NNRKQR',   256: 'NRKNQR',   448: 'RNNKQR',   640: 'RNKRQN',   832: 'RKNRQN',
-    80: 'NNRKRQ',   272: 'NRKNRQ',   464: 'RNNKRQ',   656: 'RNKRNQ',   848: 'RKNRNQ',
-    96: 'QNRNKR',   288: 'QNRKRN',   480: 'QRNKNR',   672: 'QRKNNR',   864: 'QRKRNN',
-    112: 'NQRNKR',  304: 'NQRKRN',  496: 'RQNKNR',   688: 'RQKNNR',   880: 'RQKRNN',
-    128: 'NRQNKR',  320: 'NRQKRN',  512: 'RNQKNR',   704: 'RKQNNR',   896: 'RKQRNN',
-    144: 'NRNQKR',  336: 'NRKQRN',  528: 'RNKQNR',   720: 'RKNQNR',   912: 'RKRQNN',
-    160: 'NRNKQR',  352: 'NRKRQN',  544: 'RNKNQR',   736: 'RKNNQR',   928: 'RKRNQN',
-    176: 'NRNKRQ',  368: 'NRKRNQ',  560: 'RNKNRQ',   752: 'RKNNRQ',   944: 'RKRNNQ'
-  };
-
-  const bishopsTable = [
-    ['B', 'B', '-', '-', '-', '-', '-', '-'],
-    ['B', '-', '-', 'B', '-', '-', '-', '-'],
-    ['B', '-', '-', '-', '-', 'B', '-', '-'],
-    ['B', '-', '-', '-', '-', '-', '-', 'B'],
-    ['-', 'B', 'B', '-', '-', '-', '-', '-'],
-    ['-', '-', 'B', 'B', '-', '-', '-', '-'],
-    ['-', '-', 'B', '-', '-', 'B', '-', '-'],
-    ['-', '-', 'B', '-', '-', '-', '-', 'B'],
-    ['-', 'B', '-', '-', 'B', '-', '-', '-'],
-    ['-', '-', '-', 'B', 'B', '-', '-', '-'],
-    ['-', '-', '-', '-', 'B', 'B', '-', '-'],
-    ['-', '-', '-', '-', 'B', '-', '-', 'B'],
-    ['-', 'B', '-', '-', '-', '-', 'B', '-'],
-    ['-', '-', '-', 'B', '-', '-', 'B', '-'],
-    ['-', '-', '-', '-', '-', 'B', 'B', '-'],
-    ['-', '-', '-', '-', '-', '-', 'B', 'B']
-  ];
-
-  if(!(idn >= 0 && idn <= 959))
-    var idn = Math.floor(Math.random() * 960); // Get random Chess960 starting position identification number
-  var kIndex = idn - idn % 16; // Index into King's Table
-  var bIndex = idn - kIndex; // Index into Bishop's Table
-  var kEntry = kingsTable[kIndex];
-
-  // Fill in empty spots in the row from Bishop's Table with pieces from the row in King's Table
-  var backRow = [...bishopsTable[bIndex]]; // Copy row from array
-  var p = 0;
-  for(let sq = 0; sq < 8; sq++) {
-    if(backRow[sq] === '-') {
-      backRow[sq] = kEntry[p];
-      p++;
-    }
-  }
-
-  var whiteBackRow = backRow.join('');
-  var blackBackRow = whiteBackRow.toLowerCase();
-  var fen = `${blackBackRow}/pppppppp/8/8/8/8/PPPPPPPP/${whiteBackRow} w KQkq - 0 1`;
-
-  return fen;
-}
-
-
-
-
-

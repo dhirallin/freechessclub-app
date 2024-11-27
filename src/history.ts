@@ -7,6 +7,8 @@ import { updateBoard } from './index';
 import { Role } from './game';
 import { Reason } from './parser';
 import { storage } from './storage';
+import { setCaretToEnd } from './utils';
+import { getPlyFromFEN, getMoveNoFromFEN, getTurnColorFromFEN } from './chess-helper';
 
 export class HEntry {
   public move: any;
@@ -43,7 +45,7 @@ export class HEntry {
 
     var parent = this.parent;
     if(parent) {
-      if(History.getPlyFromFEN(parent.fen) === History.getPlyFromFEN(this.fen))
+      if(getPlyFromFEN(parent.fen) === getPlyFromFEN(this.fen))
         return parent.prev; // this move was a subvariation
       else
         return parent; // this move was a continuation (at the end of the main line)
@@ -93,15 +95,15 @@ export class HEntry {
   }
 
   public get ply(): number {
-    return History.getPlyFromFEN(this.fen);
+    return getPlyFromFEN(this.fen);
   }
 
   public get moveNo(): number {
-    return History.getMoveNoFromFEN(this.fen);
+    return getMoveNoFromFEN(this.fen);
   }
 
   public get turnColor(): string {
-    return History.getTurnColorFromFEN(this.fen);
+    return getTurnColorFromFEN(this.fen);
   }
 
   public add(item: HEntry) {
@@ -571,22 +573,6 @@ export class History {
     return this.current().turnColor;
   }
 
-  public static getPlyFromFEN(fen: string) {
-    const turnColor = fen.split(/\s+/)[1];
-    const moveNo = +fen.split(/\s+/).pop();
-    const ply = moveNo * 2 - (turnColor === 'w' ? 1 : 0);
-
-    return ply;
-  }
-
-  public static getMoveNoFromFEN(fen: string): number {
-    return +fen.split(/\s+/).pop();
-  }
-
-  public static getTurnColorFromFEN(fen: string): string {
-    return fen.split(/\s+/)[1];
-  }
-
   public scratch(_scratch?: boolean):  any {
     if(_scratch !== undefined)
       this._scratch = _scratch;
@@ -635,23 +621,6 @@ export class History {
     }
   }
 
- /**
-  * Returns move as a string in coordinate form (e.g a1-d4)
-  */
-  public static moveToCoordinateString(move: any): string {  
-    var moveStr = '';
-    if(move.san && move.san.startsWith('O-O')) // support for variants
-      moveStr = move.san;
-    else if(!move.from)
-      moveStr = `${move.piece}@${move.to}`; // add piece in crazyhouse or bsetup mode
-    else if(!move.to)
-      moveStr = `x${move.from}`; // remove piece in bsetup mode
-    else
-      moveStr = `${move.from}-${move.to}${move.promotion ? '=' + move.promotion : ''}`;
-
-    return moveStr;
-  }
-
   public movesToString(): string {
     var movesStr = '';
     var showMoveNo = true;
@@ -661,14 +630,14 @@ export class History {
 
       var isContinuation = entry === entry.first && entry.isContinuation();
       if(isContinuation) {
-        var parentMoveNo = History.getMoveNoFromFEN(entry.parent.fen);
-        var parentTurnColor = History.getTurnColorFromFEN(entry.parent.fen);
+        var parentMoveNo = getMoveNoFromFEN(entry.parent.fen);
+        var parentTurnColor = getTurnColorFromFEN(entry.parent.fen);
         var parentPeriods = (parentTurnColor === 'w' ? '...' : '.');
         movesStr += `(${parentMoveNo}${parentPeriods}${entry.parent.move.san} `;
         showMoveNo = false;
       }
 
-      var turnColor = History.getTurnColorFromFEN(entry.fen);
+      var turnColor = getTurnColorFromFEN(entry.fen);
       if((entry === entry.first && !isContinuation) || showMoveNo || entry.commentBefore || turnColor === 'b') {
         if(entry === entry.first && !isContinuation)
           movesStr += '(';
@@ -676,7 +645,7 @@ export class History {
         if(entry.commentBefore)
           movesStr += `{${entry.commentBefore}} `;
 
-        var moveNo = History.getMoveNoFromFEN(entry.fen);
+        var moveNo = getMoveNoFromFEN(entry.fen);
         var periods = (turnColor === 'w' ? '...' : '.');
         movesStr += `${moveNo}${periods}`;
         showMoveNo = false;
@@ -1599,18 +1568,5 @@ $(document).on('focus', '.comment', function(event) {
     }
   });
 });
-
-/**
- * Move caret to the end of an editable text element
- */
-function setCaretToEnd(element: JQuery<HTMLElement>) {
-  // Set cursor to end of content
-  var range = document.createRange();
-  var sel = window.getSelection();
-  range.selectNodeContents(element[0]);
-  range.collapse(false);
-  sel.removeAllRanges();
-  sel.addRange(range);
-}
 
 export default History;

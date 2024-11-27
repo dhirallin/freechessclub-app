@@ -3,7 +3,8 @@
 // license that can be found in the LICENSE file.
 
 import { Chessground } from 'chessground';
-import { History, HEntry } from './history';
+import { HEntry } from './history';
+import { getTurnColorFromFEN, getMoveNoFromFEN } from './chess-helper';
 import { gotoMove, parseMove } from './index';
 import { Game } from './game';
 import * as d3 from 'd3';
@@ -121,8 +122,8 @@ export class Engine {
               return;
             }
             
-            var turnColor = History.getTurnColorFromFEN(currFen);
-            var moveNumber = History.getMoveNoFromFEN(currFen);
+            var turnColor = getTurnColorFromFEN(currFen);
+            var moveNumber = getMoveNoFromFEN(currFen);
             var moveNumStr = '';
             if(turnColor === 'w')
               moveNumStr = `${moveNumber}.`;
