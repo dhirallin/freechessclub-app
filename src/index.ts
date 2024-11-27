@@ -3695,11 +3695,7 @@ $('#collapse-menus').on('hidden.bs.collapse', (event) => {
   $('#menus-toggle-icon').removeClass('fa-toggle-up').addClass('fa-toggle-down');
 
   activeTab = $('#pills-tab button').filter('.active');
-  if(!activeTab.length)
-    activeTab = $('#pills-play-tab');
-  activeTab.removeClass('active');
-  activeTab.parent('li').removeClass('active');
-  $(activeTab.attr('data-bs-target')).removeClass('active');
+  $('#pills-placeholder-tab').tab('show'); // switch to a hidden tab in order to hide the active one
 
   $('#collapse-menus').removeClass('collapse-init');
 });
