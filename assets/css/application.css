@@ -912,26 +912,6 @@ body {
   color: #638FA8;
 }
 
-.dropdown-menu li {
-  position: relative;
-}
-.dropdown-submenu{
-  display: none;
-  position: absolute;
-  left:100%;
-  top:-7px;
-}
-.dropdown-submenu-left {
-  right:100%; left:auto;
-}
-.dropdown-menu > li:hover > .dropdown-submenu{ display: block; }
-@media (max-width: 767px) {
-  .dropdown-submenu {
-    right:100%; left:auto;
-    min-width: 0;
-  }
-}
-
 .tooltip-separator {
   margin-top: 4px;
   margin-bottom: 4px;
