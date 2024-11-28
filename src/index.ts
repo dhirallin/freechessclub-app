@@ -3758,8 +3758,9 @@ $('#collapse-menus').on('shown.bs.collapse', (event) => {
 });
 
 $('#pills-tab button').on('shown.bs.tab', function(event) {
-  if($(this).attr('id') !== 'pills-placeholder-tab')
+  if($(this).attr('id') !== 'pills-placeholder-tab') 
     activeTab = $(this);
+  
   newTabShown = true;
   setTimeout(() => { newTabShown = false; }, 0);
 });
@@ -3768,9 +3769,9 @@ $('#pills-tab button').on('click', function(event) {
   if(!newTabShown)
     $('#collapse-menus').collapse('hide');  
   else {
+    activeTab = $(this);
     $('#collapse-menus').collapse('show');
     scrollToTop();
-    activeTab = $(this);
   }
 });
 
