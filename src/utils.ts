@@ -347,7 +347,8 @@ export function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: numbe
       {
         name: 'flip',
         options: {
-          fallbackPlacements: fallbackPlacements || ['top-end', 'bottom-start', 'bottom-end']
+          fallbackPlacements: fallbackPlacements || ['top-end', 'bottom-start', 'bottom-end'],
+          boundary: 'viewport'
         }
       },
       {
