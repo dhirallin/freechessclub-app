@@ -557,136 +557,12 @@ function messageHandler(data) {
       chat.newMessage(data.user, data);
       break;
     case MessageType.GameMove:
-      if(gameExitPending.includes(data.id))
-        break;
-
-      // If in single-board mode, check we are not examining/observing another game already
-      if(!settings.multiboardToggle) {
-        var game = games.getMainGame();
-        if(game.isPlayingOnline() && game.id !== data.id) {
-          if(data.role === Role.OBSERVING || data.role === Role.OBS_EXAMINED)
-            session.send(`unobs ${data.id}`);
-          break;
-        }
-        else if((game.isExamining() || game.isObserving()) && game.id !== data.id) {
-          if(game.isExamining()) {
-            session.send('unex');
-          }
-          else if(game.isObserving())
-            session.send(`unobs ${game.id}`);
-
-          if(data.role === Role.PLAYING_COMPUTER)
-            cleanupGame(game);
-          else {
-            gameExitPending.push(game.id);
-            break;
-          }
-        }
-        else if(game.role === Role.PLAYING_COMPUTER && data.role !== Role.PLAYING_COMPUTER)
-          cleanupGame(game); // Allow player to imemediately play/examine/observe a game at any time while playing the Computer. The Computer game will simply be aborted.
-      }
-
-      if((examineModeRequested || mexamineRequested) && data.role === Role.EXAMINING) {
-        // Converting a game to examine mode
-        game = examineModeRequested || mexamineRequested;
-        if(game.role !== Role.NONE && settings.multiboardToggle)
-          game = cloneGame(game);
-        game.id = data.id;
-        if(!game.wname)
-          game.wname = data.wname;
-        if(!game.bname)
-          game.bname = data.bname;
-        game.role = Role.EXAMINING;
-      }
-      else {
-        if(settings.multiboardToggle) {
-          // Get game object
-          var game = games.findGame(data.id);
-          if(!game)
-            game = games.getFreeGame();
-          if(!game)
-            game = createGame();
-        }
-
-        var prevRole = game.role;
-        Object.assign(game, data);
-      }
-
-      // New game
-      if(examineModeRequested || mexamineRequested || prevRole === Role.NONE)
-        gameStart(game);
-
-      // Make move
-      if(game.setupBoard && !game.commitingMovelist) {
-        updateSetupBoard(game, game.fen, true);
-      }
-      else if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
-        var lastFen = currentGameMove(game).fen;
-        const lastPly = ChessHelper.getPlyFromFEN(lastFen);
-        const thisPly = ChessHelper.getPlyFromFEN(game.fen);
-
-        if(game.move !== 'none' && thisPly === lastPly + 1) { // make sure the move no is right
-          var parsedMove = parseGameMove(game, lastFen, game.move);
-          movePieceAfter(game, (parsedMove ? parsedMove.move : game.moveVerbose), game.fen);
-        }
-        else
-          updateHistory(game, null, game.fen);
-
-        hitClock(game, true);
-      }
+      gameMove(data);
       break;
     case MessageType.GameStart:
       break;
     case MessageType.GameEnd:
-      var game = games.findGame(data.game_id);
-      if(!game)
-        return;
-
-      // Set clock time to the time that the player resigns/aborts etc.
-      game.history.updateClockTimes(game.history.last(), game.clock.getWhiteTime(), game.clock.getBlackTime());
-
-      if(data.reason <= 4 && game.element.find('.player-status .name').text() === data.winner) {
-        // player won
-        game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-win-color)');
-        game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-lose-color)');
-        if (game === games.focused && settings.soundToggle) {
-          Sounds.winSound.play();
-        }
-      } else if (data.reason <= 4 && game.element.find('.player-status .name').text() === data.loser) {
-        // opponent won
-        game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-lose-color)');
-        game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-win-color)');
-        if (game === games.focused && settings.soundToggle) {
-          Sounds.loseSound.play();
-        }
-      } else {
-        // tie
-        game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-tie-color)');
-        game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-tie-color)');
-      }
-
-      var status = data.message.replace(/Game \d+ /, '');
-      showStatusMsg(game, status);
-
-      if(game.isPlaying()) {
-        let rematch = [], analyze = [];
-        var useSessionSend = true;
-        if(data.reason !== Reason.Disconnect && data.reason !== Reason.Adjourn && data.reason !== Reason.Abort) {
-          if(game.role === Role.PLAYING_COMPUTER) {
-            rematch = ['rematchComputer();', 'Rematch'];
-            useSessionSend = false;
-          }
-          else if(game.element.find('.player-status .name').text() === session.getUser())
-            rematch = [`sessionSend('rematch')`, 'Rematch']
-        }
-        if(data.reason !== Reason.Adjourn && data.reason !== Reason.Abort && game.history.length()) {
-          analyze = ['analyze();', 'Analyze'];
-        }
-        Dialogs.showBoardDialog({type: 'Match Result', msg: data.message, btnFailure: rematch, btnSuccess: analyze, icons: false});
-      }
-      game.history.setMetatags({Result: data.score, Termination: data.reason});
-
-      cleanupGame(game);
+      gameEnd(data);
       break;
     case MessageType.GameHoldings:
       var game = games.findGame(data.game_id);
@@ -697,753 +573,92 @@ function messageHandler(data) {
       showCapturedMaterial(game);
       break;
     case MessageType.Offers:
-      var offers = data.offers;
-      // Clear the lobby
-      if(offers[0].type === 'sc')
-        $('#lobby-table').html('');
-
-      // Add seeks to the lobby
-      var seeks = offers.filter((item) => item.type === 's');
-      if(seeks.length && lobbyRequested) {
-        seeks.forEach((item) => {
-          if(!settings.lobbyShowComputersToggle && item.title === 'C')
-            return;
-          if(!settings.lobbyShowUnratedToggle && item.ratedUnrated === 'u')
-            return;
-
-          var lobbyEntryText = formatLobbyEntry(item);
-
-          $('#lobby-table').append(
-            `<button type="button" data-offer-id="${item.id}" class="btn btn-outline-secondary lobby-entry"` 
-              + ` onclick="acceptSeek(${item.id});">${lobbyEntryText}</button>`);
-        });
-
-        if(lobbyScrolledToBottom) {
-          var container = $('#lobby-table-container')[0];
-          container.scrollTop = container.scrollHeight;
-        }
-      }
-
-      // Add our own seeks and match requests to the top of the Play pairing pane
-      var sentOffers = offers.filter((item) => item.type === 'sn'
-        || (item.type === 'pt' && (item.subtype === 'partner' || item.subtype === 'match')));
-      if(sentOffers.length) {
-        sentOffers.forEach((item) => {
-          if(!$(`.sent-offer[data-offer-id="${item.id}"]`).length) {
-            if(matchRequested)
-              matchRequested--;
-            newSentOffers.push(item);
-            if(item.adjourned)
-              removeAdjournNotification(item.opponent);
-          }
-        });
-        if(newSentOffers.length) {
-          clearTimeout(showSentOffersTimer);
-          showSentOffersTimer = setTimeout(() => {
-            showSentOffers(newSentOffers);
-            newSentOffers = [];
-          }, 1000);
-        }
-        $('#pairing-pane-status').hide();
-      }
-
-      // Offers received from another player
-      var otherOffers = offers.filter((item) => item.type === 'pf');
-      otherOffers.forEach((item) => {
-        var headerTitle = '', bodyTitle = '', bodyText = '', displayType = '';
-        switch(item.subtype) {
-          case 'match':
-            displayType = 'notification';
-            var time = !isNaN(item.initialTime) ? ` ${item.initialTime} ${item.increment}` : '';
-            bodyText = `${item.ratedUnrated} ${item.category}${time}`;
-            if(item.adjourned) {
-              headerTitle = 'Resume Adjourned Game Request';
-              removeAdjournNotification(item.opponent);
-            }
-            else
-              headerTitle = 'Match Request';
-            bodyTitle = `${item.opponent} (${item.opponentRating})${item.color ? ` [${item.color}]` : ''}`;
-            $('.notification').each((index, element) => {
-              var headerTextElement = $(element).find('.header-text');
-              var bodyTextElement = $(element).find('.body-text');
-              if(headerTextElement.text() === 'Match Request' && bodyTextElement.text().startsWith(`${item.opponent}(`)) {
-                $(element).attr('data-offer-id', item.id);
-                bodyTextElement.text(`${bodyTitle} ${bodyText}`);
-                var btnSuccess = $(element).find('.button-success');
-                var btnFailure = $(element).find('.button-failure');
-                btnSuccess.attr('onclick', `sessionSend('accept ${item.id}');`);
-                btnFailure.attr('onclick', `sessionSend('decline ${item.id}');`);
-                displayType = '';
-              }
-            });
-            break;
-          case 'partner':
-            displayType = 'notification';
-            headerTitle = 'Partnership Request';
-            bodyTitle = item.toFrom;
-            bodyText = 'offers to be your bughouse partner.';
-            break;
-          case 'takeback':
-            displayType = 'dialog';
-            headerTitle = 'Takeback Request';
-            bodyTitle = item.toFrom;
-            bodyText = `would like to take back ${item.parameters} half move(s).`;
-            break;
-          case 'abort':
-            displayType = 'dialog';
-            headerTitle = 'Abort Request';
-            bodyTitle = item.toFrom;
-            bodyText = 'would like to abort the game.';
-            break;
-          case 'draw':
-            displayType = 'dialog';
-            headerTitle = 'Draw Request';
-            bodyTitle = item.toFrom;
-            bodyText = 'offers you a draw.';
-            break;
-          case 'adjourn':
-            displayType = 'dialog';
-            headerTitle = 'Adjourn Request';
-            bodyTitle = item.toFrom;
-            bodyText = 'would like to adjourn the game.';
-            break;
-        }
-
-        if(displayType) {
-          if(displayType === 'notification')
-            var dialog = Dialogs.createNotification({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
-          else if(displayType === 'dialog')
-            var dialog = Dialogs.showBoardDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
-          dialog.attr('data-offer-id', item.id);
-        }
-      });
-
-      // Remove match requests and seeks. Note our own seeks are removed in the MessageType.Unknown section
-      // since <sr> info is only received when we are in the lobby.
-      var removals = offers.filter((item) => item.type === 'pr' || item.type === 'sr');
-      removals.forEach((item) => {
-        item.ids.forEach((id) => {
-          Dialogs.removeNotification($(`.notification[data-offer-id="${id}"]`)); // If match request was not ours, remove the Notification
-          $(`.board-dialog[data-offer-id="${id}"]`).toast('hide'); // if in-game request, hide the dialog
-          $(`.sent-offer[data-offer-id="${id}"]`).remove(); // If offer, match request or seek was sent by us, remove it from the Play pane
-          $(`.lobby-entry[data-offer-id="${id}"]`).remove(); // Remove seek from lobby
-        });
-        if(!$('#sent-offers-status').children().length)
-          $('#sent-offers-status').hide();
-      });
+      handleOffers(data.offers);
       break;
     case MessageType.Unknown:
     default:
-      var msg = data.message;
-
-      var match = msg.match(/^No one is observing game (\d+)\./m);
-      if (match != null && match.length > 1) {
-        if(allobsRequested) {
-          allobsRequested--;
-          return;
-        }
-        chat.newMessage('console', data);
-        return;
-      }
-
-      match = msg.match(/^(?:Observing|Examining)\s+(\d+) [\(\[].+[\)\]]: (.+) \(\d+ users?\)/m);
-      if (match != null && match.length > 1) {
-        if (allobsRequested) {
-          allobsRequested--;
-          var game = games.findGame(+match[1]);
-          if(!game)
-            return;
-
-          game.statusElement.find('.game-watchers').empty();
-          match[2] = match[2].replace(/\(U\)/g, '');
-          const watchers = match[2].split(' ');
-          game.watchers = watchers.filter(item => item.replace('#', '') !== session.getUser());
-          var chatTab = chat.getTabFromGameID(game.id);
-          if(chatTab)
-            chat.updateNumWatchers(chatTab);
-          let req = '';
-          let numWatchers = 0;
-          for (let i = 0; i < watchers.length; i++) {
-            if(watchers[i].replace('#', '') === session.getUser())
-              continue;
-            numWatchers++;
-            if(numWatchers == 1)
-              req = 'Watchers:';
-            req += `<span class="ms-1 badge rounded-pill bg-secondary noselect">${watchers[i]}</span>`;
-            if (numWatchers > 5) {
-              req += ` + ${watchers.length - i} more.`;
-              break;
-            }
-          }
-          game.statusElement.find('.game-watchers').html(req);
-
-          return;
-        }
-        chat.newMessage('console', data);
-        return;
-      }
-
-      match = msg.match(/(?:^|\n)\s*\d+\s+(\(Exam\.\s+)?[0-9\+]+\s\w+\s+[0-9\+]+\s\w+\s*(\)\s+)?\[[\w\s]+\]\s+[\d:]+\s*\-\s*[\d:]+\s\(\s*\d+\-\s*\d+\)\s+[BW]:\s+\d+\s*\d+ games displayed/);
-      if (match != null && match.length > 0 && gamesRequested) {
-        showGames(msg);
-        gamesRequested = false;
-        return;
-      }
-
-      match = msg.match(/^Game (\d+): (\S+) has lagged for 30 seconds\./m);
-      if(match) {
-        var game = games.findGame(+match[1]);
-        if(game && game.isPlaying()) {
-          var bodyText = `${match[2]} has lagged for 30 seconds.<br>You may courtesy adjourn the game.<br><br>If you believe your opponent has intentionally disconnected, you can request adjudication of an adjourned game. Type 'help adjudication' in the console for more info.`;
-          var dialog = Dialogs.showBoardDialog({type: 'Opponent Lagging', msg: bodyText, btnFailure: ['', 'Wait'], btnSuccess: ['adjourn', 'Adjourn'], useSessionSend: true});
-          dialog.attr('data-game-id', game.id);
-        }
-        chat.newMessage('console', data);
-        return;
-      }
-
-      match = msg.match(/^History for (\w+):.*/m);
-      if (match != null && match.length > 1) {
-        if (historyRequested) {
-          historyRequested--;
-          if(!historyRequested) {
-            $('#history-username').val(match[1]);
-            showHistory(match[1], data.message);
-          }
-        }
-        else
-          chat.newMessage('console', data);
-
-        return;
-      }
-
-      // Retrieve status/error messages from commands sent to the server via the left menus
-      match = msg.match(/^There is no player matching the name \w+\./m);
-      if(!match)
-        match = msg.match(/^\S+ is not a valid handle\./m);
-      if(!match)
-        match = msg.match(/^\w+ has no history games\./m);
-      if(!match)
-        match = msg.match(/^You need to specify at least two characters of the name\./m);
-      if(!match)
-        match = msg.match(/^Ambiguous name (\w+):/m);
-      if(!match)
-        match = msg.match(/^\w+ is not logged in\./m);
-      if(!match)
-        match = msg.match(/^\w+ is not playing a game\./m);
-      if(!match)
-        match = msg.match(/^Sorry, game \d+ is a private game\./m);
-      if(!match)
-        match = msg.match(/^\w+ is playing a game\./m);
-      if(!match)
-        match = msg.match(/^\w+ is examining a game\./m);
-      if(!match)
-        match = msg.match(/^You can't match yourself\./m);
-      if(!match)
-        match = msg.match(/^You cannot challenge while you are (?:examining|playing) a game\./m);
-      if(!match)
-        match = msg.match(/^You are already offering an identical match to \w+\./m);
-      if(!match)
-        match = msg.match(/^You can only have 3 active seeks\./m);
-      if(!match)
-        match = msg.match(/^There is no such game\./m);
-      if(!match)
-        match = msg.match(/^You cannot seek bughouse games\./m);
-      if(!match)
-        match = msg.match(/^\w+ is not open for bughouse\./m);
-      if(!match)
-        match = msg.match(/^Your opponent has no partner for bughouse\./m);
-      if(!match)
-        match = msg.match(/^You have no partner for bughouse\./m);
-      if(match && (historyRequested || obsRequested || matchRequested || allobsRequested)) {
-        let status;
-        if(historyRequested)
-          status = $('#history-pane-status');
-        else if(obsRequested)
-          status = $('#observe-pane-status');
-        else if(matchRequested)
-          status = $('#pairing-pane-status');
-
-        if(historyRequested) {
-          historyRequested--;
-          if(historyRequested)
-            return;
-
-          $('#history-table').html('');
-        }
-        else if(obsRequested) {
-          obsRequested--;
-          if(obsRequested)
-            return;
-        }
-        else if(matchRequested)
-          matchRequested--;
-        else if(allobsRequested && match[0] === 'There is no such game.')
-          allobsRequested--;
-
-        if(status) {
-          if(match[0].startsWith('Ambiguous name'))
-            status.text(`There is no player matching the name ${match[1]}.`);
-          else if(match[0].includes('is not open for bughouse.'))
-            status.text(`${match[0]} Ask them to 'set bugopen 1' in the Console.`);
-          else if(match[0] === 'You cannot seek bughouse games.')
-            status.text('You must specify an opponent for bughouse.');
-          else if(match[0].includes('no partner for bughouse.'))
-            status.text(`${match[0]} Get one by using 'partner <username>' in the Console.`);
-          else
-            status.text(match[0]);
-
-          status.show();
-        }
-        return;
-      }
-
-      match = msg.match(/(?:^|\n)(\d+ players?, who (?:has|have) an adjourned game with you, (?:is|are) online:)\n(.*)/);
-      if(match && match.length > 2) {
-        var n = Dialogs.createNotification({type: 'Resume Game', title: `${match[1]}<br>${match[2]}`, btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
-        n.attr('data-adjourned-list', "true");
-        chat.newMessage('console', data);
-        return;
-      }
-      match = msg.match(/^Notification: ((\S+), who has an adjourned game with you, has arrived\.)/m);
-      if(match && match.length > 2) {
-        if(!$(`.notification[data-adjourned-arrived="${match[2]}"]`).length) {
-          var n = Dialogs.createNotification({type: 'Resume Game', title: match[1], btnSuccess: [`resume ${match[2]}`, 'Resume Game'], useSessionSend: true});
-          n.attr('data-adjourned-arrived', match[2]);
-        }
-        return;
-      }
-      match = msg.match(/^\w+ is not logged in./m);
-      if(!match)
-        match = msg.match(/^Player [a-zA-Z\"]+ is censoring you./m);
-      if(!match)
-        match = msg.match(/^Sorry the message is too long./m);
-      if(!match)
-        match = msg.match(/^You are muted./m);
-      if(!match)
-        match = msg.match(/^Only registered players may whisper to others' games./m);
-      if(!match)
-        match = msg.match(/^Notification: .*/m);
-      if(match && match.length > 0) {
-        chat.newNotification(match[0]);
-        return;
-      }
-
-      // A match request sent to a player was declined or the player left
-      match = msg.match(/^(\w+ declines the match offer\.)/m);
-      if(!match)
-        match = msg.match(/^(\w+, whom you were challenging, has departed\.)/m);
-      if(match && match.length > 1) {
-        $('#pairing-pane-status').show();
-        $('#pairing-pane-status').text(match[1]);
-      }
-
-      match = msg.match(/^(\w+ declines the partnership request\.)/m);
-      if(match && match.length > 1) {
-        let headerTitle = 'Partnership Declined';
-        let bodyTitle = match[1];
-        Dialogs.createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
-      }
-      match = msg.match(/^(\w+ agrees to be your partner\.)/m);
-      if(match && match.length > 1) {
-        let headerTitle = 'Partnership Accepted';
-        let bodyTitle = match[1];
-        Dialogs.createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
-      }
-
-      match = msg.match(/^You are now observing game \d+\./m);
-      if(match) {
-        if(obsRequested) {
-          obsRequested--;
-          $('#observe-pane-status').hide();
-          return;
-        }
-
-        chat.newMessage('console', data);
-        return;
-      }
-
-      match = msg.match(/^(Issuing match request since the seek was set to manual\.)/m);
-      if(match && match.length > 1 && lobbyRequested) {
-        $('#lobby-pane-status').text(match[1]);
-        $('#lobby-pane-status').show();
-      }
-
-      match = msg.match(/^Your seek has been posted with index \d+\./m);
-      if(match) {
-        // retrieve <sn> notification
-        session.send('iset showownseek 1');
-        session.send('iset seekinfo 1');
-        session.send('iset seekinfo 0');
-        session.send('iset showownseek 0');
-        return;
-      }
-
-      match = msg.match(/^Your seeks have been removed\./m);
-      if(!match)
-        match = msg.match(/^Your seek (\d+) has been removed\./m);
-      if(match) {
-        if(match.length > 1) // delete seek by id
-          $(`.sent-offer[data-offer-id="${match[1]}"]`).remove();
-        else  // Remove all seeks
-          $('.sent-offer[data-offer-type="sn"]').remove();
-
-        if(!$('#sent-offers-status').children().length)
-          $('#sent-offers-status').hide();
-        return;
-      }
-
-      match = msg.match(/(?:^|\n)\s*Movelist for game (\d+):\s+(\S+) \((\d+|UNR)\) vs\. (\S+) \((\d+|UNR)\)[^\n]+\s+(\w+) (\S+) match, initial time: (\d+) minutes, increment: (\d+) seconds\./);
-      if (match != null && match.length > 9) {
-        var game = games.findGame(+match[1]);
-        if(game && (game.movelistRequested || game.gameStatusRequested)) {
-          if(game.isExamining()) {
-            var id = match[1];
-            var wname = match[2];
-            var wrating = game.wrating = match[3];
-            var bname = match[4];
-            var brating = game.brating = match[5];
-            var rated = match[6].toLowerCase();
-            game.category = match[7];
-            var initialTime = match[8];
-            var increment = match[9];
-
-            if(wrating === 'UNR') {
-              game.wrating = '';
-              match = wname.match(/Guest[A-Z]{4}/);
-              if(match)
-                wrating = '++++';
-              else wrating = '----';
-            }
-            if(brating === 'UNR') {
-              game.brating = '';
-              match = bname.match(/Guest[A-Z]{4}/);
-              if(match)
-                brating = '++++';
-              else brating = '----';
-            }
-
-            game.element.find('.player-status .rating').text(game.color === 'b' ? game.brating : game.wrating);
-            game.element.find('.opponent-status .rating').text(game.color === 'b' ? game.wrating : game.brating);
-
-            let time = ` ${initialTime} ${increment}`;
-            if(initialTime === '0' && increment === '0')
-              time = '';
-
-            const statusMsg = `<span class="game-id">Game ${id}: </span>${wname} (${wrating}) ${bname} (${brating}) `
-              + `${rated} ${game.category}${time}`;
-            showStatusMsg(game, statusMsg);
-
-            var tags = game.history.metatags;
-            game.history.setMetatags({
-              ...(!('WhiteElo' in tags) && { WhiteElo: game.wrating || '-' }),
-              ...(!('BlackElo' in tags) && { BlackElo: game.brating || '-' }),
-              ...(!('Variant' in tags) && { Variant: game.category })
-            });
-            var chatTab = chat.getTabFromGameID(game.id);
-            if(chatTab)
-              chat.updateGameDescription(chatTab);
-            initAnalysis(game);
-            initGameTools(game);
-          }
-
-          game.gameStatusRequested = false;
-          if(game.movelistRequested) {
-            game.movelistRequested--;
-            var categorySupported = SupportedCategories.includes(game.category);
-            if(categorySupported)
-              parseMovelist(game, msg);
-
-            if(game.isExamining()) {
-              if(game.history.length() || !categorySupported)
-                session.send('back 999');
-              if(!game.history.length || !categorySupported)
-                game.history.scratch(true);
-
-              if(game.mexamineMovelist) { // Restore current move after retrieving move list in mexamine mode
-                if(categorySupported) {
-                  let curr = game.history.first().next;
-                  let forwardNum = 0;
-                  for(let move of game.mexamineMovelist) {
-                    if(curr && ChessHelper.moveToCoordinateString(curr.move) === move) {
-                      forwardNum++;
-                      curr = curr.next;
-                    }
-                    else {
-                      curr = null;
-                      if(forwardNum) {
-                        session.send(`forward ${forwardNum}`);
-                        forwardNum = 0;
-                      }
-                      session.send(move);
-                    }
-                  }
-                  if(forwardNum)
-                    session.send(`forward ${forwardNum}`);
-                }
-                game.mexamineMovelist = null;
-              }
-            }
-            else
-              game.history.display();
-          }
-          updateBoard(game, false, false);
-          return;
-        }
-        else {
-          chat.newMessage('console', data);
-          return;
-        }
-      }
-
-      match = msg.match(/^Your partner is playing game (\d+)/m);
-      if (match != null && match.length > 1) {
-        if(settings.multiboardToggle)
-          session.send('pobserve');
-
-        partnerGameId = +match[1];
-        var mainGame = games.getPlayingExaminingGame();
-        if(mainGame) {
-          mainGame.partnerGameId = partnerGameId;
-          chat.createTab(`Game ${mainGame.id} and ${partnerGameId}`);
-        }
-      }
-
-      match = msg.match(/^(Creating|Game\s(\d+)): (\S+) \(([\d\+\-\s]+)\) (\S+) \(([\d\-\+\s]+)\) \S+ (\S+).+/m);
-      if (match != null && match.length > 7) {
-        if(!settings.multiboardToggle)
-          var game = games.getMainGame();
-        else {
-          var game = games.findGame(+match[2]);
-          if(!game)
-            game = games.getFreeGame();
-          if(!game)
-            game = createGame();
-        }
-
-        if(settings.multiboardToggle || !game.isPlaying() || +match[2] === game.id) {
-          game.wrating = (isNaN(match[4]) || match[4] === '0') ? '' : match[4];
-          game.brating = (isNaN(match[6]) || match[6] === '0') ? '' : match[6];
-          game.category = match[7];
-
-          var status = match[0].substring(match[0].indexOf(':') + 1);
-          if(game.role !== Role.NONE)
-            status = `<span class="game-id">Game ${game.id}: </span>${status}`;
-          showStatusMsg(game, status);
-
-          if(game.history)
-            game.history.initMetatags();
-          if (match[3] === session.getUser() || match[1].startsWith('Game')) {
-            game.element.find('.player-status .rating').text(game.wrating);
-            game.element.find('.opponent-status .rating').text(game.brating);
-          } else if (match[5] === session.getUser()) {
-            game.element.find('.opponent-status .rating').text(game.wrating);
-            game.element.find('.player-status .rating').text(game.brating);
-          }
-        }
-        data.message = msg = Utils.removeLine(msg, match[0]); // remove the matching line
-        if(!msg)
-          return;
-      }
-
-      /* Parse score and termination reason for examined games */
-      match = msg.match(/^Game (\d+): ([a-zA-Z]+)(?:' game|'s)?\s([^\d\*]+)\s([012/]+-[012/]+)/m);
-      if(match != null && match.length > 3) {
-        var game = games.findGame(+match[1]);
-        if(game && game.history) {
-          const who = match[2];
-          const action = match[3];
-          const score = match[4];
-          const [winner, loser, reason] = session.getParser().getGameResult(game.wname, game.bname, who, action);
-          game.history.setMetatags({Result: score, Termination: reason});
-          return;
-        }
-      }
-
-      match = msg.match(/^Removing game (\d+) from observation list./m);
-      if(!match)
-        match = msg.match(/^You are no longer examining game (\d+)./m);
-      if(match != null && match.length > 1) {
-        var game = games.findGame(+match[1]);
-        if(game) {
-          mexamineGame = game; // Stores the game in case a 'mexamine' is about to be issued.
-          if(game === games.focused)
-            stopEngine();
-          cleanupGame(game);
-        }
-
-        var index = gameExitPending.indexOf(+match[1]);
-        if(index !== -1) {
-          gameExitPending.splice(index, 1);
-          if(!gameExitPending.length && !settings.multiboardToggle)
-            session.send('refresh');
-        }
-        return;
-      }
-
-      match = msg.match(/(?:^|\n)-- channel list: \d+ channels --\s*([\d\s]*)/);
-      if (match !== null && match.length > 1) {
-        if(!channelListRequested)
-          chat.newMessage('console', data);
-
-        channelListRequested = false;
-        return chat.addChannels(match[1].split(/\s+/).sort(function(a, b) { return a - b; }));
-      }
-
-      match = msg.match(/(?:^|\n)-- computer list: \d+ names --([\w\s]*)/);
-      if (match !== null && match.length > 1) {
-        if(!computerListRequested)
-          chat.newMessage('console', data);
-
-        computerListRequested = false;
-        computerList = match[1].split(/\s+/);
-        return;
-      }
-
-      match = msg.match(/^\[\d+\] (?:added to|removed from) your channel list\./m);
-      if (match != null && match.length > 0) {
-        session.send('=ch');
-        channelListRequested = true;
-        chat.newMessage('console', data);
-        return;
-      }
-
-      // Suppress messages when 'moves' command issued internally
-      match = msg.match(/^You're at the (?:beginning|end) of the game\./m);
-      if(match) {
-        for(let game of games) {
-          if(game.movelistRequested) {
-            return;
-          }
-        }
-      }
-
-      // Moving backwards and forwards is now handled more generally by updateHistory()
-      match = msg.match(/^Game\s\d+: \w+ backs up (\d+) moves?\./m);
-      if (match != null && match.length > 1)
-        return;
-      match = msg.match(/^Game\s\d+: \w+ goes forward (\d+) moves?\./m);
-      if (match != null && match.length > 1)
-        return;
-
-      // Enter setup mode when server (other user or us) issues 'bsetup' command
-      match = msg.match(/^Entering setup mode\./m);
-      if(!match)
-        match = msg.match(/^Game (\d+): \w+ enters setup mode\./m);
-      if(match) {
-        if(match.length > 1)
-          var game = games.findGame(+match[1]);
-        else
-          var game = games.getPlayingExaminingGame();
-
-        if(game) {
-          if(!game.commitingMovelist && !game.setupBoard)
-            setupBoard(game, true);
-        }
-        else
-          setupBoardPending = true; // user issued 'bsetup' before 'examine'
-      }
-      // Leave setup mode when server (other user or us) issues 'bsetup done' command
-      match = msg.match(/^Game is validated - entering examine mode\./m);
-      if(!match)
-        match = msg.match(/^Game (\d+): \w+ has validated the position. Entering examine mode\./m);
-      if(match) {
-        if(match.length > 1)
-          var game = games.findGame(+match[1]);
-        else
-          var game = games.getPlayingExaminingGame();
-
-        if(game && !game.commitingMovelist && game.setupBoard)
-          leaveSetupBoard(game, true);
-      }
-
-      // Suppress output when commiting a movelist in examine mode
-      match = msg.match(/^Game \d+: \w+ commits the subvariation\./m);
-      if(!match)
-        match = msg.match(/^Game \d+: \w+ sets (white|black)'s clock to \S+/m);
-      if(!match)
-        match = msg.match(/^Game \d+: \w+ moves: \S+/m);
-      if(!match)
-        match = msg.match(/^Entering setup mode\./m);
-      if(!match)
-        match = msg.match(/^Castling rights for (white|black) set to \w+\./m);
-      if(!match)
-        match = msg.match(/^It is now (white|black)'s turn to move\./m);
-      if(!match)
-        match = msg.match(/^Game is validated - entering examine mode\./m);
-      if(!match)
-        match = msg.match(/^The game type is now .*/m);
-      if(!match)
-        match = msg.match(/^done: Command not found\./m);
-      if(match) {
-        var game = games.getPlayingExaminingGame();
-        if(game && game.commitingMovelist) {
-          if(match[0] === 'done: Command not found.') // This was sent by us to indicate when we are done
-            game.commitingMovelist = false;
-          return;
-        }
-      }
-
-      // Support for multiple examiners, we need to handle other users commiting or truncating moves from the main line
-      match = msg.match(/^Game (\d+): \w+ commits the subvariation\./m);
-      if(match) {
-        var game = games.findGame(+match[1]);
-        if(game) {
-          // An examiner has commited the current move to the mainline. So we need to also make it the mainline.
-          game.history.scratch(false);
-          var curr = game.history.current();
-          while(curr.depth() > 0)
-            game.history.promoteSubvariation(curr);
-          // Make the moves following the commited move a continuation (i.e. not mainline)
-          if(curr.next)
-            game.history.makeContinuation(curr.next);
-        }
-      }
-      match = msg.match(/^Game (\d+): \w+ truncates the game at halfmove (\d+)\./m);
-      if(match) {
-        var game = games.findGame(+match[1]);
-        if(game) {
-          var index = +match[2];
-          if(index === 0)
-            game.history.scratch(true); // The entire movelist was truncated so revert back to being a scratch game
-          else {
-            var entry = game.history.getByIndex(index)
-            if(entry && entry.next)
-              game.history.makeContinuation(entry.next);
-          }
-        }
-      }
-
-      match = msg.match(/^\w+ has made you an examiner of game (\d+)\./m);
-      if(match) {
-        let id = +match[1];
-        mexamineRequested = mexamineGame;
-        return;
-      }
-
-      match = msg.match(/^Starting a game in examine \(scratch\) mode\./m);
-      if(match && examineModeRequested)
-        return;
-
-      if (
-        msg === 'Style 12 set.' ||
-        msg === 'You will not see seek ads.' ||
-        msg === 'You will now hear communications echoed.' ||
-        msg === 'seekinfo set.' || msg === 'seekinfo unset.' ||
-        msg === 'seekremove set.' || msg === 'seekremove unset.' ||
-        msg === 'defprompt set.' ||
-        msg === 'nowrap set.' ||
-        msg === 'startpos set.' || msg === 'startpos unset.' ||
-        msg === 'showownseek set.' || msg === 'showownseek unset.' ||
-        msg === 'pendinfo set.' ||
-        msg === 'ms set.' ||
-        msg.startsWith('<12>') // Discard malformed style 12 messages (sometimes the server sends them split in two etc).
-      ) {
-        return;
-      }
-
-      chat.newMessage('console', data);
+      handleMiscMessage(data);
       break;
+  }
+}
+
+function gameMove(data: any) {
+  if(gameExitPending.includes(data.id))
+    return;
+
+  // If in single-board mode, check we are not examining/observing another game already
+  if(!settings.multiboardToggle) {
+    var game = games.getMainGame();
+    if(game.isPlayingOnline() && game.id !== data.id) {
+      if(data.role === Role.OBSERVING || data.role === Role.OBS_EXAMINED)
+        session.send(`unobs ${data.id}`);
+      return;
+    }
+    else if((game.isExamining() || game.isObserving()) && game.id !== data.id) {
+      if(game.isExamining()) {
+        session.send('unex');
+      }
+      else if(game.isObserving())
+        session.send(`unobs ${game.id}`);
+
+      if(data.role === Role.PLAYING_COMPUTER)
+        cleanupGame(game);
+      else {
+        gameExitPending.push(game.id);
+        return;
+      }
+    }
+    else if(game.role === Role.PLAYING_COMPUTER && data.role !== Role.PLAYING_COMPUTER)
+      cleanupGame(game); // Allow player to imemediately play/examine/observe a game at any time while playing the Computer. The Computer game will simply be aborted.
+  }
+
+  if((examineModeRequested || mexamineRequested) && data.role === Role.EXAMINING) {
+    // Converting a game to examine mode
+    game = examineModeRequested || mexamineRequested;
+    if(game.role !== Role.NONE && settings.multiboardToggle)
+      game = cloneGame(game);
+    game.id = data.id;
+    if(!game.wname)
+      game.wname = data.wname;
+    if(!game.bname)
+      game.bname = data.bname;
+    game.role = Role.EXAMINING;
+  }
+  else {
+    if(settings.multiboardToggle) {
+      // Get game object
+      var game = games.findGame(data.id);
+      if(!game)
+        game = games.getFreeGame();
+      if(!game)
+        game = createGame();
+    }
+
+    var prevRole = game.role;
+    Object.assign(game, data);
+  }
+
+  // New game
+  if(examineModeRequested || mexamineRequested || prevRole === Role.NONE)
+    gameStart(game);
+
+  // Make move
+  if(game.setupBoard && !game.commitingMovelist) {
+    updateSetupBoard(game, game.fen, true);
+  }
+  else if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
+    var lastFen = currentGameMove(game).fen;
+    const lastPly = ChessHelper.getPlyFromFEN(lastFen);
+    const thisPly = ChessHelper.getPlyFromFEN(game.fen);
+
+    if(game.move !== 'none' && thisPly === lastPly + 1) { // make sure the move no is right
+      var parsedMove = parseGameMove(game, lastFen, game.move);
+      movePieceAfter(game, (parsedMove ? parsedMove.move : game.moveVerbose), game.fen);
+    }
+    else
+      updateHistory(game, null, game.fen);
+
+    hitClock(game, true);
   }
 }
 
@@ -1683,6 +898,194 @@ function gameStart(game: Game) {
     scrollToBoard(game);
 }
 
+function gameEnd(data: any) {
+  var game = games.findGame(data.game_id);
+  if(!game)
+    return;
+
+  // Set clock time to the time that the player resigns/aborts etc.
+  game.history.updateClockTimes(game.history.last(), game.clock.getWhiteTime(), game.clock.getBlackTime());
+
+  if(data.reason <= 4 && game.element.find('.player-status .name').text() === data.winner) {
+    // player won
+    game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-win-color)');
+    game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-lose-color)');
+    if (game === games.focused && settings.soundToggle) {
+      Sounds.winSound.play();
+    }
+  } else if (data.reason <= 4 && game.element.find('.player-status .name').text() === data.loser) {
+    // opponent won
+    game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-lose-color)');
+    game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-win-color)');
+    if (game === games.focused && settings.soundToggle) {
+      Sounds.loseSound.play();
+    }
+  } else {
+    // tie
+    game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-tie-color)');
+    game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-tie-color)');
+  }
+
+  var status = data.message.replace(/Game \d+ /, '');
+  showStatusMsg(game, status);
+
+  if(game.isPlaying()) {
+    let rematch = [], analyze = [];
+    var useSessionSend = true;
+    if(data.reason !== Reason.Disconnect && data.reason !== Reason.Adjourn && data.reason !== Reason.Abort) {
+      if(game.role === Role.PLAYING_COMPUTER) {
+        rematch = ['rematchComputer();', 'Rematch'];
+        useSessionSend = false;
+      }
+      else if(game.element.find('.player-status .name').text() === session.getUser())
+        rematch = [`sessionSend('rematch')`, 'Rematch']
+    }
+    if(data.reason !== Reason.Adjourn && data.reason !== Reason.Abort && game.history.length()) {
+      analyze = ['analyze();', 'Analyze'];
+    }
+    Dialogs.showBoardDialog({type: 'Match Result', msg: data.message, btnFailure: rematch, btnSuccess: analyze, icons: false});
+  }
+  game.history.setMetatags({Result: data.score, Termination: data.reason});
+
+  cleanupGame(game);
+}
+
+function handleOffers(offers: any[]) { 
+  // Clear the lobby
+  if(offers[0].type === 'sc')
+    $('#lobby-table').html('');
+
+  // Add seeks to the lobby
+  var seeks = offers.filter((item) => item.type === 's');
+  if(seeks.length && lobbyRequested) {
+    seeks.forEach((item) => {
+      if(!settings.lobbyShowComputersToggle && item.title === 'C')
+        return;
+      if(!settings.lobbyShowUnratedToggle && item.ratedUnrated === 'u')
+        return;
+
+      var lobbyEntryText = formatLobbyEntry(item);
+
+      $('#lobby-table').append(
+        `<button type="button" data-offer-id="${item.id}" class="btn btn-outline-secondary lobby-entry"` 
+          + ` onclick="acceptSeek(${item.id});">${lobbyEntryText}</button>`);
+    });
+
+    if(lobbyScrolledToBottom) {
+      var container = $('#lobby-table-container')[0];
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  // Add our own seeks and match requests to the top of the Play pairing pane
+  var sentOffers = offers.filter((item) => item.type === 'sn'
+    || (item.type === 'pt' && (item.subtype === 'partner' || item.subtype === 'match')));
+  if(sentOffers.length) {
+    sentOffers.forEach((item) => {
+      if(!$(`.sent-offer[data-offer-id="${item.id}"]`).length) {
+        if(matchRequested)
+          matchRequested--;
+        newSentOffers.push(item);
+        if(item.adjourned)
+          removeAdjournNotification(item.opponent);
+      }
+    });
+    if(newSentOffers.length) {
+      clearTimeout(showSentOffersTimer);
+      showSentOffersTimer = setTimeout(() => {
+        showSentOffers(newSentOffers);
+        newSentOffers = [];
+      }, 1000);
+    }
+    $('#pairing-pane-status').hide();
+  }
+
+  // Offers received from another player
+  var otherOffers = offers.filter((item) => item.type === 'pf');
+  otherOffers.forEach((item) => {
+    var headerTitle = '', bodyTitle = '', bodyText = '', displayType = '';
+    switch(item.subtype) {
+      case 'match':
+        displayType = 'notification';
+        var time = !isNaN(item.initialTime) ? ` ${item.initialTime} ${item.increment}` : '';
+        bodyText = `${item.ratedUnrated} ${item.category}${time}`;
+        if(item.adjourned) {
+          headerTitle = 'Resume Adjourned Game Request';
+          removeAdjournNotification(item.opponent);
+        }
+        else
+          headerTitle = 'Match Request';
+        bodyTitle = `${item.opponent} (${item.opponentRating})${item.color ? ` [${item.color}]` : ''}`;
+        $('.notification').each((index, element) => {
+          var headerTextElement = $(element).find('.header-text');
+          var bodyTextElement = $(element).find('.body-text');
+          if(headerTextElement.text() === 'Match Request' && bodyTextElement.text().startsWith(`${item.opponent}(`)) {
+            $(element).attr('data-offer-id', item.id);
+            bodyTextElement.text(`${bodyTitle} ${bodyText}`);
+            var btnSuccess = $(element).find('.button-success');
+            var btnFailure = $(element).find('.button-failure');
+            btnSuccess.attr('onclick', `sessionSend('accept ${item.id}');`);
+            btnFailure.attr('onclick', `sessionSend('decline ${item.id}');`);
+            displayType = '';
+          }
+        });
+        break;
+      case 'partner':
+        displayType = 'notification';
+        headerTitle = 'Partnership Request';
+        bodyTitle = item.toFrom;
+        bodyText = 'offers to be your bughouse partner.';
+        break;
+      case 'takeback':
+        displayType = 'dialog';
+        headerTitle = 'Takeback Request';
+        bodyTitle = item.toFrom;
+        bodyText = `would like to take back ${item.parameters} half move(s).`;
+        break;
+      case 'abort':
+        displayType = 'dialog';
+        headerTitle = 'Abort Request';
+        bodyTitle = item.toFrom;
+        bodyText = 'would like to abort the game.';
+        break;
+      case 'draw':
+        displayType = 'dialog';
+        headerTitle = 'Draw Request';
+        bodyTitle = item.toFrom;
+        bodyText = 'offers you a draw.';
+        break;
+      case 'adjourn':
+        displayType = 'dialog';
+        headerTitle = 'Adjourn Request';
+        bodyTitle = item.toFrom;
+        bodyText = 'would like to adjourn the game.';
+        break;
+    }
+
+    if(displayType) {
+      if(displayType === 'notification')
+        var dialog = Dialogs.createNotification({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
+      else if(displayType === 'dialog')
+        var dialog = Dialogs.showBoardDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
+      dialog.attr('data-offer-id', item.id);
+    }
+  });
+
+  // Remove match requests and seeks. Note our own seeks are removed in the MessageType.Unknown section
+  // since <sr> info is only received when we are in the lobby.
+  var removals = offers.filter((item) => item.type === 'pr' || item.type === 'sr');
+  removals.forEach((item) => {
+    item.ids.forEach((id) => {
+      Dialogs.removeNotification($(`.notification[data-offer-id="${id}"]`)); // If match request was not ours, remove the Notification
+      $(`.board-dialog[data-offer-id="${id}"]`).toast('hide'); // if in-game request, hide the dialog
+      $(`.sent-offer[data-offer-id="${id}"]`).remove(); // If offer, match request or seek was sent by us, remove it from the Play pane
+      $(`.lobby-entry[data-offer-id="${id}"]`).remove(); // Remove seek from lobby
+    });
+    if(!$('#sent-offers-status').children().length)
+      $('#sent-offers-status').hide();
+  });
+}
+
 function showSentOffers(offers: any) {
   var requestsHtml = '';
   offers.forEach((offer) => {
@@ -1773,6 +1176,617 @@ function removeAdjournNotification(opponent: string) {
         bodyTextElement.html(`${players.length}${msg}${players.join(' ')}`);
     }
   }
+}
+
+function handleMiscMessage(data: any) {
+  var msg = data.message;
+
+  var match = msg.match(/^No one is observing game (\d+)\./m);
+  if (match != null && match.length > 1) {
+    if(allobsRequested) {
+      allobsRequested--;
+      return;
+    }
+    chat.newMessage('console', data);
+    return;
+  }
+
+  match = msg.match(/^(?:Observing|Examining)\s+(\d+) [\(\[].+[\)\]]: (.+) \(\d+ users?\)/m);
+  if (match != null && match.length > 1) {
+    if (allobsRequested) {
+      allobsRequested--;
+      var game = games.findGame(+match[1]);
+      if(!game)
+        return;
+
+      game.statusElement.find('.game-watchers').empty();
+      match[2] = match[2].replace(/\(U\)/g, '');
+      const watchers = match[2].split(' ');
+      game.watchers = watchers.filter(item => item.replace('#', '') !== session.getUser());
+      var chatTab = chat.getTabFromGameID(game.id);
+      if(chatTab)
+        chat.updateNumWatchers(chatTab);
+      let req = '';
+      let numWatchers = 0;
+      for (let i = 0; i < watchers.length; i++) {
+        if(watchers[i].replace('#', '') === session.getUser())
+          continue;
+        numWatchers++;
+        if(numWatchers == 1)
+          req = 'Watchers:';
+        req += `<span class="ms-1 badge rounded-pill bg-secondary noselect">${watchers[i]}</span>`;
+        if(numWatchers > 5) {
+          req += ` + ${watchers.length - i} more.`;
+          break;
+        }
+      }
+      game.statusElement.find('.game-watchers').html(req);
+      return;
+    }
+    chat.newMessage('console', data);
+    return;
+  }
+
+  match = msg.match(/(?:^|\n)\s*\d+\s+(\(Exam\.\s+)?[0-9\+]+\s\w+\s+[0-9\+]+\s\w+\s*(\)\s+)?\[[\w\s]+\]\s+[\d:]+\s*\-\s*[\d:]+\s\(\s*\d+\-\s*\d+\)\s+[BW]:\s+\d+\s*\d+ games displayed/);
+  if (match != null && match.length > 0 && gamesRequested) {
+    showGames(msg);
+    gamesRequested = false;
+    return;
+  }
+
+  match = msg.match(/^Game (\d+): (\S+) has lagged for 30 seconds\./m);
+  if(match) {
+    var game = games.findGame(+match[1]);
+    if(game && game.isPlaying()) {
+      var bodyText = `${match[2]} has lagged for 30 seconds.<br>You may courtesy adjourn the game.<br><br>If you believe your opponent has intentionally disconnected, you can request adjudication of an adjourned game. Type 'help adjudication' in the console for more info.`;
+      var dialog = Dialogs.showBoardDialog({type: 'Opponent Lagging', msg: bodyText, btnFailure: ['', 'Wait'], btnSuccess: ['adjourn', 'Adjourn'], useSessionSend: true});
+      dialog.attr('data-game-id', game.id);
+    }
+    chat.newMessage('console', data);
+    return;
+  }
+
+  match = msg.match(/^History for (\w+):.*/m);
+  if (match != null && match.length > 1) {
+    if (historyRequested) {
+      historyRequested--;
+      if(!historyRequested) {
+        $('#history-username').val(match[1]);
+        showHistory(match[1], data.message);
+      }
+    }
+    else
+      chat.newMessage('console', data);
+
+    return;
+  }
+
+  // Retrieve status/error messages from commands sent to the server via the left menus
+  match = msg.match(/^There is no player matching the name \w+\./m);
+  if(!match)
+    match = msg.match(/^\S+ is not a valid handle\./m);
+  if(!match)
+    match = msg.match(/^\w+ has no history games\./m);
+  if(!match)
+    match = msg.match(/^You need to specify at least two characters of the name\./m);
+  if(!match)
+    match = msg.match(/^Ambiguous name (\w+):/m);
+  if(!match)
+    match = msg.match(/^\w+ is not logged in\./m);
+  if(!match)
+    match = msg.match(/^\w+ is not playing a game\./m);
+  if(!match)
+    match = msg.match(/^Sorry, game \d+ is a private game\./m);
+  if(!match)
+    match = msg.match(/^\w+ is playing a game\./m);
+  if(!match)
+    match = msg.match(/^\w+ is examining a game\./m);
+  if(!match)
+    match = msg.match(/^You can't match yourself\./m);
+  if(!match)
+    match = msg.match(/^You cannot challenge while you are (?:examining|playing) a game\./m);
+  if(!match)
+    match = msg.match(/^You are already offering an identical match to \w+\./m);
+  if(!match)
+    match = msg.match(/^You can only have 3 active seeks\./m);
+  if(!match)
+    match = msg.match(/^There is no such game\./m);
+  if(!match)
+    match = msg.match(/^You cannot seek bughouse games\./m);
+  if(!match)
+    match = msg.match(/^\w+ is not open for bughouse\./m);
+  if(!match)
+    match = msg.match(/^Your opponent has no partner for bughouse\./m);
+  if(!match)
+    match = msg.match(/^You have no partner for bughouse\./m);
+  if(match && (historyRequested || obsRequested || matchRequested || allobsRequested)) {
+    let status;
+    if(historyRequested)
+      status = $('#history-pane-status');
+    else if(obsRequested)
+      status = $('#observe-pane-status');
+    else if(matchRequested)
+      status = $('#pairing-pane-status');
+
+    if(historyRequested) {
+      historyRequested--;
+      if(historyRequested)
+        return;
+
+      $('#history-table').html('');
+    }
+    else if(obsRequested) {
+      obsRequested--;
+      if(obsRequested)
+        return;
+    }
+    else if(matchRequested)
+      matchRequested--;
+    else if(allobsRequested && match[0] === 'There is no such game.')
+      allobsRequested--;
+
+    if(status) {
+      if(match[0].startsWith('Ambiguous name'))
+        status.text(`There is no player matching the name ${match[1]}.`);
+      else if(match[0].includes('is not open for bughouse.'))
+        status.text(`${match[0]} Ask them to 'set bugopen 1' in the Console.`);
+      else if(match[0] === 'You cannot seek bughouse games.')
+        status.text('You must specify an opponent for bughouse.');
+      else if(match[0].includes('no partner for bughouse.'))
+        status.text(`${match[0]} Get one by using 'partner <username>' in the Console.`);
+      else
+        status.text(match[0]);
+
+      status.show();
+    }
+    return;
+  }
+
+  match = msg.match(/(?:^|\n)(\d+ players?, who (?:has|have) an adjourned game with you, (?:is|are) online:)\n(.*)/);
+  if(match && match.length > 2) {
+    var n = Dialogs.createNotification({type: 'Resume Game', title: `${match[1]}<br>${match[2]}`, btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
+    n.attr('data-adjourned-list', "true");
+    chat.newMessage('console', data);
+    return;
+  }
+  match = msg.match(/^Notification: ((\S+), who has an adjourned game with you, has arrived\.)/m);
+  if(match && match.length > 2) {
+    if(!$(`.notification[data-adjourned-arrived="${match[2]}"]`).length) {
+      var n = Dialogs.createNotification({type: 'Resume Game', title: match[1], btnSuccess: [`resume ${match[2]}`, 'Resume Game'], useSessionSend: true});
+      n.attr('data-adjourned-arrived', match[2]);
+    }
+    return;
+  }
+  match = msg.match(/^\w+ is not logged in./m);
+  if(!match)
+    match = msg.match(/^Player [a-zA-Z\"]+ is censoring you./m);
+  if(!match)
+    match = msg.match(/^Sorry the message is too long./m);
+  if(!match)
+    match = msg.match(/^You are muted./m);
+  if(!match)
+    match = msg.match(/^Only registered players may whisper to others' games./m);
+  if(!match)
+    match = msg.match(/^Notification: .*/m);
+  if(match && match.length > 0) {
+    chat.newNotification(match[0]);
+    return;
+  }
+
+  // A match request sent to a player was declined or the player left
+  match = msg.match(/^(\w+ declines the match offer\.)/m);
+  if(!match)
+    match = msg.match(/^(\w+, whom you were challenging, has departed\.)/m);
+  if(match && match.length > 1) {
+    $('#pairing-pane-status').show();
+    $('#pairing-pane-status').text(match[1]);
+  }
+
+  match = msg.match(/^(\w+ declines the partnership request\.)/m);
+  if(match && match.length > 1) {
+    let headerTitle = 'Partnership Declined';
+    let bodyTitle = match[1];
+    Dialogs.createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
+  }
+  match = msg.match(/^(\w+ agrees to be your partner\.)/m);
+  if(match && match.length > 1) {
+    let headerTitle = 'Partnership Accepted';
+    let bodyTitle = match[1];
+    Dialogs.createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
+  }
+
+  match = msg.match(/^You are now observing game \d+\./m);
+  if(match) {
+    if(obsRequested) {
+      obsRequested--;
+      $('#observe-pane-status').hide();
+      return;
+    }
+
+    chat.newMessage('console', data);
+    return;
+  }
+
+  match = msg.match(/^(Issuing match request since the seek was set to manual\.)/m);
+  if(match && match.length > 1 && lobbyRequested) {
+    $('#lobby-pane-status').text(match[1]);
+    $('#lobby-pane-status').show();
+  }
+
+  match = msg.match(/^Your seek has been posted with index \d+\./m);
+  if(match) {
+    // retrieve <sn> notification
+    session.send('iset showownseek 1');
+    session.send('iset seekinfo 1');
+    session.send('iset seekinfo 0');
+    session.send('iset showownseek 0');
+    return;
+  }
+
+  match = msg.match(/^Your seeks have been removed\./m);
+  if(!match)
+    match = msg.match(/^Your seek (\d+) has been removed\./m);
+  if(match) {
+    if(match.length > 1) // delete seek by id
+      $(`.sent-offer[data-offer-id="${match[1]}"]`).remove();
+    else  // Remove all seeks
+      $('.sent-offer[data-offer-type="sn"]').remove();
+
+    if(!$('#sent-offers-status').children().length)
+      $('#sent-offers-status').hide();
+    return;
+  }
+
+  match = msg.match(/(?:^|\n)\s*Movelist for game (\d+):\s+(\S+) \((\d+|UNR)\) vs\. (\S+) \((\d+|UNR)\)[^\n]+\s+(\w+) (\S+) match, initial time: (\d+) minutes, increment: (\d+) seconds\./);
+  if (match != null && match.length > 9) {
+    var game = games.findGame(+match[1]);
+    if(game && (game.movelistRequested || game.gameStatusRequested)) {
+      if(game.isExamining()) {
+        var id = match[1];
+        var wname = match[2];
+        var wrating = game.wrating = match[3];
+        var bname = match[4];
+        var brating = game.brating = match[5];
+        var rated = match[6].toLowerCase();
+        game.category = match[7];
+        var initialTime = match[8];
+        var increment = match[9];
+
+        if(wrating === 'UNR') {
+          game.wrating = '';
+          match = wname.match(/Guest[A-Z]{4}/);
+          if(match)
+            wrating = '++++';
+          else wrating = '----';
+        }
+        if(brating === 'UNR') {
+          game.brating = '';
+          match = bname.match(/Guest[A-Z]{4}/);
+          if(match)
+            brating = '++++';
+          else brating = '----';
+        }
+
+        game.element.find('.player-status .rating').text(game.color === 'b' ? game.brating : game.wrating);
+        game.element.find('.opponent-status .rating').text(game.color === 'b' ? game.wrating : game.brating);
+
+        let time = ` ${initialTime} ${increment}`;
+        if(initialTime === '0' && increment === '0')
+          time = '';
+
+        const statusMsg = `<span class="game-id">Game ${id}: </span>${wname} (${wrating}) ${bname} (${brating}) `
+          + `${rated} ${game.category}${time}`;
+        showStatusMsg(game, statusMsg);
+
+        var tags = game.history.metatags;
+        game.history.setMetatags({
+          ...(!('WhiteElo' in tags) && { WhiteElo: game.wrating || '-' }),
+          ...(!('BlackElo' in tags) && { BlackElo: game.brating || '-' }),
+          ...(!('Variant' in tags) && { Variant: game.category })
+        });
+        var chatTab = chat.getTabFromGameID(game.id);
+        if(chatTab)
+          chat.updateGameDescription(chatTab);
+        initAnalysis(game);
+        initGameTools(game);
+      }
+
+      game.gameStatusRequested = false;
+      if(game.movelistRequested) {
+        game.movelistRequested--;
+        var categorySupported = SupportedCategories.includes(game.category);
+        if(categorySupported)
+          parseMovelist(game, msg);
+
+        if(game.isExamining()) {
+          if(game.history.length() || !categorySupported)
+            session.send('back 999');
+          if(!game.history.length || !categorySupported)
+            game.history.scratch(true);
+
+          if(game.mexamineMovelist) { // Restore current move after retrieving move list in mexamine mode
+            if(categorySupported) {
+              let curr = game.history.first().next;
+              let forwardNum = 0;
+              for(let move of game.mexamineMovelist) {
+                if(curr && ChessHelper.moveToCoordinateString(curr.move) === move) {
+                  forwardNum++;
+                  curr = curr.next;
+                }
+                else {
+                  curr = null;
+                  if(forwardNum) {
+                    session.send(`forward ${forwardNum}`);
+                    forwardNum = 0;
+                  }
+                  session.send(move);
+                }
+              }
+              if(forwardNum)
+                session.send(`forward ${forwardNum}`);
+            }
+            game.mexamineMovelist = null;
+          }
+        }
+        else
+          game.history.display();
+      }
+      updateBoard(game, false, false);
+      return;
+    }
+    else {
+      chat.newMessage('console', data);
+      return;
+    }
+  }
+
+  match = msg.match(/^Your partner is playing game (\d+)/m);
+  if (match != null && match.length > 1) {
+    if(settings.multiboardToggle)
+      session.send('pobserve');
+
+    partnerGameId = +match[1];
+    var mainGame = games.getPlayingExaminingGame();
+    if(mainGame) {
+      mainGame.partnerGameId = partnerGameId;
+      chat.createTab(`Game ${mainGame.id} and ${partnerGameId}`);
+    }
+  }
+
+  match = msg.match(/^(Creating|Game\s(\d+)): (\S+) \(([\d\+\-\s]+)\) (\S+) \(([\d\-\+\s]+)\) \S+ (\S+).+/m);
+  if (match != null && match.length > 7) {
+    if(!settings.multiboardToggle)
+      var game = games.getMainGame();
+    else {
+      var game = games.findGame(+match[2]);
+      if(!game)
+        game = games.getFreeGame();
+      if(!game)
+        game = createGame();
+    }
+
+    if(settings.multiboardToggle || !game.isPlaying() || +match[2] === game.id) {
+      game.wrating = (isNaN(match[4]) || match[4] === '0') ? '' : match[4];
+      game.brating = (isNaN(match[6]) || match[6] === '0') ? '' : match[6];
+      game.category = match[7];
+
+      var status = match[0].substring(match[0].indexOf(':') + 1);
+      if(game.role !== Role.NONE)
+        status = `<span class="game-id">Game ${game.id}: </span>${status}`;
+      showStatusMsg(game, status);
+
+      if(game.history)
+        game.history.initMetatags();
+      if (match[3] === session.getUser() || match[1].startsWith('Game')) {
+        game.element.find('.player-status .rating').text(game.wrating);
+        game.element.find('.opponent-status .rating').text(game.brating);
+      } else if (match[5] === session.getUser()) {
+        game.element.find('.opponent-status .rating').text(game.wrating);
+        game.element.find('.player-status .rating').text(game.brating);
+      }
+    }
+    data.message = msg = Utils.removeLine(msg, match[0]); // remove the matching line
+    if(!msg)
+      return;
+  }
+
+  /* Parse score and termination reason for examined games */
+  match = msg.match(/^Game (\d+): ([a-zA-Z]+)(?:' game|'s)?\s([^\d\*]+)\s([012/]+-[012/]+)/m);
+  if(match != null && match.length > 3) {
+    var game = games.findGame(+match[1]);
+    if(game && game.history) {
+      const who = match[2];
+      const action = match[3];
+      const score = match[4];
+      const [winner, loser, reason] = session.getParser().getGameResult(game.wname, game.bname, who, action);
+      game.history.setMetatags({Result: score, Termination: reason});
+      return;
+    }
+  }
+
+  match = msg.match(/^Removing game (\d+) from observation list./m);
+  if(!match)
+    match = msg.match(/^You are no longer examining game (\d+)./m);
+  if(match != null && match.length > 1) {
+    var game = games.findGame(+match[1]);
+    if(game) {
+      mexamineGame = game; // Stores the game in case a 'mexamine' is about to be issued.
+      if(game === games.focused)
+        stopEngine();
+      cleanupGame(game);
+    }
+
+    var index = gameExitPending.indexOf(+match[1]);
+    if(index !== -1) {
+      gameExitPending.splice(index, 1);
+      if(!gameExitPending.length && !settings.multiboardToggle)
+        session.send('refresh');
+    }
+    return;
+  }
+
+  match = msg.match(/(?:^|\n)-- channel list: \d+ channels --\s*([\d\s]*)/);
+  if (match !== null && match.length > 1) {
+    if(!channelListRequested)
+      chat.newMessage('console', data);
+
+    channelListRequested = false;
+    return chat.addChannels(match[1].split(/\s+/).sort(function(a, b) { return a - b; }));
+  }
+
+  match = msg.match(/(?:^|\n)-- computer list: \d+ names --([\w\s]*)/);
+  if (match !== null && match.length > 1) {
+    if(!computerListRequested)
+      chat.newMessage('console', data);
+
+    computerListRequested = false;
+    computerList = match[1].split(/\s+/);
+    return;
+  }
+
+  match = msg.match(/^\[\d+\] (?:added to|removed from) your channel list\./m);
+  if (match != null && match.length > 0) {
+    session.send('=ch');
+    channelListRequested = true;
+    chat.newMessage('console', data);
+    return;
+  }
+
+  // Suppress messages when 'moves' command issued internally
+  match = msg.match(/^You're at the (?:beginning|end) of the game\./m);
+  if(match) {
+    for(let game of games) {
+      if(game.movelistRequested) {
+        return;
+      }
+    }
+  }
+
+  // Moving backwards and forwards is now handled more generally by updateHistory()
+  match = msg.match(/^Game\s\d+: \w+ backs up (\d+) moves?\./m);
+  if (match != null && match.length > 1)
+    return;
+  match = msg.match(/^Game\s\d+: \w+ goes forward (\d+) moves?\./m);
+  if (match != null && match.length > 1)
+    return;
+
+  // Enter setup mode when server (other user or us) issues 'bsetup' command
+  match = msg.match(/^Entering setup mode\./m);
+  if(!match)
+    match = msg.match(/^Game (\d+): \w+ enters setup mode\./m);
+  if(match) {
+    if(match.length > 1)
+      var game = games.findGame(+match[1]);
+    else
+      var game = games.getPlayingExaminingGame();
+
+    if(game) {
+      if(!game.commitingMovelist && !game.setupBoard)
+        setupBoard(game, true);
+    }
+    else
+      setupBoardPending = true; // user issued 'bsetup' before 'examine'
+  }
+  // Leave setup mode when server (other user or us) issues 'bsetup done' command
+  match = msg.match(/^Game is validated - entering examine mode\./m);
+  if(!match)
+    match = msg.match(/^Game (\d+): \w+ has validated the position. Entering examine mode\./m);
+  if(match) {
+    if(match.length > 1)
+      var game = games.findGame(+match[1]);
+    else
+      var game = games.getPlayingExaminingGame();
+
+    if(game && !game.commitingMovelist && game.setupBoard)
+      leaveSetupBoard(game, true);
+  }
+
+  // Suppress output when commiting a movelist in examine mode
+  match = msg.match(/^Game \d+: \w+ commits the subvariation\./m);
+  if(!match)
+    match = msg.match(/^Game \d+: \w+ sets (white|black)'s clock to \S+/m);
+  if(!match)
+    match = msg.match(/^Game \d+: \w+ moves: \S+/m);
+  if(!match)
+    match = msg.match(/^Entering setup mode\./m);
+  if(!match)
+    match = msg.match(/^Castling rights for (white|black) set to \w+\./m);
+  if(!match)
+    match = msg.match(/^It is now (white|black)'s turn to move\./m);
+  if(!match)
+    match = msg.match(/^Game is validated - entering examine mode\./m);
+  if(!match)
+    match = msg.match(/^The game type is now .*/m);
+  if(!match)
+    match = msg.match(/^done: Command not found\./m);
+  if(match) {
+    var game = games.getPlayingExaminingGame();
+    if(game && game.commitingMovelist) {
+      if(match[0] === 'done: Command not found.') // This was sent by us to indicate when we are done
+        game.commitingMovelist = false;
+      return;
+    }
+  }
+
+  // Support for multiple examiners, we need to handle other users commiting or truncating moves from the main line
+  match = msg.match(/^Game (\d+): \w+ commits the subvariation\./m);
+  if(match) {
+    var game = games.findGame(+match[1]);
+    if(game) {
+      // An examiner has commited the current move to the mainline. So we need to also make it the mainline.
+      game.history.scratch(false);
+      var curr = game.history.current();
+      while(curr.depth() > 0)
+        game.history.promoteSubvariation(curr);
+      // Make the moves following the commited move a continuation (i.e. not mainline)
+      if(curr.next)
+        game.history.makeContinuation(curr.next);
+    }
+  }
+  match = msg.match(/^Game (\d+): \w+ truncates the game at halfmove (\d+)\./m);
+  if(match) {
+    var game = games.findGame(+match[1]);
+    if(game) {
+      var index = +match[2];
+      if(index === 0)
+        game.history.scratch(true); // The entire movelist was truncated so revert back to being a scratch game
+      else {
+        var entry = game.history.getByIndex(index)
+        if(entry && entry.next)
+          game.history.makeContinuation(entry.next);
+      }
+    }
+  }
+
+  match = msg.match(/^\w+ has made you an examiner of game (\d+)\./m);
+  if(match) {
+    let id = +match[1];
+    mexamineRequested = mexamineGame;
+    return;
+  }
+
+  match = msg.match(/^Starting a game in examine \(scratch\) mode\./m);
+  if(match && examineModeRequested)
+    return;
+
+  if (
+    msg === 'Style 12 set.' ||
+    msg === 'You will not see seek ads.' ||
+    msg === 'You will now hear communications echoed.' ||
+    msg === 'seekinfo set.' || msg === 'seekinfo unset.' ||
+    msg === 'seekremove set.' || msg === 'seekremove unset.' ||
+    msg === 'defprompt set.' ||
+    msg === 'nowrap set.' ||
+    msg === 'startpos set.' || msg === 'startpos unset.' ||
+    msg === 'showownseek set.' || msg === 'showownseek unset.' ||
+    msg === 'pendinfo set.' ||
+    msg === 'ms set.' ||
+    msg.startsWith('<12>') // Discard malformed style 12 messages (sometimes the server sends them split in two etc).
+  ) {
+    return;
+  }
+
+  chat.newMessage('console', data);
 }
 
 export function cleanup() {
