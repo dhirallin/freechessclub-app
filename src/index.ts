@@ -1007,8 +1007,8 @@ function handleOffers(offers: any[]) {
           if(headerTextElement.text() === 'Match Request' && bodyTextElement.text().startsWith(`${item.opponent}(`)) {
             $(element).attr('data-offer-id', item.id);
             bodyTextElement.text(`${bodyTitle} ${bodyText}`);
-            var btnSuccess = $(element).find('.button-success');
-            var btnFailure = $(element).find('.button-failure');
+            const btnSuccess = $(element).find('.button-success');
+            const btnFailure = $(element).find('.button-failure');
             btnSuccess.attr('onclick', `sessionSend('accept ${item.id}');`);
             btnFailure.attr('onclick', `sessionSend('decline ${item.id}');`);
             displayType = '';
@@ -1093,17 +1093,10 @@ function showSentOffers(offers: any) {
           color = ' W';
 
         // Display 'u' if we are a registered user playing an unrated game.
-        let unrated = '';
-        if(session.isRegistered() && offer.ratedUnrated === 'unrated')
-          unrated = 'u ';
+        const unrated = session.isRegistered() && offer.ratedUnrated === 'unrated' && offer.category !== 'untimed' ? 'u' : '';
+        const time = offer.category !== 'untimed' ? `${offer.initialTime} ${offer.increment} ` : '';
 
-        let time = `${offer.initialTime} ${offer.increment} `;
-        if(offer.category === 'untimed') {
-          time = '';
-          unrated = '';
-        }
-
-        var adjourned = (offer.adjourned ? ' (adjourned)' : '');
+        const adjourned = (offer.adjourned ? ' (adjourned)' : '');
 
         requestsHtml += `Challenging ${offer.opponent} to ${time === '' ? 'an ' : 'a '}` 
           + `${time}${unrated}${offer.category}${color} game${adjourned}.`;
@@ -1773,7 +1766,7 @@ export function cleanup() {
   gameExitPending = [];
   clearMatchRequests();
   Dialogs.clearNotifications();
-  for(let game of games) {
+  for(const game of games) {
     if(game.role !== Role.PLAYING_COMPUTER)
       cleanupGame(game);
   }
@@ -1800,16 +1793,16 @@ function setFontSizes() {
   setTimeout(() => {
     // Resize fonts for player and opponent name to fit
     $('.status').each((index, element) => {
-      var nameElement = $(element).find('.name');
-      var ratingElement = $(element).find('.rating');
-      var nameRatingElement = $(element).find('.name-rating');
+      const nameElement = $(element).find('.name');
+      const ratingElement = $(element).find('.rating');
+      const nameRatingElement = $(element).find('.name-rating');
 
       nameElement.css('font-size', '');
       ratingElement.css('width', '');
 
-      var nameBorderWidth = nameElement.outerWidth() - nameElement.width();
-      var nameMaxWidth = nameRatingElement.width() - ratingElement.outerWidth() - nameBorderWidth;
-      var fontSize = calculateFontSize(nameElement, nameMaxWidth);
+      const nameBorderWidth = nameElement.outerWidth() - nameElement.width();
+      const nameMaxWidth = nameRatingElement.width() - ratingElement.outerWidth() - nameBorderWidth;
+      const fontSize = calculateFontSize(nameElement, nameMaxWidth);
       nameElement.css('font-size', `${fontSize}px`);
 
       // Hide rating badge if partially clipped
@@ -1824,10 +1817,9 @@ function setFontSizes() {
 }
 
 function showCapturedMaterial(game: Game) {
-  var whiteChanged = false;
-  var blackChanged = false;
+  let whiteChanged = false, blackChanged = false;
 
-  var captured = {
+  let captured = {
     P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0
   };
 
@@ -1846,9 +1838,9 @@ function showCapturedMaterial(game: Game) {
 
     // Get material difference between white and black, represented as "captured pieces"
     // e.g. if black is 2 pawns up on white, then 'captured' will contain P: 2 (two white pawns).
-    var pieces = Object.keys(material).filter(key => key === key.toUpperCase());
-    for(let whitePiece of pieces) {
-      var blackPiece = whitePiece.toLowerCase();
+    const pieces = Object.keys(material).filter(key => key === key.toUpperCase());
+    for(const whitePiece of pieces) {
+      const blackPiece = whitePiece.toLowerCase();
       if(material[whitePiece] > material[blackPiece]) {
         captured[blackPiece] = material[whitePiece] - material[blackPiece];
         captured[whitePiece] = 0;
@@ -1873,28 +1865,28 @@ function showCapturedMaterial(game: Game) {
   game.captured = captured;
 
   if(whiteChanged) {
-    let panel = (game.color === 'w' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
+    const panel = (game.color === 'w' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     panel.empty();
   }
   if(blackChanged) {
-    let panel = (game.color === 'b' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
+    const panel = (game.color === 'b' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     panel.empty();
   }
 
-  for (const key in captured) {
-    let panel = undefined;
+  for(const key in captured) {
+    let num: number, color: string, piece: string, draggedPiece: string, panel: JQuery<HTMLElement>;
     if(whiteChanged && key === key.toLowerCase() && captured[key] > 0) {
-      var color = 'b';
-      var piece = `${color}${key.toUpperCase()}`;
-      var draggedPiece = `w${key}`;
-      var num = captured[key];
+      color = 'b';
+      piece = `${color}${key.toUpperCase()}`;
+      draggedPiece = `w${key}`;
+      num = captured[key];
       panel = (game.color === 'w' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     }
     else if(blackChanged && key === key.toUpperCase() && captured[key] > 0) {
-      var color = 'w';
-      var piece = `${color}${key}`;
-      var draggedPiece = `b${key}`;
-      var num = captured[key];
+      color = 'w';
+      piece = `${color}${key}`;
+      draggedPiece = `b${key}`;
+      num = captured[key];
       panel = (game.color === 'b' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     }
     if(panel) {
@@ -1912,10 +1904,10 @@ function showCapturedMaterial(game: Game) {
 }
 
 function dragPiece(event: any) {
-  var game = games.focused;
-  var id = $(event.target).closest('[data-drag-piece]').attr('data-drag-piece');
-  var color = id.charAt(0);
-  var type = id.charAt(1);
+  const game = games.focused;
+  const id = $(event.target).closest('[data-drag-piece]').attr('data-drag-piece');
+  const color = id.charAt(0);
+  const type = id.charAt(1);
 
   const cgRoles = {
     p: 'pawn',
@@ -1926,7 +1918,7 @@ function dragPiece(event: any) {
     k: 'king',
   };
 
-  var piece = {
+  const piece = {
     role: cgRoles[type.toLowerCase()],
     color: (color === 'w' ? 'white' : 'black')
   };
@@ -1939,7 +1931,7 @@ function dragPiece(event: any) {
 }
 
 function setClocks(game: Game) {
-  var hEntry = (game.isPlaying() || game.role === Role.OBSERVING ? game.history?.last() : game.history?.current());
+  const hEntry = (game.isPlaying() || game.role === Role.OBSERVING ? game.history?.last() : game.history?.current());
 
   if(!game.isPlaying() && game.role !== Role.OBSERVING) {
     game.clock.setWhiteClock(hEntry.wtime);
@@ -1947,10 +1939,10 @@ function setClocks(game: Game) {
   }
 
   // Add my-turn highlighting to clock
-  var whiteClock = (game.color === 'w' ? game.element.find('.player-status .clock') : game.element.find('.opponent-status .clock'));
-  var blackClock = (game.color === 'b' ? game.element.find('.player-status .clock') : game.element.find('.opponent-status .clock'));
+  const whiteClock = (game.color === 'w' ? game.element.find('.player-status .clock') : game.element.find('.opponent-status .clock'));
+  const blackClock = (game.color === 'b' ? game.element.find('.player-status .clock') : game.element.find('.opponent-status .clock'));
 
-  var turnColor = hEntry.turnColor;
+  const turnColor = hEntry.turnColor;
   if(turnColor === 'b') {
     whiteClock.removeClass('my-turn');
     blackClock.addClass('my-turn');
