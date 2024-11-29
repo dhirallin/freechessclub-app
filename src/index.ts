@@ -34,7 +34,7 @@ export const enum Layout {
 // Currently the only FICS variants we don't support are Atomic and Suicide
 // For unsupported categories, chess.js and toDests() are not used, the board is put into 'free' mode,
 // and a move is not added to the move list unless it is verified by the server.
-var SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
+const SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
 
 let session: Session;
 let chat: Chat;
@@ -110,7 +110,7 @@ async function onDeviceReady() {
 
   chat = new Chat();
   
-  var game = createGame();
+  const game = createGame();
   game.role = Role.NONE;
   game.category = 'untimed';
   game.history = new History(game, new Chess().fen());
@@ -163,7 +163,7 @@ $(window).on('load', function() {
 
 /** Prompt before unloading page if in a game */
 $(window).on('beforeunload', () => {
-  var game = games.getPlayingExaminingGame();
+  const game = games.getPlayingExaminingGame();
   if(game && game.isPlaying())
     return true;
 });
@@ -193,7 +193,7 @@ $('body').on('click', function (e) {
 
 $(document).on('keydown', (e) => {
   if(e.key === 'Enter') {
-    var blurElement = $(e.target).closest('.blur-on-enter');
+    const blurElement = $(e.target).closest('.blur-on-enter');
     if(blurElement.length) {
       blurElement.trigger('blur');
       e.preventDefault();
@@ -237,10 +237,10 @@ $(window).on('resize', () => {
 
 function setPanelSizes() {
   // Reset player status panels that may have been previously slimmed down on single column screen
-  var maximizedGame = games.getMainGame();
-  var maximizedGameCard = maximizedGame.element;
-  var topPanel = maximizedGameCard.find('.top-panel');
-  var bottomPanel = maximizedGameCard.find('.bottom-panel');
+  const maximizedGame = games.getMainGame();
+  const maximizedGameCard = maximizedGame.element;
+  const topPanel = maximizedGameCard.find('.top-panel');
+  const bottomPanel = maximizedGameCard.find('.bottom-panel');
 
   if(!Utils.isSmallWindow() && prevSizeCategory === Utils.SizeCategory.Small) {
     topPanel.css('height', '');
@@ -249,19 +249,15 @@ function setPanelSizes() {
 
   // Make sure the board is smaller than the window height and also leaves room for the other columns' min-widths
   if(!Utils.isSmallWindow()) {
-    var scrollBarWidth = Utils.getScrollbarWidth();
+    const scrollBarWidth = Utils.getScrollbarWidth();
 
     // Set board width a bit smaller in order to leave room for a scrollbar on <body>. This is because
     // we don't want to resize all the panels whenever a dropdown or something similar overflows the body.
-    if(Utils.isMediumWindow()) // display 2 columns on md (medium) display
-      var cardMaxWidth = window.innerWidth - $('#left-col').outerWidth() - scrollBarWidth;
-    else
-      var cardMaxWidth = window.innerWidth - $('#left-col').outerWidth() - parseFloat($('#right-col').css('min-width')) - scrollBarWidth;
+    const cardMaxWidth = Utils.isMediumWindow() // display 2 columns on md (medium) display
+      ? window.innerWidth - $('#left-col').outerWidth() - scrollBarWidth
+      : window.innerWidth - $('#left-col').outerWidth() - parseFloat($('#right-col').css('min-width')) - scrollBarWidth;
 
-    var safeAreas = $('body').innerHeight() - $('body').height();
-    var feature3Border = $('.feature3').outerHeight(true) - $('.feature3').height();
-    //var cardMaxHeight = $(window).height() - feature3Border - safeAreas;
-    var cardMaxHeight = $(window).height() - Utils.getRemainingHeight(maximizedGameCard);
+    const cardMaxHeight = $(window).height() - Utils.getRemainingHeight(maximizedGameCard);
     setGameCardSize(maximizedGame, cardMaxWidth, cardMaxHeight);
   }
   else
@@ -278,7 +274,7 @@ function setPanelSizes() {
       + Math.round(parseFloat($('#right-card').css('border-top-width')));
     const playerStatusBorder = maximizedGameCard.find('.top-panel').outerHeight() - maximizedGameCard.find('.top-panel').height();
     const safeAreas = $('body').innerHeight() - $('body').height();
-    var playerStatusHeight = ($(window).height() - safeAreas - $('#board-card').outerHeight() - $('#left-panel-footer').outerHeight() - $('#right-panel-header').outerHeight() - cardBorders) / 2 - playerStatusBorder;
+    let playerStatusHeight = ($(window).height() - safeAreas - $('#board-card').outerHeight(true) - $('#left-panel-footer').outerHeight() - $('#right-panel-header').outerHeight() - cardBorders) / 2 - playerStatusBorder;
     playerStatusHeight = Math.min(Math.max(playerStatusHeight, originalStatusHeight - 20), originalStatusHeight);
 
     topPanel.height(playerStatusHeight);
@@ -314,9 +310,9 @@ function setLeftColumnSizes() {
     if(Utils.isSmallWindow())
       $('#left-panel').css('height', ''); // Reset back to CSS defined height
     else {
-      var remHeight = Utils.getRemainingHeight($('#left-panel'), $('#inner-left-panels'));
-      var leftPanelBorder = $('#left-panel').outerHeight(true) - $('#left-panel').height();
-      var leftPanelHeight = boardHeight - remHeight - leftPanelBorder;
+      const remHeight = Utils.getRemainingHeight($('#left-panel'), $('#inner-left-panels'));
+      const leftPanelBorder = $('#left-panel').outerHeight(true) - $('#left-panel').height();
+      const leftPanelHeight = boardHeight - remHeight - leftPanelBorder;
       $('#left-panel').height(Math.max(leftPanelHeight, 0));
       // If we've made the left panel height as small as possible, reduce size of status panel instead
       // Note leftPanelHeight is negative in that case
@@ -327,27 +323,28 @@ function setLeftColumnSizes() {
 }
 
 function setGameCardSize(game: Game, cardMaxWidth?: number, cardMaxHeight?: number) {
-  var card = game.element;
-  var roundingCorrection = (card.hasClass('game-card-sm') ? 0.032 : 0.1);
+  const card = game.element;
+  const roundingCorrection = (card.hasClass('game-card-sm') ? 0.032 : 0.1);
+  let cardWidth: number;
 
   if(cardMaxWidth !== undefined || cardMaxHeight !== undefined) {
-    var cardBorderWidth = card.outerWidth() - card.width();
-    var boardMaxWidth = cardMaxWidth - cardBorderWidth;
-    var cardBorderHeight = card.outerHeight() - card.height();
-
-    var remHeight = card.outerHeight() - card.find('.card-body').height();
-    var boardMaxHeight = cardMaxHeight - remHeight;
+    const cardBorderWidth = card.outerWidth() - card.width();
+    let boardMaxWidth = cardMaxWidth - cardBorderWidth;
+    
+    const cardBorderHeight = card.outerHeight() - card.height();
+    const remHeight = card.outerHeight() - card.find('.card-body').height();
+    let boardMaxHeight = cardMaxHeight - remHeight;
 
     if(!cardMaxWidth)
       boardMaxWidth = boardMaxHeight;
     if(!cardMaxHeight)
       boardMaxHeight = boardMaxWidth;
 
-    var cardWidth: any = Math.min(boardMaxWidth, boardMaxHeight) - (2 * roundingCorrection); // Subtract small amount for rounding error
+    cardWidth = Math.min(boardMaxWidth, boardMaxHeight) - (2 * roundingCorrection); // Subtract small amount for rounding error
   }
   else {
     card.css('width', '');
-    var cardWidth = card.width();
+    cardWidth = card.width();
   }
 
   // Recalculate the width of the board so that the squares align to integer pixel boundaries, this is to match
@@ -366,7 +363,7 @@ function setRightColumnSizes() {
     $('#chat-panel').height(0);
 
   // Set width and height of game cards in the right board area
-  var numCards = $('#secondary-board-area').children().length;
+  const numCards = $('#secondary-board-area').children().length;
   if(numCards > 2)
     $('#secondary-board-area').css('overflow-y', 'scroll');
   else
@@ -374,24 +371,18 @@ function setRightColumnSizes() {
  
   for(let game of games) {
     if(game.element.parent().is($('#secondary-board-area'))) {
-      if(Utils.isLargeWindow()) {
-        var cardsPerRow = Math.min(2, numCards);
-        var cardHeight: any = boardHeight * 0.6;
-      }
-      else {
-        var cardsPerRow = 2;
-        var cardHeight = null;
-      }
+      const cardsPerRow = Utils.isLargeWindow() ? Math.min(2, numCards) : 2;
+      const cardHeight = Utils.isLargeWindow() ? boardHeight * 0.6 : null;
 
-      var boardAreaScrollbarWidth = $('#secondary-board-area')[0].offsetWidth - $('#secondary-board-area')[0].clientWidth;
-      var innerWidth = $('#secondary-board-area').width() - boardAreaScrollbarWidth - 1;
+      const boardAreaScrollbarWidth = $('#secondary-board-area')[0].offsetWidth - $('#secondary-board-area')[0].clientWidth;
+      const innerWidth = $('#secondary-board-area').width() - boardAreaScrollbarWidth - 1;
       setGameCardSize(game, innerWidth / cardsPerRow - parseInt($('#secondary-board-area').css('gap')) * (cardsPerRow - 1) / cardsPerRow, cardHeight);
 
       // These variables are used to resize status panel elements based on the width / height of the panel
-      var topPanel = game.element.find('.top-panel');
+      const topPanel = game.element.find('.top-panel');
       topPanel.css('--panel-height', topPanel.css('height'));
       topPanel.css('--panel-width', topPanel.css('width'));
-      var bottomPanel = game.element.find('.bottom-panel');
+      const bottomPanel = game.element.find('.bottom-panel');
       bottomPanel.css('--panel-height', bottomPanel.css('height'));
       bottomPanel.css('--panel-width', bottomPanel.css('width'));
     }
@@ -403,13 +394,13 @@ function setRightColumnSizes() {
     $('#secondary-board-area').height($('#secondary-board-area > :first-child').outerHeight());
 
   if(!Utils.isLargeWindow() || !boardHeight) {
-    let hasSiblings = $('#collapse-chat').siblings(':visible').length > 0; // If there are game boards in the right column, then don't try to fit the header and chat into the same screen height
-    let border = $('#chat-panel').outerHeight(true) - $('#chat-panel').height();
+    const hasSiblings = $('#collapse-chat').siblings(':visible').length > 0; // If there are game boards in the right column, then don't try to fit the header and chat into the same screen height
+    const border = $('#chat-panel').outerHeight(true) - $('#chat-panel').height();
     $('#chat-panel').height($(window).height() - Utils.getRemainingHeight($('#chat-panel'), $('body'), `#collapse-chat ${hasSiblings ? ', #inner-right-panels' : ''}`) - border);
   }
   else {
-    var remHeight = Utils.getRemainingHeight($('#chat-panel'), $('#inner-right-panels'));
-    var chatPanelBorder = $('#chat-panel').outerHeight(true) - $('#chat-panel').height();
+    const remHeight = Utils.getRemainingHeight($('#chat-panel'), $('#inner-right-panels'));
+    const chatPanelBorder = $('#chat-panel').outerHeight(true) - $('#chat-panel').height();
     $('#chat-panel').height(boardHeight + $('#left-panel-footer').outerHeight() - remHeight - chatPanelBorder);
   }
 
@@ -420,15 +411,15 @@ function setRightColumnSizes() {
 
 function calculateFontSize(container: any, containerMaxWidth: number, minWidth?: number, maxWidth?: number) {
   if(minWidth === undefined)
-    var minWidth = +$('body').css('font-size').replace('px', '');
+    minWidth = +$('body').css('font-size').replace('px', '');
   if(maxWidth === undefined)
-    var maxWidth = +container.css('font-size').replace('px', '');
+    maxWidth = +container.css('font-size').replace('px', '');
 
-  var fontFamily = container.css('font-family');
-  var fontWeight = container.css('font-weight');
+  const fontFamily = container.css('font-family');
+  const fontWeight = container.css('font-weight');
 
-  var canvas = document.createElement("canvas");
-  var context = canvas.getContext("2d");
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
 
   function getTextWidth(text, font) {
     context.font = font;
@@ -436,8 +427,8 @@ function calculateFontSize(container: any, containerMaxWidth: number, minWidth?:
     return metrics.width;
   }
 
-  var fontSize = maxWidth + 1; // Initial font size
-  var textWidth;
+  let fontSize = maxWidth + 1; // Initial font size
+  let textWidth: number;
   do {
     fontSize--;
     textWidth = getTextWidth(container.text(), `${fontWeight} ${fontSize}px ${fontFamily}`);
@@ -499,10 +490,9 @@ function swapLeftRightPanelHeaders() {
  * MAIN MESSAGE PUMP                         *
  * Process messages received from the server *
  *********************************************/
-function messageHandler(data) {
-  if (data === undefined || data === null) {
+function messageHandler(data: any) {
+  if(data == null) 
     return;
-  }
 
   const type = GetMessageType(data);
   switch (type) {
@@ -568,7 +558,6 @@ function messageHandler(data) {
       var game = games.findGame(data.game_id);
       if(!game)
         return;
-
       game.history.current().variantData.holdings = data.holdings;
       showCapturedMaterial(game);
       break;
@@ -582,13 +571,15 @@ function messageHandler(data) {
   }
 }
 
-function gameMove(data: any) {
+function gameMove(data: any) { 
   if(gameExitPending.includes(data.id))
     return;
 
+  let game: Game;
+
   // If in single-board mode, check we are not examining/observing another game already
   if(!settings.multiboardToggle) {
-    var game = games.getMainGame();
+    game = games.getMainGame();
     if(game.isPlayingOnline() && game.id !== data.id) {
       if(data.role === Role.OBSERVING || data.role === Role.OBS_EXAMINED)
         session.send(`unobs ${data.id}`);
@@ -627,7 +618,7 @@ function gameMove(data: any) {
   else {
     if(settings.multiboardToggle) {
       // Get game object
-      var game = games.findGame(data.id);
+      game = games.findGame(data.id);
       if(!game)
         game = games.getFreeGame();
       if(!game)
@@ -647,12 +638,12 @@ function gameMove(data: any) {
     updateSetupBoard(game, game.fen, true);
   }
   else if(game.role === Role.NONE || game.role >= -2 || game.role === Role.PLAYING_COMPUTER) {
-    var lastFen = currentGameMove(game).fen;
+    const lastFen = currentGameMove(game).fen;
     const lastPly = ChessHelper.getPlyFromFEN(lastFen);
     const thisPly = ChessHelper.getPlyFromFEN(game.fen);
 
     if(game.move !== 'none' && thisPly === lastPly + 1) { // make sure the move no is right
-      var parsedMove = parseGameMove(game, lastFen, game.move);
+      const parsedMove = parseGameMove(game, lastFen, game.move);
       movePieceAfter(game, (parsedMove ? parsedMove.move : game.moveVerbose), game.fen);
     }
     else
@@ -669,14 +660,12 @@ function gameStart(game: Game) {
     $('#exit-subvariation').hide();
 
   // for bughouse set game.color of partner to opposite of us
-  var mainGame = games.getPlayingExaminingGame();
-  var partnerColor = (mainGame && mainGame.partnerGameId === game.id && mainGame.color === 'w' ? 'b' : 'w');
+  const mainGame = games.getPlayingExaminingGame();
+  const partnerColor = (mainGame && mainGame.partnerGameId === game.id && mainGame.color === 'w' ? 'b' : 'w');
 
   // Determine the player's color
-  var amIblack = game.bname === session.getUser();
-  var amIwhite = game.wname === session.getUser();
-  if(game.role === Role.PLAYING_COMPUTER && game.color === 'b')
-    amIblack = true;
+  const amIwhite = game.wname === session.getUser();
+  const amIblack = (game.role === Role.PLAYING_COMPUTER && game.color === 'b') || game.bname === session.getUser();
 
   if((!amIblack || amIwhite) && partnerColor !== 'b')
     game.color = 'w';
@@ -684,8 +673,8 @@ function gameStart(game: Game) {
     game.color = 'b';
 
   // Set game board text
-  var whiteStatus = game.element.find(game.color === 'w' ? '.player-status' : '.opponent-status');
-  var blackStatus = game.element.find(game.color === 'b' ? '.player-status' : '.opponent-status');
+  const whiteStatus = game.element.find(game.color === 'w' ? '.player-status' : '.opponent-status');
+  const blackStatus = game.element.find(game.color === 'b' ? '.player-status' : '.opponent-status');
   whiteStatus.find('.name').text(game.wname.replace(/_/g, ' '));
   blackStatus.find('.name').text(game.bname.replace(/_/g, ' '));
   if(!game.wrating)
@@ -694,14 +683,15 @@ function gameStart(game: Game) {
     blackStatus.find('.rating').text('');
 
   if(game.isPlayingOnline() || game.isExamining() || game.isObserving()) {
+    let gameType: string;
     if(game.isPlayingOnline())
-      var gameType = 'Playing';
+      gameType = 'Playing';
     else if(game.isExamining())
-      var gameType = 'Examining';
+      gameType = 'Examining';
     else if(game.isObserving())
-      var gameType = 'Observing';
+      gameType = 'Observing';
     game.element.find('.title-bar-text').text(`Game ${game.id} (${gameType})`);
-    var gameStatus = game.statusElement.find('.game-status');
+    const gameStatus = game.statusElement.find('.game-status');
     if(gameStatus.text())
       gameStatus.prepend(`<span class="game-id">Game ${game.id}: </span>`);
   }
@@ -712,17 +702,13 @@ function gameStart(game: Game) {
 
   // Set board orientation
 
-  var flipped = game.element.find('.opponent-status').parent().hasClass('bottom-panel');
+  const flipped = game.element.find('.opponent-status').parent().hasClass('bottom-panel');
   game.board.set({
     orientation: ((game.color === 'b') === flipped ? 'white' : 'black'),
   });
 
   // Check if server flip variable is set and flip board if necessary
-  if(game.isPlaying())
-    var v_flip = (game.color === 'b') !== game.flip;
-  else
-    var v_flip = game.flip;
-
+  const v_flip = game.isPlaying() ? (game.color === 'b') !== game.flip : game.flip;
   if(v_flip != flipped)
     flipBoard(game);
 
@@ -782,7 +768,7 @@ function gameStart(game: Game) {
   if(game.isPlayingOnline())
     game.element.find($('[title="Close"]')).css('visibility', 'hidden');
 
-  var focusSet = false;
+  let focusSet = false;
   if(!game.isObserving() || games.getMainGame().role === Role.NONE) {
     if(game !== games.focused) {
       setGameWithFocus(game);
@@ -824,7 +810,7 @@ function gameStart(game: Game) {
     // Adjust settings for game category (variant)
     // When examining we do this after requesting the movelist (since the category is told to us by the 'moves' command)
     if(game.isPlaying()) {
-      if (settings.soundToggle) {
+      if(settings.soundToggle) {
         Sounds.startSound.play();
       }
 
@@ -856,11 +842,11 @@ function gameStart(game: Game) {
 
       if(!game.setupBoard) {
         if(mexamineRequested) {
-          var hEntry = game.history.find(game.fen);
+          const hEntry = game.history.find(game.fen);
           if(hEntry)
             game.history.display(hEntry);
 
-          let moves = [];
+          const moves = [];
           let curr = game.history.current();
           while(curr.move) {
             moves.push(ChessHelper.moveToCoordinateString(curr.move));            
@@ -899,7 +885,7 @@ function gameStart(game: Game) {
 }
 
 function gameEnd(data: any) {
-  var game = games.findGame(data.game_id);
+  const game = games.findGame(data.game_id);
   if(!game)
     return;
 
@@ -926,12 +912,12 @@ function gameEnd(data: any) {
     game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-tie-color)');
   }
 
-  var status = data.message.replace(/Game \d+ /, '');
+  const status = data.message.replace(/Game \d+ /, '');
   showStatusMsg(game, status);
 
   if(game.isPlaying()) {
     let rematch = [], analyze = [];
-    var useSessionSend = true;
+    let useSessionSend = true;
     if(data.reason !== Reason.Disconnect && data.reason !== Reason.Adjourn && data.reason !== Reason.Abort) {
       if(game.role === Role.PLAYING_COMPUTER) {
         rematch = ['rematchComputer();', 'Rematch'];
@@ -956,7 +942,7 @@ function handleOffers(offers: any[]) {
     $('#lobby-table').html('');
 
   // Add seeks to the lobby
-  var seeks = offers.filter((item) => item.type === 's');
+  const seeks = offers.filter((item) => item.type === 's');
   if(seeks.length && lobbyRequested) {
     seeks.forEach((item) => {
       if(!settings.lobbyShowComputersToggle && item.title === 'C')
@@ -964,21 +950,20 @@ function handleOffers(offers: any[]) {
       if(!settings.lobbyShowUnratedToggle && item.ratedUnrated === 'u')
         return;
 
-      var lobbyEntryText = formatLobbyEntry(item);
-
+      const lobbyEntryText = formatLobbyEntry(item);
       $('#lobby-table').append(
         `<button type="button" data-offer-id="${item.id}" class="btn btn-outline-secondary lobby-entry"` 
           + ` onclick="acceptSeek(${item.id});">${lobbyEntryText}</button>`);
     });
 
     if(lobbyScrolledToBottom) {
-      var container = $('#lobby-table-container')[0];
+      const container = $('#lobby-table-container')[0];
       container.scrollTop = container.scrollHeight;
     }
   }
 
   // Add our own seeks and match requests to the top of the Play pairing pane
-  var sentOffers = offers.filter((item) => item.type === 'sn'
+  const sentOffers = offers.filter((item) => item.type === 'sn'
     || (item.type === 'pt' && (item.subtype === 'partner' || item.subtype === 'match')));
   if(sentOffers.length) {
     sentOffers.forEach((item) => {
@@ -1001,13 +986,13 @@ function handleOffers(offers: any[]) {
   }
 
   // Offers received from another player
-  var otherOffers = offers.filter((item) => item.type === 'pf');
+  const otherOffers = offers.filter((item) => item.type === 'pf');
   otherOffers.forEach((item) => {
-    var headerTitle = '', bodyTitle = '', bodyText = '', displayType = '';
+    let headerTitle = '', bodyTitle = '', bodyText = '', displayType = '';
     switch(item.subtype) {
       case 'match':
         displayType = 'notification';
-        var time = !isNaN(item.initialTime) ? ` ${item.initialTime} ${item.increment}` : '';
+        const time = !isNaN(item.initialTime) ? ` ${item.initialTime} ${item.increment}` : '';
         bodyText = `${item.ratedUnrated} ${item.category}${time}`;
         if(item.adjourned) {
           headerTitle = 'Resume Adjourned Game Request';
@@ -1017,8 +1002,8 @@ function handleOffers(offers: any[]) {
           headerTitle = 'Match Request';
         bodyTitle = `${item.opponent} (${item.opponentRating})${item.color ? ` [${item.color}]` : ''}`;
         $('.notification').each((index, element) => {
-          var headerTextElement = $(element).find('.header-text');
-          var bodyTextElement = $(element).find('.body-text');
+          const headerTextElement = $(element).find('.header-text');
+          const bodyTextElement = $(element).find('.body-text');
           if(headerTextElement.text() === 'Match Request' && bodyTextElement.text().startsWith(`${item.opponent}(`)) {
             $(element).attr('data-offer-id', item.id);
             bodyTextElement.text(`${bodyTitle} ${bodyText}`);
@@ -1063,17 +1048,18 @@ function handleOffers(offers: any[]) {
     }
 
     if(displayType) {
+      let dialog: JQuery<HTMLElement>;
       if(displayType === 'notification')
-        var dialog = Dialogs.createNotification({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
+        dialog = Dialogs.createNotification({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
       else if(displayType === 'dialog')
-        var dialog = Dialogs.showBoardDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
+        dialog = Dialogs.showBoardDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: [`decline ${item.id}`, 'Decline'], btnSuccess: [`accept ${item.id}`, 'Accept'], useSessionSend: true});
       dialog.attr('data-offer-id', item.id);
     }
   });
 
   // Remove match requests and seeks. Note our own seeks are removed in the MessageType.Unknown section
   // since <sr> info is only received when we are in the lobby.
-  var removals = offers.filter((item) => item.type === 'pr' || item.type === 'sr');
+  const removals = offers.filter((item) => item.type === 'pr' || item.type === 'sr');
   removals.forEach((item) => {
     item.ids.forEach((id) => {
       Dialogs.removeNotification($(`.notification[data-offer-id="${id}"]`)); // If match request was not ours, remove the Notification
@@ -1087,15 +1073,16 @@ function handleOffers(offers: any[]) {
 }
 
 function showSentOffers(offers: any) {
-  var requestsHtml = '';
+  let requestsHtml = '';
   offers.forEach((offer) => {
     requestsHtml += `<div class="sent-offer" data-offer-type="${offer.type}" data-offer-id="${offer.id}">`;
     requestsHtml += `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>&nbsp;&nbsp;`;
 
+    let removeCmd: string;
     if(offer.type === 'pt') {
       if(offer.subtype === 'partner') {
         requestsHtml += `Making a partnership offer to ${offer.toFrom}.`;
-        var removeCmd = `withdraw ${offer.id}`;
+        removeCmd = `withdraw ${offer.id}`;
       }
       else if(offer.subtype === 'match') {
         // convert match offers to the same format as seeks
@@ -1120,31 +1107,23 @@ function showSentOffers(offers: any) {
 
         requestsHtml += `Challenging ${offer.opponent} to ${time === '' ? 'an ' : 'a '}` 
           + `${time}${unrated}${offer.category}${color} game${adjourned}.`;
-        var removeCmd = `withdraw ${offer.id}`;
+        removeCmd = `withdraw ${offer.id}`;
       }
     }
     else if(offer.type === 'sn') {
       // Display 'u' if we are a registered user playing an unrated game.
-      let unrated = '';
-      if(session.isRegistered() && offer.ratedUnrated === 'u')
-        unrated = 'u ';
-
+      const unrated = session.isRegistered() && offer.ratedUnrated === 'u' && offer.category !== 'untimed' ? 'u' : '';
       // Change 0 0 to 'untimed'
-      let time = `${offer.initialTime} ${offer.increment} `;
-      if(offer.category === 'untimed') {
-        unrated = '';
-        time = '';
-      }
-      let color = (offer.color !== '?' ? offer.color : '');
+      const time = offer.category !== 'untimed' ? `${offer.initialTime} ${offer.increment} ` : '';
+      const color = (offer.color !== '?' ? offer.color : '');
 
       requestsHtml += `Seeking ${time === '' ? 'an ' : 'a '}${time}${unrated}${offer.category}${color} game.`;
-      var removeCmd = `unseek ${offer.id}`;
+      removeCmd = `unseek ${offer.id}`;
     }
 
-    var lastIndex = requestsHtml.lastIndexOf(' ') + 1;
-    var lastWord = requestsHtml.slice(lastIndex);
+    const lastIndex = requestsHtml.lastIndexOf(' ') + 1;
+    const lastWord = requestsHtml.slice(lastIndex);
     requestsHtml = requestsHtml.substring(0, lastIndex);
-
     requestsHtml += `<span style="white-space: nowrap">${lastWord}<span class="fa fa-times-circle btn btn-default `  
       + `btn-sm" onclick="sessionSend('${removeCmd}')" aria-hidden="false"></span></span></div>`;
   });
@@ -1158,20 +1137,20 @@ function showSentOffers(offers: any) {
  * Remove an adjourned game notification if the players are already attempting to resume their match
  */
 function removeAdjournNotification(opponent: string) {
-  var n = $(`.notification[data-adjourned-arrived="${opponent}"]`);
-  Dialogs.removeNotification(n);
+  const n1 = $(`.notification[data-adjourned-arrived="${opponent}"]`);
+  Dialogs.removeNotification(n1);
 
-  var n = $(`.notification[data-adjourned-list="true"]`);
-  if(n.length) {
-    var bodyTextElement = n.find('.body-text');
-    var bodyText = bodyTextElement.html();
-    var match = bodyText.match(/^\d+( players?, who (?:has|have) an adjourned game with you, (?:is|are) online:<br>)(.*)/);
+  const n2 = $(`.notification[data-adjourned-list="true"]`);
+  if(n2.length) {
+    const bodyTextElement = n2.find('.body-text');
+    const bodyText = bodyTextElement.html();
+    const match = bodyText.match(/^\d+( players?, who (?:has|have) an adjourned game with you, (?:is|are) online:<br>)(.*)/);
     if(match && match.length > 2) {
-      var msg = match[1];
-      var players = match[2].trim().split(/\s+/);
+      const msg = match[1];
+      let players = match[2].trim().split(/\s+/);
       players = players.filter(item => item !== opponent);
       if(!players.length)
-        Dialogs.removeNotification(n);
+        Dialogs.removeNotification(n2);
       else
         bodyTextElement.html(`${players.length}${msg}${players.join(' ')}`);
     }
@@ -1179,10 +1158,10 @@ function removeAdjournNotification(opponent: string) {
 }
 
 function handleMiscMessage(data: any) {
-  var msg = data.message;
+  let msg = data.message;
 
-  var match = msg.match(/^No one is observing game (\d+)\./m);
-  if (match != null && match.length > 1) {
+  let match = msg.match(/^No one is observing game (\d+)\./m);
+  if(match != null && match.length > 1) {
     if(allobsRequested) {
       allobsRequested--;
       return;
@@ -1195,7 +1174,7 @@ function handleMiscMessage(data: any) {
   if (match != null && match.length > 1) {
     if (allobsRequested) {
       allobsRequested--;
-      var game = games.findGame(+match[1]);
+      const game = games.findGame(+match[1]);
       if(!game)
         return;
 
@@ -1203,7 +1182,7 @@ function handleMiscMessage(data: any) {
       match[2] = match[2].replace(/\(U\)/g, '');
       const watchers = match[2].split(' ');
       game.watchers = watchers.filter(item => item.replace('#', '') !== session.getUser());
-      var chatTab = chat.getTabFromGameID(game.id);
+      const chatTab = chat.getTabFromGameID(game.id);
       if(chatTab)
         chat.updateNumWatchers(chatTab);
       let req = '';
@@ -1228,7 +1207,7 @@ function handleMiscMessage(data: any) {
   }
 
   match = msg.match(/(?:^|\n)\s*\d+\s+(\(Exam\.\s+)?[0-9\+]+\s\w+\s+[0-9\+]+\s\w+\s*(\)\s+)?\[[\w\s]+\]\s+[\d:]+\s*\-\s*[\d:]+\s\(\s*\d+\-\s*\d+\)\s+[BW]:\s+\d+\s*\d+ games displayed/);
-  if (match != null && match.length > 0 && gamesRequested) {
+  if(match != null && match.length > 0 && gamesRequested) {
     showGames(msg);
     gamesRequested = false;
     return;
@@ -1236,10 +1215,10 @@ function handleMiscMessage(data: any) {
 
   match = msg.match(/^Game (\d+): (\S+) has lagged for 30 seconds\./m);
   if(match) {
-    var game = games.findGame(+match[1]);
+    const game = games.findGame(+match[1]);
     if(game && game.isPlaying()) {
-      var bodyText = `${match[2]} has lagged for 30 seconds.<br>You may courtesy adjourn the game.<br><br>If you believe your opponent has intentionally disconnected, you can request adjudication of an adjourned game. Type 'help adjudication' in the console for more info.`;
-      var dialog = Dialogs.showBoardDialog({type: 'Opponent Lagging', msg: bodyText, btnFailure: ['', 'Wait'], btnSuccess: ['adjourn', 'Adjourn'], useSessionSend: true});
+      const bodyText = `${match[2]} has lagged for 30 seconds.<br>You may courtesy adjourn the game.<br><br>If you believe your opponent has intentionally disconnected, you can request adjudication of an adjourned game. Type 'help adjudication' in the console for more info.`;
+      const dialog = Dialogs.showBoardDialog({type: 'Opponent Lagging', msg: bodyText, btnFailure: ['', 'Wait'], btnSuccess: ['adjourn', 'Adjourn'], useSessionSend: true});
       dialog.attr('data-game-id', game.id);
     }
     chat.newMessage('console', data);
@@ -1247,8 +1226,8 @@ function handleMiscMessage(data: any) {
   }
 
   match = msg.match(/^History for (\w+):.*/m);
-  if (match != null && match.length > 1) {
-    if (historyRequested) {
+  if(match != null && match.length > 1) {
+    if(historyRequested) {
       historyRequested--;
       if(!historyRequested) {
         $('#history-username').val(match[1]);
@@ -1300,7 +1279,7 @@ function handleMiscMessage(data: any) {
   if(!match)
     match = msg.match(/^You have no partner for bughouse\./m);
   if(match && (historyRequested || obsRequested || matchRequested || allobsRequested)) {
-    let status;
+    let status: JQuery<HTMLElement>;
     if(historyRequested)
       status = $('#history-pane-status');
     else if(obsRequested)
@@ -1344,7 +1323,7 @@ function handleMiscMessage(data: any) {
 
   match = msg.match(/(?:^|\n)(\d+ players?, who (?:has|have) an adjourned game with you, (?:is|are) online:)\n(.*)/);
   if(match && match.length > 2) {
-    var n = Dialogs.createNotification({type: 'Resume Game', title: `${match[1]}<br>${match[2]}`, btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
+    const n = Dialogs.createNotification({type: 'Resume Game', title: `${match[1]}<br>${match[2]}`, btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
     n.attr('data-adjourned-list', "true");
     chat.newMessage('console', data);
     return;
@@ -1352,7 +1331,7 @@ function handleMiscMessage(data: any) {
   match = msg.match(/^Notification: ((\S+), who has an adjourned game with you, has arrived\.)/m);
   if(match && match.length > 2) {
     if(!$(`.notification[data-adjourned-arrived="${match[2]}"]`).length) {
-      var n = Dialogs.createNotification({type: 'Resume Game', title: match[1], btnSuccess: [`resume ${match[2]}`, 'Resume Game'], useSessionSend: true});
+      const n = Dialogs.createNotification({type: 'Resume Game', title: match[1], btnSuccess: [`resume ${match[2]}`, 'Resume Game'], useSessionSend: true});
       n.attr('data-adjourned-arrived', match[2]);
     }
     return;
@@ -1384,14 +1363,14 @@ function handleMiscMessage(data: any) {
 
   match = msg.match(/^(\w+ declines the partnership request\.)/m);
   if(match && match.length > 1) {
-    let headerTitle = 'Partnership Declined';
-    let bodyTitle = match[1];
+    const headerTitle = 'Partnership Declined';
+    const bodyTitle = match[1];
     Dialogs.createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
   }
   match = msg.match(/^(\w+ agrees to be your partner\.)/m);
   if(match && match.length > 1) {
-    let headerTitle = 'Partnership Accepted';
-    let bodyTitle = match[1];
+    const headerTitle = 'Partnership Accepted';
+    const bodyTitle = match[1];
     Dialogs.createNotification({type: headerTitle, title: bodyTitle, useSessionSend: true});
   }
 
@@ -1439,18 +1418,18 @@ function handleMiscMessage(data: any) {
 
   match = msg.match(/(?:^|\n)\s*Movelist for game (\d+):\s+(\S+) \((\d+|UNR)\) vs\. (\S+) \((\d+|UNR)\)[^\n]+\s+(\w+) (\S+) match, initial time: (\d+) minutes, increment: (\d+) seconds\./);
   if (match != null && match.length > 9) {
-    var game = games.findGame(+match[1]);
+    const game = games.findGame(+match[1]);
     if(game && (game.movelistRequested || game.gameStatusRequested)) {
       if(game.isExamining()) {
-        var id = match[1];
-        var wname = match[2];
-        var wrating = game.wrating = match[3];
-        var bname = match[4];
-        var brating = game.brating = match[5];
-        var rated = match[6].toLowerCase();
+        const id = match[1];
+        const wname = match[2];
+        let wrating = game.wrating = match[3];
+        const bname = match[4];
+        let brating = game.brating = match[5];
+        const rated = match[6].toLowerCase();
         game.category = match[7];
-        var initialTime = match[8];
-        var increment = match[9];
+        const initialTime = match[8];
+        const increment = match[9];
 
         if(wrating === 'UNR') {
           game.wrating = '';
@@ -1470,21 +1449,19 @@ function handleMiscMessage(data: any) {
         game.element.find('.player-status .rating').text(game.color === 'b' ? game.brating : game.wrating);
         game.element.find('.opponent-status .rating').text(game.color === 'b' ? game.wrating : game.brating);
 
-        let time = ` ${initialTime} ${increment}`;
-        if(initialTime === '0' && increment === '0')
-          time = '';
+        const time = initialTime === '0' && increment === '0' ? '' : ` ${initialTime} ${increment}`;
 
         const statusMsg = `<span class="game-id">Game ${id}: </span>${wname} (${wrating}) ${bname} (${brating}) `
           + `${rated} ${game.category}${time}`;
         showStatusMsg(game, statusMsg);
 
-        var tags = game.history.metatags;
+        const tags = game.history.metatags;
         game.history.setMetatags({
           ...(!('WhiteElo' in tags) && { WhiteElo: game.wrating || '-' }),
           ...(!('BlackElo' in tags) && { BlackElo: game.brating || '-' }),
           ...(!('Variant' in tags) && { Variant: game.category })
         });
-        var chatTab = chat.getTabFromGameID(game.id);
+        const chatTab = chat.getTabFromGameID(game.id);
         if(chatTab)
           chat.updateGameDescription(chatTab);
         initAnalysis(game);
@@ -1546,7 +1523,7 @@ function handleMiscMessage(data: any) {
       session.send('pobserve');
 
     partnerGameId = +match[1];
-    var mainGame = games.getPlayingExaminingGame();
+    const mainGame = games.getPlayingExaminingGame();
     if(mainGame) {
       mainGame.partnerGameId = partnerGameId;
       chat.createTab(`Game ${mainGame.id} and ${partnerGameId}`);
@@ -1554,11 +1531,12 @@ function handleMiscMessage(data: any) {
   }
 
   match = msg.match(/^(Creating|Game\s(\d+)): (\S+) \(([\d\+\-\s]+)\) (\S+) \(([\d\-\+\s]+)\) \S+ (\S+).+/m);
-  if (match != null && match.length > 7) {
+  if(match != null && match.length > 7) {
+    let game: Game;
     if(!settings.multiboardToggle)
-      var game = games.getMainGame();
+      game = games.getMainGame();
     else {
-      var game = games.findGame(+match[2]);
+      game = games.findGame(+match[2]);
       if(!game)
         game = games.getFreeGame();
       if(!game)
@@ -1570,17 +1548,19 @@ function handleMiscMessage(data: any) {
       game.brating = (isNaN(match[6]) || match[6] === '0') ? '' : match[6];
       game.category = match[7];
 
-      var status = match[0].substring(match[0].indexOf(':') + 1);
+      let status = match[0].substring(match[0].indexOf(':') + 1);
       if(game.role !== Role.NONE)
         status = `<span class="game-id">Game ${game.id}: </span>${status}`;
       showStatusMsg(game, status);
 
       if(game.history)
         game.history.initMetatags();
-      if (match[3] === session.getUser() || match[1].startsWith('Game')) {
+
+      if(match[3] === session.getUser() || match[1].startsWith('Game')) {
         game.element.find('.player-status .rating').text(game.wrating);
         game.element.find('.opponent-status .rating').text(game.brating);
-      } else if (match[5] === session.getUser()) {
+      } 
+      else if(match[5] === session.getUser()) {
         game.element.find('.opponent-status .rating').text(game.wrating);
         game.element.find('.player-status .rating').text(game.brating);
       }
@@ -1593,7 +1573,7 @@ function handleMiscMessage(data: any) {
   /* Parse score and termination reason for examined games */
   match = msg.match(/^Game (\d+): ([a-zA-Z]+)(?:' game|'s)?\s([^\d\*]+)\s([012/]+-[012/]+)/m);
   if(match != null && match.length > 3) {
-    var game = games.findGame(+match[1]);
+    const game = games.findGame(+match[1]);
     if(game && game.history) {
       const who = match[2];
       const action = match[3];
@@ -1608,7 +1588,7 @@ function handleMiscMessage(data: any) {
   if(!match)
     match = msg.match(/^You are no longer examining game (\d+)./m);
   if(match != null && match.length > 1) {
-    var game = games.findGame(+match[1]);
+    const game = games.findGame(+match[1]);
     if(game) {
       mexamineGame = game; // Stores the game in case a 'mexamine' is about to be issued.
       if(game === games.focused)
@@ -1616,7 +1596,7 @@ function handleMiscMessage(data: any) {
       cleanupGame(game);
     }
 
-    var index = gameExitPending.indexOf(+match[1]);
+    const index = gameExitPending.indexOf(+match[1]);
     if(index !== -1) {
       gameExitPending.splice(index, 1);
       if(!gameExitPending.length && !settings.multiboardToggle)
@@ -1626,7 +1606,7 @@ function handleMiscMessage(data: any) {
   }
 
   match = msg.match(/(?:^|\n)-- channel list: \d+ channels --\s*([\d\s]*)/);
-  if (match !== null && match.length > 1) {
+  if(match !== null && match.length > 1) {
     if(!channelListRequested)
       chat.newMessage('console', data);
 
@@ -1635,7 +1615,7 @@ function handleMiscMessage(data: any) {
   }
 
   match = msg.match(/(?:^|\n)-- computer list: \d+ names --([\w\s]*)/);
-  if (match !== null && match.length > 1) {
+  if(match !== null && match.length > 1) {
     if(!computerListRequested)
       chat.newMessage('console', data);
 
@@ -1645,7 +1625,7 @@ function handleMiscMessage(data: any) {
   }
 
   match = msg.match(/^\[\d+\] (?:added to|removed from) your channel list\./m);
-  if (match != null && match.length > 0) {
+  if(match != null && match.length > 0) {
     session.send('=ch');
     channelListRequested = true;
     chat.newMessage('console', data);
@@ -1662,24 +1642,12 @@ function handleMiscMessage(data: any) {
     }
   }
 
-  // Moving backwards and forwards is now handled more generally by updateHistory()
-  match = msg.match(/^Game\s\d+: \w+ backs up (\d+) moves?\./m);
-  if (match != null && match.length > 1)
-    return;
-  match = msg.match(/^Game\s\d+: \w+ goes forward (\d+) moves?\./m);
-  if (match != null && match.length > 1)
-    return;
-
   // Enter setup mode when server (other user or us) issues 'bsetup' command
   match = msg.match(/^Entering setup mode\./m);
   if(!match)
     match = msg.match(/^Game (\d+): \w+ enters setup mode\./m);
   if(match) {
-    if(match.length > 1)
-      var game = games.findGame(+match[1]);
-    else
-      var game = games.getPlayingExaminingGame();
-
+    const game = match.length > 1 ? games.findGame(+match[1]) : games.getPlayingExaminingGame();
     if(game) {
       if(!game.commitingMovelist && !game.setupBoard)
         setupBoard(game, true);
@@ -1692,11 +1660,7 @@ function handleMiscMessage(data: any) {
   if(!match)
     match = msg.match(/^Game (\d+): \w+ has validated the position. Entering examine mode\./m);
   if(match) {
-    if(match.length > 1)
-      var game = games.findGame(+match[1]);
-    else
-      var game = games.getPlayingExaminingGame();
-
+    const game = match.length > 1 ? games.findGame(+match[1]) : games.getPlayingExaminingGame();
     if(game && !game.commitingMovelist && game.setupBoard)
       leaveSetupBoard(game, true);
   }
@@ -1720,7 +1684,7 @@ function handleMiscMessage(data: any) {
   if(!match)
     match = msg.match(/^done: Command not found\./m);
   if(match) {
-    var game = games.getPlayingExaminingGame();
+    const game = games.getPlayingExaminingGame();
     if(game && game.commitingMovelist) {
       if(match[0] === 'done: Command not found.') // This was sent by us to indicate when we are done
         game.commitingMovelist = false;
@@ -1731,11 +1695,11 @@ function handleMiscMessage(data: any) {
   // Support for multiple examiners, we need to handle other users commiting or truncating moves from the main line
   match = msg.match(/^Game (\d+): \w+ commits the subvariation\./m);
   if(match) {
-    var game = games.findGame(+match[1]);
+    const game = games.findGame(+match[1]);
     if(game) {
       // An examiner has commited the current move to the mainline. So we need to also make it the mainline.
       game.history.scratch(false);
-      var curr = game.history.current();
+      const curr = game.history.current();
       while(curr.depth() > 0)
         game.history.promoteSubvariation(curr);
       // Make the moves following the commited move a continuation (i.e. not mainline)
@@ -1745,28 +1709,33 @@ function handleMiscMessage(data: any) {
   }
   match = msg.match(/^Game (\d+): \w+ truncates the game at halfmove (\d+)\./m);
   if(match) {
-    var game = games.findGame(+match[1]);
+    const game = games.findGame(+match[1]);
     if(game) {
-      var index = +match[2];
+      const index = +match[2];
       if(index === 0)
         game.history.scratch(true); // The entire movelist was truncated so revert back to being a scratch game
       else {
-        var entry = game.history.getByIndex(index)
+        const entry = game.history.getByIndex(index)
         if(entry && entry.next)
           game.history.makeContinuation(entry.next);
       }
     }
   }
 
-  match = msg.match(/^\w+ has made you an examiner of game (\d+)\./m);
+  match = msg.match(/^\w+ has made you an examiner of game \d+\./m);
   if(match) {
-    let id = +match[1];
     mexamineRequested = mexamineGame;
     return;
   }
 
   match = msg.match(/^Starting a game in examine \(scratch\) mode\./m);
   if(match && examineModeRequested)
+    return;
+
+  match = msg.match(/^Game\s\d+: \w+ backs up \d+ moves?\./m);
+  if(!match)
+    match = msg.match(/^Game\s\d+: \w+ goes forward \d+ moves?\./m);
+  if(match)
     return;
 
   if (
