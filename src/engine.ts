@@ -4,8 +4,8 @@
 
 import { Chessground } from 'chessground';
 import { HEntry } from './history';
-import { getTurnColorFromFEN, getMoveNoFromFEN } from './chess-helper';
-import { gotoMove, parseMove } from './index';
+import { getTurnColorFromFEN, getMoveNoFromFEN, parseMove } from './chess-helper';
+import { gotoMove } from './index';
 import { Game } from './game';
 import * as d3 from 'd3';
 
@@ -115,7 +115,7 @@ export class Engine {
                 promotion: (move.length === 5 ? move.charAt(4) : undefined)
               };
                      
-            var parsedMove = parseMove(this.game, currFen, moveParam);    
+            var parsedMove = parseMove(currFen, moveParam, game.history.first().fen, game.category, game.history.holdings);    
             if(!parsedMove) {
               // Non-standard or unsupported moves were passed to Engine.
               this.terminate();
