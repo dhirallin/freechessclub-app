@@ -2341,18 +2341,18 @@ function hidePromotionPanel(game?: Game) {
  * create a new variation or overwrite the existing variation.
  */
 function createNewVariationMenu(game: Game) {
-  var menu = $(`
+  const menu = $(`
     <ul class="context-menu dropdown-menu">
       <li><a class="dropdown-item noselect" data-action="overwrite">Overwrite variation</a></li>
       <li><a class="dropdown-item noselect" data-action="new">New variation</a></li>
     </ul>`);
 
-  var closeMenuCallback = (event: any) => {
+  const closeMenuCallback = (event: any) => {
     updateBoard(game);
   }
 
-  var itemSelectedCallback = (event: any) => {
-    var action = $(event.target).data('action');
+  const itemSelectedCallback = (event: any) => {
+    const action = $(event.target).data('action');
     if(action === 'new')
       game.newVariationMode = NewVariationMode.NEW_VARIATION;
     else
@@ -2360,8 +2360,8 @@ function createNewVariationMenu(game: Game) {
     movePiece(game.movePieceSource, game.movePieceTarget, game.movePieceMetadata);
   }
 
-  var x = lastPointerCoords.x;
-  var y = (Utils.isSmallWindow() ? lastPointerCoords.y : lastPointerCoords.y + 15);
+  const x = lastPointerCoords.x;
+  const y = (Utils.isSmallWindow() ? lastPointerCoords.y : lastPointerCoords.y + 15);
 
   Utils.createContextMenu(menu, x, y, itemSelectedCallback, closeMenuCallback, 'top', ['top-start', 'top-end', 'bottom-start', 'bottom-end']);
 }
@@ -2405,10 +2405,10 @@ function updateGameVariantMoveData(game: Game) {
 
 export function parseMovelist(game: Game, movelist: string) {
   const moves = [];
-  let found : string[] & { index?: number } = [''];
+  let found: RegExpMatchArray | null;
   let n = 1;
-  var wtime = game.time * 60000;
-  var btime = game.time * 60000;
+  let wtime = game.time * 60000;
+  let btime = game.time * 60000;
 
   // We've set 'iset startpos 1' so that the 'moves' command also returns the start position in style12 in cases
   // where the start position is non-standard, e.g. fischer random.
@@ -2426,13 +2426,13 @@ export function parseMovelist(game: Game, movelist: string) {
     var chess = Chess();
 
   game.history.reset(chess.fen(), wtime, btime);
-  while (found !== null) {
+  while(found !== null) {
     found = movelist.match(new RegExp(n + '\\.\\s*(\\S*)\\s*\\((\\d+):(\\d+)\.(\\d+)\\)\\s*(?:(\\S*)\\s*\\((\\d+):(\\d+)\.(\\d+)\\))?.*', 'm'));
     if (found !== null && found.length > 4) {
       const m1 = found[1].trim();
       if(m1 !== '...') {
         wtime += (n === 1 ? 0 : game.inc * 1000) - (+found[2] * 60000 + +found[3] * 1000 + +found[4]);
-        var parsedMove = parseGameMove(game, chess.fen(), m1);
+        const parsedMove = parseGameMove(game, chess.fen(), m1);
         if(!parsedMove)
           break;
         chess.load(parsedMove.fen);
@@ -2443,7 +2443,7 @@ export function parseMovelist(game: Game, movelist: string) {
       if (found.length > 5 && found[5]) {
         const m2 = found[5].trim();
         btime += (n === 1 ? 0 : game.inc * 1000) - (+found[6] * 60000 + +found[7] * 1000 + +found[8]);
-        parsedMove = parseGameMove(game, chess.fen(), m2);
+        const parsedMove = parseGameMove(game, chess.fen(), m2);
         if(!parsedMove)
           break;
         chess.load(parsedMove.fen);
@@ -2473,13 +2473,14 @@ function updateHistory(game: Game, move?: any, fen?: string) {
     fen = game.history.last().fen;
 
   const hEntry = game.history.find(fen);
+  let sameMove = false;
 
   if(!hEntry) {
     if(game.movelistRequested)
       return;
 
     if(move) {
-      var newSubvariation = false;
+      let newSubvariation = false;
 
       if(game.role === Role.NONE || game.isExamining()) {
         if(game.history.length() === 0)
@@ -2519,7 +2520,8 @@ function updateHistory(game: Game, move?: any, fen?: string) {
       game.history.updateClockTimes(hEntry, game.wtime, game.btime);
 
     if(hEntry === game.history.current())
-      var sameMove = true;
+      sameMove = true;
+
     else if(game.isPlaying() || game.isObserving()) {
       if(hEntry !== game.history.last()) {
         game.board.cancelPremove();
@@ -2547,7 +2549,7 @@ function updateHistory(game: Game, move?: any, fen?: string) {
  ******************/
 
 function createGame(): Game {
-  var game = new Game();
+  const game = new Game();
   if(!games.length) {
     game.element = $('#main-board-area').children().first();
     game.statusElement = $('#game-status-list > :first-child');
@@ -2580,7 +2582,6 @@ function createGame(): Game {
     game.moveListElement.appendTo($('#movelists'));
 
     $('#secondary-board-area')[0].scrollTop = $('#secondary-board-area')[0].scrollHeight; // Scroll secondary board area to the bottom
-
     $('#game-tools-close').parent().show();
   }
 
@@ -2592,7 +2593,6 @@ function createGame(): Game {
   game.element[0].addEventListener('mousedown', gameTouchHandler);
 
   game.element.on('click', '[title="Close"]', (event) => {
-    var game = games.focused;
     if(game.preserved || game.history.editMode)
       closeGameDialog(game);
     else
@@ -2731,7 +2731,7 @@ export function maximizeGame(game: Game) {
     Utils.animateBoundingRects(game.element, $('#main-board-area'), game.element.css('--border-expand-color'), game.element.css('--border-expand-width'));
 
     // Move currently maximized game card to secondary board area
-    var prevMaximized = games.getMainGame();
+    const prevMaximized = games.getMainGame();
     if(prevMaximized)
       makeSecondaryBoard(prevMaximized);
     else
@@ -2750,11 +2750,11 @@ function closeGameDialog(game: Game) {
       closeGame(game);
   };
 
-  var headerTitle = 'Close Game';
-  var bodyText = 'Really close game?';
-  var button1 = [`closeGameClickHandler(event)`, 'OK'];
-  var button2 = ['', 'Cancel'];
-  var showIcons = true;
+  const headerTitle = 'Close Game';
+  const bodyText = 'Really close game?';
+  const button1 = [`closeGameClickHandler(event)`, 'OK'];
+  const button2 = ['', 'Cancel'];
+  const showIcons = true;
   Dialogs.showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
 }
 
@@ -2778,7 +2778,7 @@ function removeGame(game: Game) {
 
   // if we are removing the main game, choose the most important secondary game to maximize
   if(game.element.parent().is('#main-board-area')) {
-    var newMainGame = games.getMostImportantGame();
+    const newMainGame = games.getMostImportantGame();
     maximizeGame(newMainGame);
   }
 
@@ -2863,24 +2863,23 @@ function cleanupGame(game: Game) {
 }
 
 async function getOpening(game: Game) {
-  var historyItem = game.history.current();
+  const historyItem = game.history.current();
 
-  var fetchOpenings = async () => {
-    var inputFilePath = 'assets/data/openings.tsv';
+  const fetchOpenings = async () => {
+    const inputFilePath = 'assets/data/openings.tsv';
     openings = new Map();
-    var chess = new Chess();
     await fetch(inputFilePath)
     .then(response => response.text())
     .then(data => {
       const rows = data.split('\n');
       for(const row of rows) {
-        var cols = row.split('\t');
+        const cols = row.split('\t');
         if(cols.length === 4 && cols[2].startsWith('1.')) {
-          var eco = cols[0];
-          var name = cols[1];
-          var moves = cols[2];
-          var fen = cols[3];
-          var fenNoPlyCounts = fen.split(' ').slice(0, -2).join(' ');
+          const eco = cols[0];
+          const name = cols[1];
+          const moves = cols[2];
+          const fen = cols[3];
+          const fenNoPlyCounts = fen.split(' ').slice(0, -2).join(' ');
           openings.set(fenNoPlyCounts, {eco, name, moves});
         }
       }
@@ -2895,11 +2894,9 @@ async function getOpening(game: Game) {
   }
   await fetchOpeningsPromise;
 
-  var fen = historyItem.fen.split(' ').slice(0, -2).join(' '); // Remove ply counts
-  var opening = null;
-  if(['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category))
-    var opening = openings.get(fen);
-
+  const fen = historyItem.fen.split(' ').slice(0, -2).join(' '); // Remove ply counts
+  const opening = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category) 
+      ? openings.get(fen) : null;
   historyItem.opening = opening;
   game.history.updateOpeningMetatags();
 }
@@ -2914,7 +2911,7 @@ $('#fast-backward').on('click', () => {
 });
 
 function fastBackward() {
-  var game = games.focused;
+  const game = games.focused;
   gotoMove(game.history.first());
   if(!SupportedCategories.includes(game.category) && game.isExamining())
     session.send('back 999');
@@ -2927,8 +2924,8 @@ $('#backward').on('click', () => {
 });
 
 function backward() {
-  var game = games.focused;
-  var move = bufferedCurrentMove(game).prev;
+  const game = games.focused;
+  const move = bufferedCurrentMove(game).prev;
 
   if(move)
     gotoMove(move);
@@ -2944,8 +2941,8 @@ $('#forward').on('click', () => {
 });
 
 function forward() {
-  var game = games.focused;
-  var move = bufferedCurrentMove(game).next;
+  const game = games.focused;
+  const move = bufferedCurrentMove(game).next;
 
   if(move)
     gotoMove(move, true);
@@ -2961,7 +2958,7 @@ $('#fast-forward').on('click', () => {
 });
 
 function fastForward() {
-  var game = games.focused;
+  const game = games.focused;
   gotoMove(game.history.last());
   if(!SupportedCategories.includes(game.category) && game.isExamining())
     session.send('forward 999');
@@ -2975,9 +2972,8 @@ $('#exit-subvariation').on('click', () => {
 });
 
 function exitSubvariation() {
-  var curr = bufferedCurrentMove(games.focused);
-
-  var prev = curr.first.prev;
+  const curr = bufferedCurrentMove(games.focused);
+  const prev = curr.first.prev;
   gotoMove(prev);
   showTab($('#pills-game-tab'));
 }
@@ -2990,17 +2986,17 @@ export function gotoMove(to: HEntry, playSound = false) {
   if(!to)
     return;
 
-  var game = games.focused;
+  const game = games.focused;
   if(game.isExamining() && !game.setupBoard) {
-    var from = bufferedCurrentMove(game);
-    var curr = from;
+    let from = bufferedCurrentMove(game);
+    let curr = from;
     let i = 0;
     while(curr) {
       curr.visited = i;
       curr = curr.prev;
       i++;
     }
-    var path = [];
+    const path = [];
     curr = to;
     while(curr && curr.visited === undefined) {
       path.push(curr);
@@ -3121,7 +3117,7 @@ function showPanel(id: string) {
 }
 
 function hidePanel(id: string) {
-  var elem = $(id);
+  const elem = $(id);
   elem.hide();
 
   if(elem.closest('#left-col'))
@@ -3181,22 +3177,20 @@ $('#play-computer-form').on('submit', (event) => {
   };
 
   if($('#play-computer-start-from-pos').prop('checked')) {
-    var game = games.focused;
+    const game = games.focused;
     if(game.setupBoard) 
       params.fen = getSetupBoardFEN(game);
     else {
-      var fen: string = game.history.current().fen;
-      var fenWords = ChessHelper.splitFEN(fen);
+      const fen = game.history.current().fen;
+      const fenWords = ChessHelper.splitFEN(fen);
       fenWords.plyClock = '0';
       fenWords.moveNo = '1';
       params.fen = ChessHelper.joinFEN(fenWords);
     }
 
-    var category = params.gameType.toLowerCase();
-    if(params.gameType === 'Chess960')
-      category = 'wild/fr';
+    const category = params.gameType === 'Chess960' ? 'wild/fr' : params.gameType.toLowerCase();
 
-    var err = ChessHelper.validateFEN(params.fen, category);
+    const err = ChessHelper.validateFEN(params.fen, category);
     if(err) {
       $('#play-computer-start-from-pos').addClass('is-invalid');
       return;
@@ -3224,23 +3218,24 @@ $('#play-computer-form').on('submit', (event) => {
 });
 
 function playComputer(params: any) {
-  var computerGame = games.getComputerGame();
+  const computerGame = games.getComputerGame();
+  let game: Game;
   if(computerGame) {
     cleanupGame(computerGame);
-    var game = computerGame;
+    game = computerGame;
   }
   else if(!settings.multiboardToggle)
-    var game = games.getMainGame();
+    game = games.getMainGame();
   else {
-    var game = games.getFreeGame();
+    game = games.getFreeGame();
     if(!game)
       game = createGame();
   }
 
   game.id = -1;
 
-  var playerName = (session.isConnected() ? session.getUser() : 'Player');
-  var playerTimeRemaining = params.playerTime * 60000;
+  const playerName = (session.isConnected() ? session.getUser() : 'Player');
+  let playerTimeRemaining = params.playerTime * 60000;
   if(params.playerTime === 0) {
     if(params.playerInc === 0)
       playerTimeRemaining = null; // untimed game
@@ -3248,14 +3243,10 @@ function playComputer(params: any) {
       playerTimeRemaining = 10000; // if initial player time is 0, player gets 10 seconds
   }
 
-  var wname = (params.playerColor === 'White' ? playerName : 'Computer');
-  var bname = (params.playerColor === 'Black' ? playerName : 'Computer');
-
-  var category = params.gameType.toLowerCase();
-  if(params.gameType === 'Chess960')
-    category = 'wild/fr';
-
-  var turnColor = ChessHelper.getTurnColorFromFEN(params.fen);
+  let wname = (params.playerColor === 'White' ? playerName : 'Computer');
+  let bname = (params.playerColor === 'Black' ? playerName : 'Computer');
+  const category = params.gameType === 'Chess960' ? 'wild/fr' : params.gameType.toLowerCase();
+  const turnColor = ChessHelper.getTurnColorFromFEN(params.fen);
 
   var data = {
     fen: params.fen,                        // game state
@@ -3279,17 +3270,16 @@ function playComputer(params: any) {
   }
 
   // Show game status mmessage
-  var computerName = `Computer (Lvl ${params.difficulty})`;
+  const computerName = `Computer (Lvl ${params.difficulty})`;
   if(params.playerColor === 'White')
     bname = computerName;
   else
     wname = computerName;
-  let time = ` ${params.playerTime} ${params.playerInc}`;
-  if(params.playerTime === 0 && params.playerInc === 0)
-    time = '';
-  let gameType = '';
-  if(params.gameType !== 'Standard')
-    gameType = ` ${params.gameType}`;
+
+  const time = params.playerTime === 0 && params.playerInc === 0 
+      ? '' : ` ${params.playerTime} ${params.playerInc}`;
+  const gameType = params.gameType !== 'Standard' ? ` ${params.gameType}` : '';
+
   const statusMsg = `${wname} vs. ${bname}${gameType}${time}`;
   showStatusMsg(game, statusMsg);
 
@@ -3297,9 +3287,9 @@ function playComputer(params: any) {
 }
 
 function getPlayComputerEngineOptions(game: Game): object {
-  var skillLevels = [0, 1, 2, 3, 5, 7, 9, 11, 13, 15]; // Skill Level for each difficulty level
+  const skillLevels = [0, 1, 2, 3, 5, 7, 9, 11, 13, 15]; // Skill Level for each difficulty level
 
-  var engineOptions = {}
+  const engineOptions = {}
   if(game.category === 'wild/fr')
     engineOptions['UCI_Chess960'] = true;
   else if(game.category === 'crazyhouse')
@@ -3313,28 +3303,26 @@ function getPlayComputerEngineOptions(game: Game): object {
 function getPlayComputerMoveParams(game: Game): string {
   // Max nodes for each difficulty level. This is also used to limit the engine's thinking time
   // but in a way that keeps the difficulty the same across devices
-  var maxNodes = [100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000];
-  var moveParams = `nodes ${maxNodes[game.difficulty - 1]}`;
+  const maxNodes = [100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000];
+  const moveParams = `nodes ${maxNodes[game.difficulty - 1]}`;
 
   return moveParams;
 }
 
 function playComputerBestMove(game: Game, bestMove: string, score: string = '=0.00') {
-  var move;
-  if(bestMove[1] === '@') // Crazyhouse/bughouse
-    move = bestMove;
-  else
-    move = {
-      from: bestMove.slice(0,2),
-      to: bestMove.slice(2,4),
-      promotion: (bestMove.length === 5 ? bestMove[4] : undefined)
-    }
+  const move = bestMove[1] === '@' // Crazyhouse/bughouse
+    ? bestMove
+    : {
+        from: bestMove.slice(0,2),
+        to: bestMove.slice(2,4),
+        promotion: (bestMove.length === 5 ? bestMove[4] : undefined)
+      };
 
   game.lastComputerMoveEval = score;
 
-  var parsedMove = parseGameMove(game, game.history.last().fen, move);
+  const parsedMove = parseGameMove(game, game.history.last().fen, move);
 
-  var moveData = {
+  const moveData = {
     role: Role.PLAYING_COMPUTER,                      // game mode
     id: -1,                                           // game id, always -1 for playing computer
     fen: parsedMove.fen,                              // board/game state
@@ -3350,13 +3338,13 @@ function playComputerBestMove(game: Game, bestMove: string, score: string = '=0.
 
 // Get Computer's next move either from the opening book or engine
 async function getComputerMove(game: Game) {
-  var bookMove = '';
+  let bookMove = '';
   if(game.category === 'standard') { // only use opening book with normal chess
-    var fen = game.history.last().fen;
-    var moveNo = ChessHelper.getMoveNoFromFEN(fen);
+    const fen = game.history.last().fen;
+    const moveNo = ChessHelper.getMoveNoFromFEN(fen);
     // Cool-down function for deviating from the opening book. The chances of staying in book
     // decrease with each move
-    var coolDownParams = [
+    const coolDownParams = [
       { slope: 0.2, shift: 1.0 }, // Difficulty level 1
       { slope: 0.2, shift: 1.2 }, // 2
       { slope: 0.2, shift: 1.4 }, // 3
@@ -3368,16 +3356,16 @@ async function getComputerMove(game: Game) {
       { slope: 0.2, shift: 3.5 }, // 9
       { slope: 0.2, shift: 4.0 }, // 10
     ];
-    let a = coolDownParams[game.difficulty - 1].slope;
-    let b = coolDownParams[game.difficulty - 1].shift;
-    let x = moveNo;
-    var sigma = 1 / (1 + Math.exp(a*x - b));
+    const a = coolDownParams[game.difficulty - 1].slope;
+    const b = coolDownParams[game.difficulty - 1].shift;
+    const x = moveNo;
+    const sigma = 1 / (1 + Math.exp(a*x - b));
     if(Math.random() < sigma) {
       // Use book move (if there is one)
-      var bookMoves = await getBookMoves(fen);
-      var totalWeight = bookMoves.reduce((acc, curr) => acc + curr.weight, 0);
-      var probability = 0;
-      var rValue = Math.random();
+      const bookMoves = await getBookMoves(fen);
+      const totalWeight = bookMoves.reduce((acc, curr) => acc + curr.weight, 0);
+      const rValue = Math.random();
+      let probability = 0;
       for(let bm of bookMoves) {
         probability += bm.weight / totalWeight; // polyglot moves are weighted based on number of wins and draws
         if(rValue <= probability) {
@@ -3398,7 +3386,7 @@ async function getBookMoves(fen: string): Promise<any[]> {
   if(!book)
     book = new Polyglot("assets/data/gm2600.bin");
 
-  var entries = await book.getMovesFromFen(fen);
+  const entries = await book.getMovesFromFen(fen);
   return entries;
 }
 
@@ -3412,71 +3400,71 @@ function checkGameEnd(game: Game) {
   if(game.role !== Role.PLAYING_COMPUTER)
     return;
 
-  var gameEnd = false;
-  var isThreefold = game.history.isThreefoldRepetition();
-  var winner = '', loser = '';
-  var lastMove = game.history.last();
-  var turnColor = lastMove.turnColor;
-  var fen = lastMove.fen;
-  var chess = new Chess(fen);
-  var gameStr = `(${game.wname} vs. ${game.bname})`;
+  const lastMove = game.history.last();
+  let gameEnd = false;
+  let winner = '', loser = '', reason: Reason, reasonStr: string, scoreStr: string;
+  let fen = lastMove.fen;
+  const isThreefold = game.history.isThreefoldRepetition();
+  const turnColor = lastMove.turnColor;
+  const gameStr = `(${game.wname} vs. ${game.bname})`;
+  const chess = new Chess(fen);
 
   // Check white or black is out of time
   if(game.clock.getWhiteTime() < 0 || game.clock.getBlackTime() < 0) {
-    var wtime = game.clock.getWhiteTime();
-    var btime = game.clock.getBlackTime();
+    const wtime = game.clock.getWhiteTime();
+    const btime = game.clock.getBlackTime();
 
     // Check if the side that is not out of time has sufficient material to mate, otherwise its a draw
-    var insufficientMaterial = false;
+    let insufficientMaterial = false;
     if(wtime < 0)
-      var fen = chess.fen().replace(' w ', ' b '); // Set turn color to the side not out of time in order to check their material
+      fen = chess.fen().replace(' w ', ' b '); // Set turn color to the side not out of time in order to check their material
     else if(btime < 0)
-      var fen = chess.fen().replace(' b ', ' w ');
+      fen = chess.fen().replace(' b ', ' w ');
 
     chess.load(fen);
     insufficientMaterial = chess.insufficient_material();
 
     if(insufficientMaterial) {
-      var reason = Reason.Draw;
-      var reasonStr = `${wtime < 0 ? game.wname : game.bname} ran out of time and ${wtime >= 0 ? game.wname : game.bname} has no material to mate`;
-      var scoreStr = '1/2-1/2';
+      reason = Reason.Draw;
+      reasonStr = `${wtime < 0 ? game.wname : game.bname} ran out of time and ${wtime >= 0 ? game.wname : game.bname} has no material to mate`;
+      scoreStr = '1/2-1/2';
     }
     else {
       winner = (wtime >= 0 ? game.wname : game.bname);
       loser = (wtime < 0 ? game.wname : game.bname);
-      var reason = Reason.TimeForfeit;
-      var reasonStr = `${loser} forfeits on time`;
-      var scoreStr = (winner === game.wname ? '1-0' : '0-1');
+      reason = Reason.TimeForfeit;
+      reasonStr = `${loser} forfeits on time`;
+      scoreStr = (winner === game.wname ? '1-0' : '0-1');
     }
     gameEnd = true;
   }
   else if(chess.in_checkmate()) {
     winner = (turnColor === 'w' ? game.bname : game.wname);
     loser = (turnColor === 'w' ? game.wname : game.bname);
-    var reason = Reason.Checkmate;
-    var reasonStr = `${loser} checkmated`;
-    var scoreStr = (winner === game.wname ? '1-0' : '0-1');
+    reason = Reason.Checkmate;
+    reasonStr = `${loser} checkmated`;
+    scoreStr = (winner === game.wname ? '1-0' : '0-1');
 
     gameEnd = true;
   }
   else if(chess.in_draw() || isThreefold) {
-    var reason = Reason.Draw;
-    var scoreStr = '1/2-1/2';
+    reason = Reason.Draw;
+    scoreStr = '1/2-1/2';
 
     if(isThreefold)
-      var reasonStr = 'Game drawn by repetition';
+      reasonStr = 'Game drawn by repetition';
     else if(chess.insufficient_material())
-      var reasonStr = 'Neither player has mating material';
+      reasonStr = 'Neither player has mating material';
     else if(chess.in_stalemate())
-      var reasonStr = 'Game drawn by stalemate';
+      reasonStr = 'Game drawn by stalemate';
     else
-      var reasonStr = 'Game drawn by the 50 move rule';
+      reasonStr = 'Game drawn by the 50 move rule';
 
     gameEnd = true;
   }
 
   if(gameEnd) {
-    var gameEndData = {
+    const gameEndData = {
       game_id: -1,
       winner,
       loser,
@@ -3525,9 +3513,9 @@ function getGame(min: number, sec: number) {
   opponent = opponent.trim().split(/\s+/)[0];
   $('#opponent-player-name').val(opponent);
 
-  var ratedUnrated = ($('#rated-unrated-button').text() === 'Rated' ? 'r' : 'u');
-  var colorName = $('#player-color-button').text();
-  var color = '';
+  const ratedUnrated = ($('#rated-unrated-button').text() === 'Rated' ? 'r' : 'u');
+  const colorName = $('#player-color-button').text();
+  let color = '';
   if(colorName === 'White')
     color = 'W ';
   else if(colorName === 'Black')
@@ -3536,7 +3524,7 @@ function getGame(min: number, sec: number) {
   matchRequested++;
 
   const cmd: string = (opponent !== '') ? `match ${opponent}` : 'seek';
-  var mainGame = games.getPlayingExaminingGame();
+  const mainGame = games.getPlayingExaminingGame();
   if(mainGame && mainGame.isExamining())
     session.send('unex');
   session.send(`${cmd} ${min} ${sec} ${ratedUnrated} ${color}${newGameVariant}`);
@@ -3583,7 +3571,7 @@ $(document).on('shown.bs.tab', 'button[data-bs-target="#pills-lobby"]', (e) => {
 });
 
 function initLobbyPane() {
-  var game = games.getPlayingExaminingGame();
+  const game = games.getPlayingExaminingGame();
   if(!session || !session.isConnected())
     $('#lobby').hide();
   else if(game && (game.isExamining() || game.isPlayingOnline())) {
@@ -3640,7 +3628,7 @@ function leaveLobbyPane() {
     $('#lobby-table').html('');
     lobbyRequested = false;
 
-    if (session && session.isConnected()) {
+    if(session && session.isConnected()) {
       session.send('iset seekremove 0');
       session.send('iset seekinfo 0');
     }
@@ -3660,14 +3648,14 @@ $('#lobby-show-unrated').on('change', function (e) {
 });
 
 $('#lobby-table-container').on('scroll', (e) => {
-  var container = $('#lobby-table-container')[0];
+  const container = $('#lobby-table-container')[0];
   lobbyScrolledToBottom = container.scrollHeight - container.clientHeight < container.scrollTop + 1.5;
 });
 
 function formatLobbyEntry(seek: any): string {
-  var title = (seek.title !== '' ? `(${seek.title})` : '');
-  var color = (seek.color !== '?' ? ` ${seek.color}` : '');
-  var rating = (seek.rating !== '' ? `(${seek.rating})` : '');
+  const title = (seek.title !== '' ? `(${seek.title})` : '');
+  const color = (seek.color !== '?' ? ` ${seek.color}` : '');
+  const rating = (seek.rating !== '' ? `(${seek.rating})` : '');
   return `${seek.toFrom}${title}${rating} ${seek.initialTime} ${seek.increment} `
     + `${seek.ratedUnrated} ${seek.category}${color}`;
 }
@@ -3688,7 +3676,7 @@ $(document).on('shown.bs.tab', 'button[data-bs-target="#pills-observe"]', (e) =>
 function initObservePane() {
   obsRequested = 0;
   $('#games-table').html('');
-  if (session && session.isConnected()) {
+  if(session && session.isConnected()) {
     gamesRequested = true;
     session.send('games');
   }
@@ -3718,16 +3706,15 @@ function observe(id?: string) {
 }
 
 function showGames(games: string) {
-  if (!$('#pills-observe').hasClass('active')) {
+  if (!$('#pills-observe').hasClass('active')) 
     return;
-  }
 
   $('#observe-pane-status').hide();
 
-  for (const g of games.split('\n').slice(0, -2).reverse()) {
-    var match = g.match(/\s*(\d+)\s+(\(Exam\.\s+)?(\S+)\s+(\w+)\s+(\S+)\s+(\w+)\s*(\)\s+)?(\[\s*)(\w+)(.*)/);
+  for(const g of games.split('\n').slice(0, -2).reverse()) {
+    const match = g.match(/\s*(\d+)\s+(\(Exam\.\s+)?(\S+)\s+(\w+)\s+(\S+)\s+(\w+)\s*(\)\s+)?(\[\s*)(\w+)(.*)/);
     if(match) {
-      var id = match[1];
+      const id = match[1];
 
       if(match[9].startsWith('p')) // Don't list private games
         continue;
@@ -3739,8 +3726,7 @@ function showGames(games: string) {
           match[6] += '(C)';
       });
 
-      var gg = match.slice(1).join(' ')
-
+      const gg = match.slice(1).join(' ')
       $('#games-table').append(
         `<button type="button" class="w-100 btn btn-outline-secondary" onclick="observeGame('${id}');">`
           + `${gg}</button>`);
@@ -3760,11 +3746,9 @@ function initHistoryPane() {
   historyRequested = 0;
   $('#history-table').html('');
   let username = Utils.getValue('#history-username');
-  if (username === undefined || username === '') {
-    if (session) {
-      username = session.getUser();
-      $('#history-username').val(username);
-    }
+  if(!username && session) {
+    username = session.getUser();
+    $('#history-username').val(username);
   }
   getHistory(username);
 }
@@ -4164,7 +4148,7 @@ $('#game-tools-new').on('click', (event) => {
 
 /** New Variant Game menu item selected */
 $('#new-variant-game-submenu a').on('click', (event) => {
-  var category = $(event.target).text();
+  let category = $(event.target).text();
   if(category === 'Chess960')
     category = 'wild/fr';
 
@@ -4177,46 +4161,49 @@ $('#new-variant-game-submenu a').on('click', (event) => {
  * current game or open a New Board. For Chess960, also lets select Chess960 starting position
  */
 function newGameDialog(category: string = 'untimed') {
-  var bodyText = '';
+  let bodyText = '';
 
   if(category === 'wild/fr') {
-    var bodyText =
+    let bodyText =
       `<label for"chess960idn">Chess960 Starting Position ID (Optional)</label>
       <input type="number" min="0" max="959" placeholder="0-959" class="form-control text-center chess960idn"><br>`;
   }
 
   var overwriteHandler = function(event) {
-    if(category === 'wild/fr')
-      var chess960idn = this.closest('.toast').querySelector('.chess960idn').value;
+    const chess960idn = category === 'wild/fr'
+        ? this.closest('.toast').querySelector('.chess960idn').value
+        : undefined;
     newGame(false, category, null, chess960idn);
   };
 
   var newBoardHandler = function(event) {
-    if(category === 'wild/fr')
-      var chess960idn = this.closest('.toast').querySelector('.chess960idn').value;
+    const chess960idn = category === 'wild/fr'
+        ? this.closest('.toast').querySelector('.chess960idn').value
+        : undefined;
     newGame(true, category, null, chess960idn);
   };
 
-  var button1: any, button2: any;
   if(games.focused.role === Role.NONE || (category === 'wild/fr' && settings.multiboardToggle)) {
-    var headerTitle = 'Create new game';
-    var bodyTitle = '';
+    const headerTitle = 'Create new game';
+    const bodyTitle = '';
+    let showIcons = false;
+    let button1: any, button2: any;
     if(games.focused.role === Role.NONE && settings.multiboardToggle) {
-      var bodyText = `${bodyText}Overwrite existing game or open new board?`;
+      bodyText = `${bodyText}Overwrite existing game or open new board?`;
       button1 = [overwriteHandler, 'Overwrite'];
       button2 = [newBoardHandler, 'New Board'];
-      var showIcons = false;
+      showIcons = false;
     }
     else if(games.focused.role === Role.NONE) {
-      var bodyText = `${bodyText}This will clear the current game.`;
+      bodyText = `${bodyText}This will clear the current game.`;
       button1 = [overwriteHandler, 'OK'];
       button2 = ['', 'Cancel'];
-      var showIcons = true;
+      showIcons = true;
     }
     else if(category === 'wild/fr' && settings.multiboardToggle) {
       button1 = [newBoardHandler, 'OK'];
       button2 = ['', 'Cancel'];
-      var showIcons = true;
+      showIcons = true;
     }
     Dialogs.showFixedDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
   }
@@ -4233,16 +4220,12 @@ function newGameDialog(category: string = 'untimed') {
  * @param chess960idn Alternatively the starting IDN for Chess960
  */
 function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: string, chess960idn?: string): Game {
-  if(createNewBoard)
-    var game = createGame();
-  else {
-    var game = games.focused;
+  const game = createNewBoard ? createGame() : games.focused;
+  if(!createNewBoard)
     cleanupGame(game);
-  }
 
   if(category === 'wild/fr' && !fen)
-    var fen = ChessHelper.generateChess960FEN(chess960idn ? +chess960idn : null);
-
+    fen = ChessHelper.generateChess960FEN(chess960idn ? +chess960idn : null);
   if(!fen)
     fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -4283,7 +4266,7 @@ $('#open-games-modal').on('show.bs.modal', function() {
  */
 $('#open-files').on('click', (event) => {
   // Create file selector dialog
-  var fileInput = $('<input type="file" style="display: none" multiple/>');
+  const fileInput = $('<input type="file" style="display: none" multiple/>');
   fileInput.appendTo('body');
   fileInput.trigger('click');
 
@@ -4291,13 +4274,13 @@ $('#open-files').on('click', (event) => {
     $('#open-games-modal').modal('hide');
     fileInput.remove();
     const target = event.target as HTMLInputElement;
-    var gameFileStrings = await openGameFiles(target.files);
+    const gameFileStrings = await openGameFiles(target.files);
     openGamesOverwriteDialog(gameFileStrings);
   });
 });
 
 $('#add-games-button').on('click', (event) => {
-  var inputStr = $('#add-games-input').val() as string;
+  let inputStr = $('#add-games-input').val() as string;
   inputStr = inputStr.trim();
   if(inputStr) {
     $('#open-games-modal').modal('hide');
@@ -4312,8 +4295,7 @@ $('#add-games-button').on('click', (event) => {
  * @param fileStrings an array of strings representing each opened PGN file (or the Add Games textarea)
  */
 function openGamesOverwriteDialog(fileStrings: string[]) {
-  var bodyText = '';
-  var game = games.focused;
+  const game = games.focused;
 
   var overwriteHandler = function(event) {
     parseGameFiles(game, fileStrings, false);
@@ -4323,22 +4305,24 @@ function openGamesOverwriteDialog(fileStrings: string[]) {
     parseGameFiles(game, fileStrings, true);
   };
 
-  var button1: any, button2: any;
   if(games.focused.role === Role.NONE) {
     if(games.focused.history.length()) {
-      var headerTitle = 'Open Games';
-      var bodyTitle = '';
+      let bodyText = '';
+      let button1: any, button2: any;
+      let showIcons = false;
+      const headerTitle = 'Open Games';
+      const bodyTitle = '';
       if(games.focused.role === Role.NONE && settings.multiboardToggle) {
-        var bodyText = `${bodyText}Overwrite existing game or open new board?`;
+        bodyText = `${bodyText}Overwrite existing game or open new board?`;
         button1 = [overwriteHandler, 'Overwrite'];
         button2 = [newBoardHandler, 'New Board'];
-        var showIcons = false;
+        showIcons = false;
       }
       else if(games.focused.role === Role.NONE) {
-        var bodyText = `${bodyText}This will clear the current game.`;
+        bodyText = `${bodyText}This will clear the current game.`;
         button1 = [overwriteHandler, 'OK'];
         button2 = ['', 'Cancel'];
-        var showIcons = true;
+        showIcons = true;
       }
       Dialogs.showFixedDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
     }
