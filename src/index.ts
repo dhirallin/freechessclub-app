@@ -2466,24 +2466,26 @@ function variantToDests(game: Game): Map<Key, Key[]> {
 }
 
 function showPromotionPanel(game: Game, premove: boolean = false) {
-  var source = game.movePieceSource;
-  var target = game.movePieceTarget;
-  var metadata = game.movePieceMetadata;
-  var showKing = !SupportedCategories.includes(game.category) && game.category !== 'atomic';
+  const source = game.movePieceSource;
+  const target = game.movePieceTarget;
+  const metadata = game.movePieceMetadata;
+  const showKing = !SupportedCategories.includes(game.category) && game.category !== 'atomic';
 
   game.promoteIsPremove = premove;
-  var orientation = game.board.state.orientation;
-  var color = (target.charAt(1) === '8' ? 'white' : 'black');
-  var fileNum = target.toLowerCase().charCodeAt(0) - 97;
+  const orientation = game.board.state.orientation;
+  const color = (target.charAt(1) === '8' ? 'white' : 'black');
+  const fileNum = target.toLowerCase().charCodeAt(0) - 97;
 
-  var promotionPanel = $(`<div class="cg-wrap promotion-panel"></div>`);
+  hidePromotionPanel(game);
+  const promotionPanel = $(`<div class="cg-wrap promotion-panel"></div>`);
   promotionPanel.appendTo(game.element.find('.board-container'));
   promotionPanel.css({
     left: `calc(12.5% * ${orientation === "white" ? fileNum : 7 - fileNum})`,
-    height: showKing ? '62.5%' : '50%'
+    height: showKing ? '62.5%' : '50%',
+    top: orientation === color ? '0' : '50%',
+    display: 'flex'
   });
   if(orientation === color) {
-    promotionPanel.css('top', 0);
     promotionPanel.html(`
       <piece data-piece="q" class="promotion-piece queen ` + color + `"></piece>
       <piece data-piece="n" class="promotion-piece knight ` + color + `"></piece>
@@ -2493,7 +2495,6 @@ function showPromotionPanel(game: Game, premove: boolean = false) {
     `);
   }
   else {
-    promotionPanel.css('top', '50%');
     promotionPanel.html(`
       ${showKing ? `<piece data-piece="k" class="promotion-piece king ` + color + `"></piece>` : ``}
       <piece data-piece="b" class="promotion-piece bishop ` + color + `"></piece>
@@ -2509,8 +2510,6 @@ function showPromotionPanel(game: Game, premove: boolean = false) {
     if(!premove)
       movePiece(source, target, metadata);
   });
-
-  promotionPanel.css('display', 'flex');
 }
 
 function hidePromotionPanel(game?: Game) {
