@@ -2025,7 +2025,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
     hidePromotionPanel(game);
   }
 
-  var categorySupported = SupportedCategories.includes(game.category);
+  const categorySupported = SupportedCategories.includes(game.category);
 
   if(move && move.from && move.to)
     game.board.set({ lastMove: [move.from, move.to] });
@@ -2034,9 +2034,9 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
   else
     game.board.set({ lastMove: false });
 
-  let dests : Map<string, string[]> | undefined;
-  let movableColor : string | undefined;
-  let turnColor : string | undefined;
+  let dests: Map<string, string[]> | undefined;
+  let movableColor: string | undefined;
+  let turnColor: string | undefined;
 
   if(game.isObserving()) {
     turnColor = color;
@@ -2055,7 +2055,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
     turnColor = color;
   }
 
-  let movable : any = {};
+  let movable: any = {};
   movable = {
     color: movableColor,
     dests,
@@ -2116,8 +2116,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
 }
 
 function boardChanged() {
-  var game = games.focused;
-
+  const game = games.focused;
   if(game.setupBoard) {
     var fen = getSetupBoardFEN(game);
 
@@ -2128,7 +2127,7 @@ function boardChanged() {
       session.send(`bsetup fen ${game.board.getFen()}`);
 
     // Remove castling rights if king or rooks move from initial position
-    var newFEN = ChessHelper.adjustCastlingRights(fen, game.fen, game.category);
+    const newFEN = ChessHelper.adjustCastlingRights(fen, game.fen, game.category);
     if(newFEN !== fen)
       setupBoardCastlingRights(game, ChessHelper.splitFEN(newFEN).castlingRights);
 
@@ -2156,9 +2155,7 @@ export function scrollToBoard(game?: Game) {
 }
 
 export function movePiece(source: any, target: any, metadata: any) {
-  let fen = '';
-  let move = null;
-  var game = games.focused;
+  const game = games.focused;
 
   if(game.isObserving())
     return;
@@ -2169,40 +2166,33 @@ export function movePiece(source: any, target: any, metadata: any) {
   if(game.setupBoard)
     return;
 
-  var prevHEntry = currentGameMove(game);
+  const prevHEntry = currentGameMove(game);
 
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
-  var pieces = game.board.state.pieces;
-  var pieceRole = cgRoles[pieces.get(target).role];
-  var pieceColor = pieces.get(target).color;
+  const pieces = game.board.state.pieces;
+  const pieceRole = cgRoles[pieces.get(target).role];
+  const pieceColor = pieces.get(target).color;
 
+  let promotePiece = '';
   if(game.promotePiece)
-    var promotePiece: string = game.promotePiece;
+    promotePiece = game.promotePiece;
   else if(pieceRole === 'p' && !cgRoles.hasOwnProperty(source) && target.charAt(1) === (pieceColor === 'white' ? '8' : '1'))
-    var promotePiece = 'q';
-  else
-    var promtoePiece = '';
+    promotePiece = 'q';
 
-  var inMove = {
+  const inMove = {
     from: (!cgRoles.hasOwnProperty(source) ? source : ''),
     to: target,
     promotion: promotePiece,
     piece: pieceRole,
   };
 
-  var parsedMove = parseGameMove(game, prevHEntry.fen, inMove);
-  if(parsedMove) {
-    fen = parsedMove.fen;
-    move = parsedMove.move;
-  }
-  else {
-    if(SupportedCategories.includes(game.category)) {
-      updateBoard(game, false, true);
-      return;
-    }
+  const parsedMove = parseGameMove(game, prevHEntry.fen, inMove);
+  const fen = parsedMove ? parsedMove.fen : null;
+  const move = parsedMove ? parsedMove.move : inMove;
 
-    fen = null;
-    move = inMove;
+  if(!parsedMove && SupportedCategories.includes(game.category)) {
+    updateBoard(game, false, true);
+    return;
   }
 
   game.movePieceSource = source;
@@ -2218,10 +2208,10 @@ export function movePiece(source: any, target: any, metadata: any) {
 
   if(parsedMove) {
     if(game.history.editMode && game.newVariationMode === NewVariationMode.ASK && nextMove) {
-      var subFound = false;
+      let subFound = false;
       for(let i = 0; i < nextMove.subvariations.length; i++) {
         if(nextMove.subvariations[i].fen === fen)
-          var subFound = true;
+          subFound = true;
       }
       if(nextMove.fen !== fen && !subFound) {
         createNewVariationMenu(game);
@@ -2234,7 +2224,7 @@ export function movePiece(source: any, target: any, metadata: any) {
     sendMove(move);
 
   if(game.isExamining()) {
-    var nextMoveMatches = false;
+    let nextMoveMatches = false;
     if(nextMove
         && ((!move.from && !nextMove.from && move.piece === nextMove.piece) || move.from === nextMove.from)
         && move.to === nextMove.to
