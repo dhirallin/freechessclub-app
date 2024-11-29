@@ -2260,7 +2260,7 @@ export function movePiece(source: any, target: any, metadata: any) {
 
   if(game.promotePiece)
     var promotePiece: string = game.promotePiece;
-  else if(pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1'))
+  else if(pieceRole === 'p' && !cgRoles.hasOwnProperty(source) && target.charAt(1) === (pieceColor === 'white' ? '8' : '1'))
     var promotePiece = 'q';
   else
     var promtoePiece = '';
@@ -2278,6 +2278,11 @@ export function movePiece(source: any, target: any, metadata: any) {
     move = parsedMove.move;
   }
   else {
+    if(SupportedCategories.includes(game.category)) {
+      updateBoard(game, false, true);
+      return;
+    }
+
     fen = null;
     move = inMove;
   }
