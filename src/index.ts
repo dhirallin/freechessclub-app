@@ -2361,12 +2361,12 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 function preMovePiece(source: any, target: any, metadata: any) {
   var game = gameWithFocus;
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
-  if(cgRoles.hasOwnProperty(source)) // piece drop rather than move
+  if(cgRoles.hasOwnProperty(source) || settings.autoPromoteToggle) // piece drop rather than move
     return;
   const pieces = game.board.state.pieces;
   const pieceRole = cgRoles[pieces.get(source).role];
   const pieceColor = pieces.get(source).color;
-  if(!game.promotePiece && pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1')) {
+  if(pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1')) {
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;    
@@ -5055,7 +5055,7 @@ async function openGameFiles(files: any): Promise<string[]> {
         reader.onerror = function(e) {
           const error = e.target?.error;
           let errorMessage = 'An unknown error occurred';
-          if (error)
+          if(error)
             errorMessage = error.name + ' - ' + error.message;
           showFixedDialog({type: 'Failed to open game file', msg: errorMessage, btnSuccess: ['', 'OK']});
           reject(error);
