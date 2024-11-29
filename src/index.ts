@@ -2360,8 +2360,16 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 
 function preMovePiece(source: any, target: any, metadata: any) {
   var game = gameWithFocus;
-  var chess = new Chess(game.board.getFen() + ' w KQkq - 0 1');
-  if(!game.promotePiece && chess.get(source).type === 'p' && (target.charAt(1) === '1' || target.charAt(1) === '8')) {
+  const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
+  if(cgRoles.hasOwnProperty(source)) // piece drop rather than move
+    return;
+  const pieces = game.board.state.pieces;
+  const pieceRole = cgRoles[pieces.get(source).role];
+  const pieceColor = pieces.get(source).color;
+  if(!game.promotePiece && pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1')) {
+    game.movePieceSource = source;
+    game.movePieceTarget = target;
+    game.movePieceMetadata = metadata;    
     showPromotionPanel(game, true);
   }
 }
@@ -2468,7 +2476,8 @@ function showPromotionPanel(game: Game, premove: boolean = false) {
   var color = (target.charAt(1) === '8' ? 'white' : 'black');
   var fileNum = target.toLowerCase().charCodeAt(0) - 97;
 
-  var promotionPanel = game.element.find('.promotion-panel');
+  var promotionPanel = $(`<div class="cg-wrap promotion-panel"></div>`);
+  promotionPanel.appendTo(game.element.find('.board-container'));
   promotionPanel.css({
     left: `calc(12.5% * ${orientation === "white" ? fileNum : 7 - fileNum})`,
     height: showKing ? '62.5%' : '50%'
@@ -2509,7 +2518,7 @@ function hidePromotionPanel(game?: Game) {
     game = gameWithFocus;
 
   game.promotePiece = null;
-  game.element.find('.promotion-panel').hide();
+  game.element.find('.promotion-panel').remove();
 }
 
 /**
