@@ -508,7 +508,7 @@ function messageHandler(data) {
   const type = GetMessageType(data);
   switch (type) {
     case MessageType.Control:
-      if (!session.isConnected() && data.command === 1) {
+      if(!session.isConnected() && data.command === 1) { // Connected
         cleanup();
         disableOnlineInputs(false);
         session.setUser(data.control);
@@ -536,7 +536,8 @@ function messageHandler(data) {
           else if($('#pills-pairing').hasClass('active'))
             initPairingPane();
         }
-      } else if (data.command === 2) {
+      } 
+      else if(data.command === 2) { // Login error
         session.disconnect();
         $('#session-status').popover({
           animation: true,
@@ -544,6 +545,10 @@ function messageHandler(data) {
           placement: 'top',
         });
         $('#session-status').popover('show');
+      } 
+      else if(data.command === 3) { // Disconnected
+        disableOnlineInputs(true);
+        cleanup();
       }
       break;
     case MessageType.ChannelTell:
