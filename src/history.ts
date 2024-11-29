@@ -8,7 +8,7 @@ import { Reason } from './parser';
 import { storage } from './storage';
 import { settings } from './settings';
 import { setCaretToEnd } from './utils';
-import { getPlyFromFEN, getMoveNoFromFEN, getTurnColorFromFEN } from './chess-helper';
+import { getPlyFromFEN, getMoveNoFromFEN, getTurnColorFromFEN, VariantData } from './chess-helper';
 
 export class HEntry {
   public move: any;
@@ -23,7 +23,7 @@ export class HEntry {
   public moveTableCellElement: any;
   public moveListCellElement: any;
   public opening: any;
-  public holdings: any;
+  public variantData: Partial<VariantData> = {};
   private _next: HEntry;
   private _prev: HEntry;
   private _parent: HEntry;

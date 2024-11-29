@@ -6,7 +6,12 @@ import Chess from 'chess.js';
 
 /** FEN and chess helper functions **/
 
-export function parseMove(fen: string, move: any, startFen: string, category: string, holdings?: any) {
+export interface VariantData {
+  holdings: object,
+  promoted: string[],
+}
+
+export function parseMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>) {
   // Parse variant move
   var standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
   if(!standardCategories.includes(category))
@@ -23,7 +28,7 @@ export function parseMove(fen: string, move: any, startFen: string, category: st
   return { fen: outFen, move: outMove };
 }
 
-function parseVariantMove(fen: string, move: any, startFen: string, category: string, holdings?: any) {
+function parseVariantMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>) {
   var supportedCategories = ['crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
   if(!supportedCategories.includes(category))
     return null;
@@ -305,8 +310,8 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
         if(category === 'crazyhouse') {
           // check if we have a held piece capable of occupying the blocking square
           var canBlock = false;
-          for(let k in holdings) {
-            if(holdings[k] === 0)
+          for(let k in variantData.holdings) {
+            if(variantData.holdings[k] === 0)
               continue;
 
             if((chess.turn() === 'w' && k.toLowerCase() !== k) ||
@@ -357,7 +362,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
   return {fen: outFen, move: outMove};
 }
 
-export function toDests(fen: string, startFen: string, category: string, holdings?: any): Map<string, string[]> {
+export function toDests(fen: string, startFen: string, category: string, variantData?: Partial<VariantData>): Map<string, string[]> {
   var standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse'];
   if(!standardCategories.includes(category))
     return variantToDests(fen, startFen, category);
@@ -373,7 +378,7 @@ export function toDests(fen: string, startFen: string, category: string, holding
   return dests;
 }
 
-function variantToDests(fen: string, startFen: string, category: string, holdings?: any): Map<string, string[]> {
+function variantToDests(fen: string, startFen: string, category: string, variantData?: Partial<VariantData>): Map<string, string[]> {
   var supportedCategories = ['crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
   if(!supportedCategories.includes(category))
     return null;
@@ -420,7 +425,7 @@ function variantToDests(fen: string, startFen: string, category: string, holding
         dests.delete(king);
     }
 
-    var parsedMove = parseMove(chess.fen(), 'O-O', startFen, category, holdings);
+    var parsedMove = parseMove(chess.fen(), 'O-O', startFen, category, variantData);
     if(parsedMove) {
       var from = parsedMove.move.from;
       if(category === 'wild/fr')
@@ -432,7 +437,7 @@ function variantToDests(fen: string, startFen: string, category: string, holding
         kingDests.push(to);
       else dests.set(from, [to]);
     }
-    var parsedMove = parseMove(chess.fen(), 'O-O-O', startFen, category, holdings);
+    var parsedMove = parseMove(chess.fen(), 'O-O-O', startFen, category, variantData);
     if(parsedMove) {
       var from = parsedMove.move.from;
       if(category === 'wild/fr')
@@ -447,6 +452,71 @@ function variantToDests(fen: string, startFen: string, category: string, holding
   }
 
   return dests;
+}
+
+export function updateVariantMoveData(fen: string, move: any, prevVariantData: Partial<VariantData>, category: string): Partial<VariantData> {
+  // Maintain map of captured pieces for crazyhouse variant
+  var currVariantData: Partial<VariantData> = {};
+
+  if(category === 'crazyhouse' || category === 'bughouse') {
+    if(prevVariantData.holdings === undefined)
+      prevVariantData.holdings = {P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0};
+
+    var holdings = { ...prevVariantData.holdings };
+
+    if(category === 'crazyhouse') {
+      if(prevVariantData.promoted === undefined)
+        prevVariantData.promoted = [];
+
+      var promoted = prevVariantData.promoted.slice();
+
+      if(move.flags && move.flags.includes('c')) {
+        var chess = new Chess(fen);
+        var piece = chess.get(move.to);
+        let pieceType = (promoted.indexOf(move.to) !== -1 ? 'p' : piece.type);
+        pieceType = (piece.color === 'w' ? pieceType.toUpperCase() : pieceType.toLowerCase());
+        holdings[pieceType]++;
+      }
+      else if(move.flags && move.flags.includes('e')) {
+        var color = getTurnColorFromFEN(fen);
+        let pieceType = (color === 'w' ? 'p' : 'P');
+        holdings[pieceType]++;
+      }
+
+      promoted = updatePromotedList(move, promoted);
+      currVariantData.promoted = promoted;
+    }
+
+    if(move.san && move.san.includes('@')) {
+      var color = getTurnColorFromFEN(fen);
+      let pieceType = (color === 'w' ? move.piece.toLowerCase() : move.piece.toUpperCase());
+      holdings[pieceType]--;
+    }
+
+    currVariantData.holdings = holdings;
+  }
+
+  return currVariantData;
+}
+
+// Maintain a list of the locations of pieces which were promoted
+// This is used by crazyhouse and bughouse variants, since capturing a promoted piece only gives you a pawn
+function updatePromotedList(move: any, promoted: any) {
+  // Remove captured piece
+  var index = promoted.indexOf(move.to);
+  if(index !== -1)
+    promoted.splice(index, 1);
+  // Update piece's location
+  if(move.from) {
+    var index = promoted.indexOf(move.from);
+    if(index !== -1)
+      promoted[index] = move.to;
+  }
+  // Add newly promoted piece to the list
+  if(move.promotion)
+    promoted.push(move.to);
+
+  return promoted;
 }
 
 /**

@@ -689,7 +689,7 @@ function messageHandler(data) {
       if(!game)
         return;
 
-      game.history.current().holdings = data.holdings;
+      game.history.current().variantData.holdings = data.holdings;
       showCapturedMaterial(game);
       break;
     case MessageType.Offers:
@@ -1845,7 +1845,7 @@ function showCapturedMaterial(game: Game) {
   };
 
   if(game.category === 'crazyhouse' || game.category === 'bughouse')
-    captured = game.history.current().holdings; // for crazyhouse/bughouse we display the actual pieces captured
+    captured = game.history.current().variantData.holdings; // for crazyhouse/bughouse we display the actual pieces captured
   else {
     const material = {
       P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0
@@ -2421,77 +2421,17 @@ function flipBoard(game: Game) {
 
 /** Wrapper function for parseMove */
 function parseGameMove(game: Game, fen: string, move: any) {
-  return ChessHelper.parseMove(fen, move, game.history.first().fen, game.category, game.history.current().holdings);
+  return ChessHelper.parseMove(fen, move, game.history.first().fen, game.category, game.history.current().variantData);
 }
 
 /** Wrapper function for toDests */
 function gameToDests(game: Game) {
-  return ChessHelper.toDests(currentGameMove(game).fen, game.history.first().fen, game.category, game.history.current().holdings);
+  return ChessHelper.toDests(currentGameMove(game).fen, game.history.first().fen, game.category, game.history.current().variantData);
 }
 
-function updateVariantMoveData(game: Game) {
-  // Maintain map of captured pieces for crazyhouse variant
-  if(game.category === 'crazyhouse' || game.category === 'bughouse') {
-    var prevMove = game.history.prev();
-    var currMove = game.history.current();
-    var move = currMove.move;
-
-    if(prevMove.holdings === undefined)
-      prevMove.holdings = {P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0};
-
-    var holdings = { ...prevMove.holdings };
-
-    if(game.category === 'crazyhouse') {
-      if(prevMove.promoted === undefined)
-        prevMove.promoted = [];
-
-      var promoted = prevMove.promoted.slice();
-
-      if(move.flags && move.flags.includes('c')) {
-        var chess = new Chess(prevMove.fen);
-        var piece = chess.get(move.to);
-        let pieceType = (promoted.indexOf(move.to) !== -1 ? 'p' : piece.type);
-        pieceType = (piece.color === 'w' ? pieceType.toUpperCase() : pieceType.toLowerCase());
-        holdings[pieceType]++;
-      }
-      else if(move.flags && move.flags.includes('e')) {
-        var color = prevMove.turnColor;
-        let pieceType = (color === 'w' ? 'p' : 'P');
-        holdings[pieceType]++;
-      }
-
-      promoted = updatePromotedList(move, promoted);
-      currMove.promoted = promoted;
-    }
-
-    if(move.san && move.san.includes('@')) {
-      var color = prevMove.turnColor;
-      let pieceType = (color === 'w' ? move.piece.toLowerCase() : move.piece.toUpperCase());
-      holdings[pieceType]--;
-    }
-
-    currMove.holdings = holdings;
-  }
-}
-
-// Maintain a list of the locations of pieces which were promoted
-// This is used by crazyhouse and bughouse variants, since capturing a promoted piece only gives you a pawn
-function updatePromotedList(move: any, promoted: any) {
-  // Remove captured piece
-  var index = promoted.indexOf(move.to);
-  if(index !== -1)
-    promoted.splice(index, 1);
-  // Update piece's location
-  if(move.from) {
-    var index = promoted.indexOf(move.from);
-    if(index !== -1)
-      promoted[index] = move.to;
-  }
-  // Add newly promoted piece to the list
-  if(move.promotion)
-    promoted.push(move.to);
-
-  return promoted;
+/** Wrapper function for updateVariantMoveData */
+function updateGameVariantMoveData(game: Game) {
+  game.history.current().variantData = ChessHelper.updateVariantMoveData(game.history.prev().fen, game.history.current().move, game.history.prev().variantData, game.category);
 }
 
 export function parseMovelist(game: Game, movelist: string) {
@@ -2529,7 +2469,7 @@ export function parseMovelist(game: Game, movelist: string) {
         chess.load(parsedMove.fen);
         game.history.add(parsedMove.move, parsedMove.fen, false, wtime, btime);
         getOpening(game);
-        updateVariantMoveData(game);
+        updateGameVariantMoveData(game);
       }
       if (found.length > 5 && found[5]) {
         const m2 = found[5].trim();
@@ -2540,7 +2480,7 @@ export function parseMovelist(game: Game, movelist: string) {
         chess.load(parsedMove.fen);
         game.history.add(parsedMove.move, parsedMove.fen, false, wtime, btime);
         getOpening(game);
-        updateVariantMoveData(game);
+        updateGameVariantMoveData(game);
       }
       n++;
     }
@@ -2590,7 +2530,7 @@ function updateHistory(game: Game, move?: any, fen?: string) {
 
       game.history.add(move, fen, newSubvariation, game.wtime, game.btime);
       getOpening(game);
-      updateVariantMoveData(game);
+      updateGameVariantMoveData(game);
       $('#game-pane-status').hide();
     }
     else {
@@ -4594,7 +4534,7 @@ function parsePGNVariation(game: Game, variation: any) {
     if(move.nag)
       move.nag.forEach((nag) => game.history.setAnnotation(currHEntry, nag));
     getOpening(game);
-    updateVariantMoveData(game);
+    updateGameVariantMoveData(game);
     newSubvariation = false;
 
     for(let subvariation of move.variations) {
