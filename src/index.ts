@@ -72,7 +72,6 @@ let fetchOpeningsPromise = null;
 let book; // Opening book used in 'Play Computer' mode
 let isRegistered = false;
 let lastComputerGame = null; // Attributes of the last game played against the Computer. Used for Rematch and alternating colors each game.
-let gameWithFocus: Game = null;
 let partnerGameId = null;
 let lastPointerCoords = {x: 0, y: 0}; // Stores the pointer coordinates from the last touch/mouse event
 let credential: CredentialStorage = null; // The persistently stored username/password
@@ -467,7 +466,7 @@ function useDesktopLayout() {
   $('#chat-maximize-btn').show();
   $('#stop-observing').appendTo($('#left-panel-header-2').last());
   $('#stop-examining').appendTo($('#left-panel-header-2').last());
-  if(gameWithFocus.isObserving() || gameWithFocus.isExamining())
+  if(games.focused.isObserving() || games.focused.isExamining())
     showPanel('#left-panel-header-2');
 
   Utils.createTooltips();
@@ -650,14 +649,14 @@ function messageHandler(data) {
         // player won
         game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-win-color)');
         game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-lose-color)');
-        if (game === gameWithFocus && settings.soundToggle) {
+        if (game === games.focused && settings.soundToggle) {
           Sounds.winSound.play();
         }
       } else if (data.reason <= 4 && game.element.find('.player-status .name').text() === data.loser) {
         // opponent won
         game.element.find('.player-status').parent().css('--bs-card-cap-bg', 'var(--game-lose-color)');
         game.element.find('.opponent-status').parent().css('--bs-card-cap-bg', 'var(--game-win-color)');
-        if (game === gameWithFocus && settings.soundToggle) {
+        if (game === games.focused && settings.soundToggle) {
           Sounds.loseSound.play();
         }
       } else {
@@ -1268,7 +1267,7 @@ function messageHandler(data) {
         var game = games.findGame(+match[1]);
         if(game) {
           mexamineGame = game; // Stores the game in case a 'mexamine' is about to be issued.
-          if(game === gameWithFocus)
+          if(game === games.focused)
             stopEngine();
           cleanupGame(game);
         }
@@ -1451,7 +1450,7 @@ function messageHandler(data) {
 function gameStart(game: Game) {
   hidePromotionPanel(game);
   game.board.cancelMove();
-  if(game === gameWithFocus && (!game.history || !game.history.hasSubvariation()))
+  if(game === games.focused && (!game.history || !game.history.hasSubvariation()))
     $('#exit-subvariation').hide();
 
   // for bughouse set game.color of partner to opposite of us
@@ -1549,7 +1548,7 @@ function gameStart(game: Game) {
     }
   }
 
-  if(game === gameWithFocus && evalEngine) {
+  if(game === games.focused && evalEngine) {
     evalEngine.terminate();
     evalEngine = null;
   }
@@ -1570,14 +1569,14 @@ function gameStart(game: Game) {
 
   var focusSet = false;
   if(!game.isObserving() || games.getMainGame().role === Role.NONE) {
-    if(game !== gameWithFocus) {
+    if(game !== games.focused) {
       setGameWithFocus(game);
       focusSet = true;
     }
     maximizeGame(game);
   }
   if(!focusSet) {
-    if(game === gameWithFocus)
+    if(game === games.focused)
       initGameControls(game);
     updateBoard(game);
   }
@@ -1674,7 +1673,7 @@ function gameStart(game: Game) {
       mexamineRequested = null;
   }
 
-  if(game === gameWithFocus) {
+  if(game === games.focused) {
     showTab($('#pills-game-tab'));
     if(game.role !== Role.NONE)
       showStatusPanel();
@@ -1930,7 +1929,7 @@ function showCapturedMaterial(game: Game) {
 }
 
 function dragPiece(event: any) {
-  var game = gameWithFocus;
+  var game = games.focused;
   var id = $(event.target).closest('[data-drag-piece]').attr('data-drag-piece');
   var color = id.charAt(0);
   var type = id.charAt(1);
@@ -2110,7 +2109,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
   showOpeningName(game);
   setFontSizes();
 
-  if(playSound && settings.soundToggle && game === gameWithFocus) {
+  if(playSound && settings.soundToggle && game === games.focused) {
     clearTimeout(soundTimer);
     soundTimer = setTimeout(() => {
       if(/[+#]/.test(move?.san)) {
@@ -2131,7 +2130,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
     }, 50);
   }
 
-  if(game === gameWithFocus) {
+  if(game === games.focused) {
     if(game.history.current().isSubvariation()) {
       $('#exit-subvariation').removeClass('disabled');
       $('#exit-subvariation').show();
@@ -2142,7 +2141,7 @@ export function updateBoard(game: Game, playSound: boolean = false, setBoard: bo
 }
 
 function boardChanged() {
-  var game = gameWithFocus;
+  var game = games.focused;
 
   if(game.setupBoard) {
     var fen = getSetupBoardFEN(game);
@@ -2184,7 +2183,7 @@ export function scrollToBoard(game?: Game) {
 export function movePiece(source: any, target: any, metadata: any) {
   let fen = '';
   let move = null;
-  var game = gameWithFocus;
+  var game = games.focused;
 
   if(game.isObserving())
     return;
@@ -2302,7 +2301,7 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 }
 
 function preMovePiece(source: any, target: any, metadata: any) {
-  var game = gameWithFocus;
+  var game = games.focused;
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
   if(cgRoles.hasOwnProperty(source) || settings.autoPromoteToggle) // piece drop rather than move
     return;
@@ -2358,7 +2357,7 @@ function showPromotionPanel(game: Game, premove: boolean = false) {
 
   $('.promotion-piece').on('click', (event) => {
     hidePromotionPanel();
-    gameWithFocus.promotePiece = $(event.target).attr('data-piece');
+    games.focused.promotePiece = $(event.target).attr('data-piece');
     if(!premove)
       movePiece(source, target, metadata);
   });
@@ -2366,7 +2365,7 @@ function showPromotionPanel(game: Game, premove: boolean = false) {
 
 function hidePromotionPanel(game?: Game) {
   if(!game)
-    game = gameWithFocus;
+    game = games.focused;
 
   game.promotePiece = null;
   game.element.find('.promotion-panel').remove();
@@ -2573,7 +2572,7 @@ function updateHistory(game: Game, move?: any, fen?: string) {
   if(game.removeMoveRequested && game.removeMoveRequested.prev === hEntry) {
     game.history.remove(game.removeMoveRequested);
     game.removeMoveRequested = null;
-    if(game === gameWithFocus && !game.history.hasSubvariation())
+    if(game === games.focused && !game.history.hasSubvariation())
       $('#exit-subvariation').hide();
   }
 }
@@ -2603,15 +2602,15 @@ function createGame(): Game {
       Utils.createTooltip($(this));
     });
 
-    game.statusElement = gameWithFocus.statusElement.clone();
+    game.statusElement = games.focused.statusElement.clone();
     game.statusElement.css('display', 'none');
     game.statusElement.appendTo($('#game-status-list'));
 
-    game.moveTableElement = gameWithFocus.moveTableElement.clone();
+    game.moveTableElement = games.focused.moveTableElement.clone();
     game.moveTableElement.css('display', 'none');
     game.moveTableElement.appendTo($('#move-table'));
 
-    game.moveListElement = gameWithFocus.moveListElement.clone();
+    game.moveListElement = games.focused.moveListElement.clone();
     game.moveListElement.css('display', 'none');
     game.moveListElement.appendTo($('#movelists'));
 
@@ -2628,7 +2627,7 @@ function createGame(): Game {
   game.element[0].addEventListener('mousedown', gameTouchHandler);
 
   game.element.on('click', '[title="Close"]', (event) => {
-    var game = gameWithFocus;
+    var game = games.focused;
     if(game.preserved || game.history.editMode)
       closeGameDialog(game);
     else
@@ -2657,13 +2656,13 @@ function createGame(): Game {
 }
 
 export function setGameWithFocus(game: Game) {
-  if(game !== gameWithFocus) {
-    if(gameWithFocus) {
-      gameWithFocus.element.removeClass('game-focused');
-      gameWithFocus.moveTableElement.hide();
-      gameWithFocus.moveListElement.hide();
-      gameWithFocus.statusElement.hide();
-      gameWithFocus.board.setAutoShapes([]);
+  if(game !== games.focused) {
+    if(games.focused) {
+      games.focused.element.removeClass('game-focused');
+      games.focused.moveTableElement.hide();
+      games.focused.moveListElement.hide();
+      games.focused.statusElement.hide();
+      games.focused.board.setAutoShapes([]);
     }
 
     game.moveTableElement.show();
@@ -2673,7 +2672,7 @@ export function setGameWithFocus(game: Game) {
     if(game.element.parent().attr('id') === 'secondary-board-area')
       game.element.addClass('game-focused');
 
-    gameWithFocus = game;
+    games.focused = game;
 
     setMovelistViewMode();
     initGameControls(game);
@@ -2684,7 +2683,7 @@ export function setGameWithFocus(game: Game) {
 }
 
 function initGameControls(game: Game) {
-  if(game !== gameWithFocus)
+  if(game !== games.focused)
     return;
 
   Utils.removeWithTooltips($('.context-menu'));
@@ -2819,7 +2818,7 @@ function removeGame(game: Game) {
   }
 
   // If game currently had the focus, switch focus to the main game
-  if(game === gameWithFocus)
+  if(game === games.focused)
     setGameWithFocus(games.getMainGame());
 
   cleanupGame(game);
@@ -2852,7 +2851,7 @@ function cleanupGame(game: Game) {
 
   game.role = Role.NONE;
 
-  if(game === gameWithFocus) {
+  if(game === games.focused) {
     Utils.hideButton($('#stop-observing'));
     Utils.hideButton($('#stop-examining'));
     hidePanel('#left-panel-header-2');
@@ -2950,7 +2949,7 @@ $('#fast-backward').on('click', () => {
 });
 
 function fastBackward() {
-  var game = gameWithFocus;
+  var game = games.focused;
   gotoMove(game.history.first());
   if(!SupportedCategories.includes(game.category) && game.isExamining())
     session.send('back 999');
@@ -2963,7 +2962,7 @@ $('#backward').on('click', () => {
 });
 
 function backward() {
-  var game = gameWithFocus;
+  var game = games.focused;
   var move = bufferedCurrentMove(game).prev;
 
   if(move)
@@ -2980,7 +2979,7 @@ $('#forward').on('click', () => {
 });
 
 function forward() {
-  var game = gameWithFocus;
+  var game = games.focused;
   var move = bufferedCurrentMove(game).next;
 
   if(move)
@@ -2997,7 +2996,7 @@ $('#fast-forward').on('click', () => {
 });
 
 function fastForward() {
-  var game = gameWithFocus;
+  var game = games.focused;
   gotoMove(game.history.last());
   if(!SupportedCategories.includes(game.category) && game.isExamining())
     session.send('forward 999');
@@ -3011,7 +3010,7 @@ $('#exit-subvariation').on('click', () => {
 });
 
 function exitSubvariation() {
-  var curr = bufferedCurrentMove(gameWithFocus);
+  var curr = bufferedCurrentMove(games.focused);
 
   var prev = curr.first.prev;
   gotoMove(prev);
@@ -3026,7 +3025,7 @@ export function gotoMove(to: HEntry, playSound = false) {
   if(!to)
     return;
 
-  var game = gameWithFocus;
+  var game = games.focused;
   if(game.isExamining() && !game.setupBoard) {
     var from = bufferedCurrentMove(game);
     var curr = from;
@@ -3169,7 +3168,7 @@ function hidePanel(id: string) {
 }
 
 $('#stop-observing').on('click', (event) => {
-  session.send(`unobs ${gameWithFocus.id}`);
+  session.send(`unobs ${games.focused.id}`);
 });
 
 $('#stop-examining').on('click', (event) => {
@@ -3217,7 +3216,7 @@ $('#play-computer-form').on('submit', (event) => {
   };
 
   if($('#play-computer-start-from-pos').prop('checked')) {
-    var game = gameWithFocus;
+    var game = games.focused;
     if(game.setupBoard) 
       params.fen = getSetupBoardFEN(game);
     else {
@@ -3919,7 +3918,7 @@ function createMoveContextMenu(event: any) {
   moveElement.find('.move').addClass('hovered'); // Show the :hovered style while menu is displayed
 
   var hEntry = moveElement.data('hEntry');
-  var game = gameWithFocus;
+  var game = games.focused;
 
   if(hEntry === hEntry.first || (!hEntry.parent && hEntry.prev === hEntry.first)) {
     // If this is the first move in a subvariation, allow user to add a comment both before and after the move.
@@ -4068,7 +4067,7 @@ function clearAnalysisDialog(game: Game) {
  * or when a game starts or ends
  */
 function initGameTools(game: Game) {
-  if(game === gameWithFocus) {
+  if(game === games.focused) {
     updateGamePreserved(game);
     updateEditMode(game);
     $('#game-tools-clone').parent().toggle(settings.multiboardToggle); // Only show 'Duplicate GAme' option in multiboard mode
@@ -4122,7 +4121,7 @@ function setViewModeTable() {
   $('#movelists').hide();
   $('#move-table').show();
   $('#game-table-view').prop('checked', true);
-  gameWithFocus.history.highlightMove();
+  games.focused.history.highlightMove();
 }
 
 /**
@@ -4134,7 +4133,7 @@ function setViewModeList() {
   $('#move-table').hide();
   $('#movelists').show();
   $('#game-list-view').prop('checked', true);
-  gameWithFocus.history.highlightMove();
+  games.focused.history.highlightMove();
 }
 
 /**
@@ -4149,7 +4148,7 @@ function setMovelistViewMode() {
 
 /** Triggered when Edit Mode toggle button is toggled on/off */
 $('#game-edit-mode').on('change', function (e) {
-  updateEditMode(gameWithFocus, $(this).is(':checked'));
+  updateEditMode(games.focused, $(this).is(':checked'));
 });
 
 /**
@@ -4166,7 +4165,7 @@ function updateEditMode(game: Game, editMode?: boolean) {
 
 /** Triggered when Game Preserved toggle button is toggled on/off */
 $('#game-preserved').on('change', function (e) {
-  updateGamePreserved(gameWithFocus, $(this).is(':checked'));
+  updateGamePreserved(games.focused, $(this).is(':checked'));
 });
 
 /**
@@ -4234,16 +4233,16 @@ function newGameDialog(category: string = 'untimed') {
   };
 
   var button1: any, button2: any;
-  if(gameWithFocus.role === Role.NONE || (category === 'wild/fr' && settings.multiboardToggle)) {
+  if(games.focused.role === Role.NONE || (category === 'wild/fr' && settings.multiboardToggle)) {
     var headerTitle = 'Create new game';
     var bodyTitle = '';
-    if(gameWithFocus.role === Role.NONE && settings.multiboardToggle) {
+    if(games.focused.role === Role.NONE && settings.multiboardToggle) {
       var bodyText = `${bodyText}Overwrite existing game or open new board?`;
       button1 = [overwriteHandler, 'Overwrite'];
       button2 = [newBoardHandler, 'New Board'];
       var showIcons = false;
     }
-    else if(gameWithFocus.role === Role.NONE) {
+    else if(games.focused.role === Role.NONE) {
       var bodyText = `${bodyText}This will clear the current game.`;
       button1 = [overwriteHandler, 'OK'];
       button2 = ['', 'Cancel'];
@@ -4272,7 +4271,7 @@ function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: st
   if(createNewBoard)
     var game = createGame();
   else {
-    var game = gameWithFocus;
+    var game = games.focused;
     cleanupGame(game);
   }
 
@@ -4349,7 +4348,7 @@ $('#add-games-button').on('click', (event) => {
  */
 function openGamesOverwriteDialog(fileStrings: string[]) {
   var bodyText = '';
-  var game = gameWithFocus;
+  var game = games.focused;
 
   var overwriteHandler = function(event) {
     parseGameFiles(game, fileStrings, false);
@@ -4360,17 +4359,17 @@ function openGamesOverwriteDialog(fileStrings: string[]) {
   };
 
   var button1: any, button2: any;
-  if(gameWithFocus.role === Role.NONE) {
-    if(gameWithFocus.history.length()) {
+  if(games.focused.role === Role.NONE) {
+    if(games.focused.history.length()) {
       var headerTitle = 'Open Games';
       var bodyTitle = '';
-      if(gameWithFocus.role === Role.NONE && settings.multiboardToggle) {
+      if(games.focused.role === Role.NONE && settings.multiboardToggle) {
         var bodyText = `${bodyText}Overwrite existing game or open new board?`;
         button1 = [overwriteHandler, 'Overwrite'];
         button2 = [newBoardHandler, 'New Board'];
         var showIcons = false;
       }
-      else if(gameWithFocus.role === Role.NONE) {
+      else if(games.focused.role === Role.NONE) {
         var bodyText = `${bodyText}This will clear the current game.`;
         button1 = [overwriteHandler, 'OK'];
         button2 = ['', 'Cancel'];
@@ -4659,7 +4658,7 @@ function updateGameFromMetatags(game: Game) {
  * multiple games are opened from PGN(s) at once.
  */
 $('#game-list-button').on('show.bs.dropdown', function(event) {
-  var game = gameWithFocus;
+  var game = games.focused;
   if(game.historyList.length > 1) {
     $('#game-list-filter').val(game.gameListFilter);
     addGameListItems(game);
@@ -4672,7 +4671,7 @@ $('#game-list-button').on('show.bs.dropdown', function(event) {
  * be performance intensive
  */
 var gameListFilterHandler = Utils.debounce((event) => {
-  var game = gameWithFocus;
+  var game = games.focused;
   game.gameListFilter = $(event.target).val() as string;
   addGameListItems(game);
 }, 500);
@@ -4756,15 +4755,15 @@ $('#game-list-button').on('hidden.bs.dropdown', function(event) {
 /** Triggered when a game is selected from the game list */
 $('#game-list-dropdown').on('click', '.dropdown-item', (event) => {
   var index = +$(event.target).attr('data-index');
-  setCurrentHistory(gameWithFocus, index);
+  setCurrentHistory(games.focused, index);
 });
 
 $('#save-game-modal').on('show.bs.modal', function() {
   var fenOutput = $('#save-fen-output');
   fenOutput.val('');
-  fenOutput.val(gameWithFocus.history.current().fen);
+  fenOutput.val(games.focused.history.current().fen);
 
-  var pgn = gameToPGN(gameWithFocus);
+  var pgn = gameToPGN(games.focused);
   var pgnOutput = $('#save-pgn-output');
   pgnOutput.val('');
   pgnOutput.val(pgn);
@@ -4803,7 +4802,7 @@ function gameToPGN(game: Game): string {
 
 /** Triggered when 'Save PGN' menu option is selected */
 $('#save-pgn-button').on('click', (event) => {
-  savePGN(gameWithFocus, $('#save-pgn-output').val() as string);
+  savePGN(games.focused, $('#save-pgn-output').val() as string);
 });
 
 /**
@@ -4849,7 +4848,7 @@ function savePGN(game: Game, pgn: string) {
 
 /** Triggered when the 'Duplicate Game' menu option is selected */
 $('#game-tools-clone').on('click', (event) => {
-  cloneGame(gameWithFocus);
+  cloneGame(games.focused);
 });
 
 /**
@@ -4879,7 +4878,7 @@ function cloneGame(game: Game): Game {
 
 /** Triggered when the 'Examine Mode (Shared)' menu option is selected */
 $('#game-tools-examine').on('click', (event) => {
-  examineModeRequested = gameWithFocus;
+  examineModeRequested = games.focused;
   var mainGame = games.getPlayingExaminingGame();
   if(mainGame && mainGame.isExamining())
     session.send('unex');
@@ -5001,7 +5000,7 @@ function sendBlackCastlingRights(castlingRights: string) {
 
 /** Triggered when 'Setup Board' menu option is selected */
 $('#game-tools-setup-board').on('click', (event) => {
-  setupBoard(gameWithFocus);
+  setupBoard(games.focused);
   scrollToBoard();
 });
 
@@ -5069,21 +5068,21 @@ function updateSetupBoard(game: Game, fen?: string, serverIssued: boolean = fals
  * Resets the board to the first move in the move list
  */
 $(document).on('click', '.reset-board', (event) => {
-  var game = gameWithFocus;
-  var fen = gameWithFocus.history.first().fen;
+  var game = games.focused;
+  var fen = games.focused.history.first().fen;
   if(fen === '8/8/8/8/8/8/8/8 w - - 0 1') // No initial position because user sent 'bsetup' without first examining a game
     fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-  updateSetupBoard(gameWithFocus, fen);
+  updateSetupBoard(games.focused, fen);
 });
 
 /** Triggered when the user clicks the 'Clear Board' button when in Setup Board mode. */
 $(document).on('click', '.clear-board', (event) => {
-  updateSetupBoard(gameWithFocus, '8/8/8/8/8/8/8/8 w - - 0 1');
+  updateSetupBoard(games.focused, '8/8/8/8/8/8/8/8 w - - 0 1');
 });
 
 /** Triggered when user checks/unchecks the castling rights controls in Setup Board mode */
 $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-white, .can-kingside-castle-black, .can-queenside-castle-black', (event) => {
-  var game = gameWithFocus;
+  var game = games.focused;
   var castlingRights = ChessHelper.splitFEN(getSetupBoardFEN(game)).castlingRights;
   if(game.isExamining()) {
     if($(event.target).hasClass('can-queenside-castle-white') || $(event.target).hasClass('can-kingside-castle-white'))
@@ -5097,7 +5096,7 @@ $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-whit
 
 /** Sets the color to move using the Setup Board dropdown button */
 (window as any).setupBoardColorToMove = (color: string) => {
-  var game = gameWithFocus;
+  var game = games.focused;
   setupBoardColorToMove(game, color);
   game.fen = getSetupBoardFEN(game);
   updateEngine();
@@ -5147,7 +5146,7 @@ function dragSetupBoardPiece(event: any) {
 
 /** Triggered when user clicks the 'Setup Done' button */
 $('#setup-done').on('click', (event) => {
-  setupDone(gameWithFocus);
+  setupDone(games.focused);
 });
 
 /**
@@ -5169,7 +5168,7 @@ function setupDone(game: Game) {
 
 /** Triggered when user clicks the 'Cancel Setup' button */
 $('#cancel-setup').on('click', (event) => {
-  cancelSetup(gameWithFocus);
+  cancelSetup(games.focused);
 });
 
 /**
@@ -5238,14 +5237,14 @@ $('#game-tools-properties').on('click', (event) => {
       Dialogs.showFixedDialog({type: 'Failed to update properties', msg: err.message, btnSuccess: ['', 'OK']});
       return;
     }
-    gameWithFocus.history.setMetatags(pgn.tags, true);
-    updateGameFromMetatags(gameWithFocus);
+    games.focused.history.setMetatags(pgn.tags, true);
+    updateGameFromMetatags(games.focused);
   };
 
   var headerTitle = 'Game Properties';
   var bodyText = `<textarea style="resize: none" class="form-control game-properties-input" rows="10" type="text" `
       + `autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">`
-      + `${gameWithFocus.history.metatagsToString()}</textarea>`;
+      + `${games.focused.history.metatagsToString()}</textarea>`;
   var button1 = [okHandler, 'Keep Changes'];
   var button2 = ['', 'Cancel'];
   Dialogs.showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, htmlMsg: true});
@@ -5256,7 +5255,7 @@ $('#game-tools-properties').on('click', (event) => {
  * Closes the game.
  */
 $('#game-tools-close').on('click', (event) => {
-  var game = gameWithFocus;
+  var game = games.focused;
   if(game.preserved || game.history.editMode)
     closeGameDialog(game);
   else
@@ -5268,12 +5267,12 @@ $('#game-tools-close').on('click', (event) => {
  *************************************/
 
 function initStatusPanel() {
-  if(gameWithFocus.isPlaying()) {
+  if(games.focused.isPlaying()) {
     $('#close-status').hide();
     hideAnalysis();
   }
   else if($('#left-panel-bottom').is(':visible')) {
-    if(gameWithFocus.analyzing)
+    if(games.focused.analyzing)
       showAnalysis();
     else
       hideAnalysis();
@@ -5307,11 +5306,11 @@ function scrollToLeftPanelBottom() {
 }
 
 $('#left-panel-bottom').on('shown.bs.tab', '.nav-link', (e) => {
-  gameWithFocus.currentStatusTab = $(e.target);
+  games.focused.currentStatusTab = $(e.target);
 
   if($(e.target).attr('id') === 'eval-graph-tab') {
     if(!evalEngine)
-      createEvalEngine(gameWithFocus);
+      createEvalEngine(games.focused);
 
     if(evalEngine)
       evalEngine.redraw();
@@ -5338,7 +5337,7 @@ function closeLeftBottomTab(tab: any) {
 }
 
 function showStatusMsg(game: Game, msg: string) {
-  if(game === gameWithFocus)
+  if(game === games.focused)
     showStatusPanel();
   if(msg)
     game.statusElement.find('.game-status').html(msg);
@@ -5376,7 +5375,7 @@ async function showOpeningName(game: Game) {
 };
 
 function showAnalysis() {
-  var game = gameWithFocus;
+  var game = games.focused;
   var currentStatusTab = game.currentStatusTab;
 
   openLeftBottomTab($('#engine-tab'));
@@ -5386,7 +5385,7 @@ function showAnalysis() {
   for(let i = 0; i < numPVs; i++)
     $('#engine-pvs').append('<li>&nbsp;</li>');
   $('#engine-pvs').css('white-space', (numPVs === 1 ? 'normal' : 'nowrap'));
-  gameWithFocus.analyzing = true;
+  games.focused.analyzing = true;
 
   if(currentStatusTab && currentStatusTab.attr('id') !== 'eval-graph-tab')
     currentStatusTab.tab('show');
@@ -5397,13 +5396,13 @@ function hideAnalysis() {
   closeLeftBottomTab($('#engine-tab'));
   closeLeftBottomTab($('#eval-graph-tab'));
   showAnalyzeButton();
-  gameWithFocus.analyzing = false;
-  gameWithFocus.currentStatusTab = null;
+  games.focused.analyzing = false;
+  games.focused.currentStatusTab = null;
 }
 
 function initAnalysis(game: Game) {
   // Check if game category (variant) is supported by Engine
-  if(game === gameWithFocus) {
+  if(game === games.focused) {
     if(evalEngine) {
       evalEngine.terminate();
       evalEngine = null;
@@ -5431,7 +5430,7 @@ $('#start-engine').on('click', (event) => {
 });
 
 function startEngine() {
-  var game = gameWithFocus;
+  var game = games.focused;
 
   if(Engine.categorySupported(game.category)) {
     $('#start-engine').text('Stop');
@@ -5464,7 +5463,7 @@ function stopEngine() {
   if(engine) {
     engine.terminate();
     engine = null;
-    setTimeout(() => { gameWithFocus.board.setAutoShapes([]); }, 0); // Need timeout to avoid conflict with board.set({orientation: X}); if that occurs in the same message handler
+    setTimeout(() => { games.focused.board.setAutoShapes([]); }, 0); // Need timeout to avoid conflict with board.set({orientation: X}); if that occurs in the same message handler
   }
 }
 
@@ -5545,7 +5544,7 @@ function showAnalyzeButton() {
     $('#show-status-panel').attr('title', 'Analyze Game');
   }
 
-  if(!$('#engine-tab').is(':visible') && Engine.categorySupported(gameWithFocus.category))
+  if(!$('#engine-tab').is(':visible') && Engine.categorySupported(games.focused.category))
     $('#show-status-panel').show();
   else if($('#left-panel-bottom').is(':visible'))
     $('#show-status-panel').hide();
@@ -5556,7 +5555,7 @@ function showAnalyzeButton() {
  *******************************/
 
 $('#resign').on('click', (event) => {
-  var game = gameWithFocus;
+  var game = games.focused;
 
   if(!game.isPlaying()) {
     showStatusMsg(game, 'You are not playing a game.');
@@ -5588,7 +5587,7 @@ $('#adjourn').on('click', (event) => {
 });
 
 $('#abort').on('click', (event) => {
-  var game = gameWithFocus;
+  var game = games.focused;
 
   if(!game.isPlaying()) {
     showStatusMsg(game, 'You are not playing a game.');
@@ -5613,7 +5612,7 @@ $('#abort').on('click', (event) => {
 });
 
 $('#takeback').on('click', (event) => {
-  var game = gameWithFocus;
+  var game = games.focused;
 
   if (game.isPlaying()) {
     if(game.history.last().turnColor === game.color)
@@ -5626,7 +5625,7 @@ $('#takeback').on('click', (event) => {
 });
 
 $('#draw').on('click', (event) => {
-  var game = gameWithFocus;
+  var game = games.focused;
 
   if(game.isPlaying()) {
     if(game.role === Role.PLAYING_COMPUTER) {
@@ -5795,7 +5794,7 @@ function initSettings() {
 }
 
 $('#flip-toggle').on('click', (event) => {
-  flipBoard(gameWithFocus);
+  flipBoard(games.focused);
 });
 
 $('#sound-toggle').on('click', (event) => {
@@ -5821,7 +5820,7 @@ $('#autopromote-toggle').on('click', (event) => {
 
 $('#highlights-toggle').on('click', (event) => {
   settings.highlightsToggle = !settings.highlightsToggle;
-  updateBoard(gameWithFocus, false, false);
+  updateBoard(games.focused, false, false);
   storage.set('highlights', String(settings.highlightsToggle));
 });
 
@@ -5848,7 +5847,7 @@ $('#multiboard-toggle').on('click', (event) => {
         closeGame(g);
     }
   }
-  initGameTools(gameWithFocus);
+  initGameTools(games.focused);
   storage.set('multiboard', String(settings.multiboardToggle));
 });
 

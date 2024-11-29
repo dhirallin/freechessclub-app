@@ -106,6 +106,15 @@ export class Game extends GameData {
 
 export class GameList {
   private gamelist: Game[] = [];
+  private gameWithFocus: Game = null;
+
+  public get focused(): Game {
+    return this.gameWithFocus;
+  }
+
+  public set focused(game: Game) {
+    this.gameWithFocus = game;
+  }
 
   public get length(): number {
     return this.gamelist.length;
