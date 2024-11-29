@@ -5,9 +5,10 @@
 import { autoLink } from 'autolink-js';
 import { load as loadEmojis, parse as parseEmojis } from 'gh-emoji';
 import { createTooltip, safeScrollTo, isSmallWindow } from './utils';
-import { findGame, setGameWithFocus, maximizeGame, scrollToBoard } from './index';
+import { setGameWithFocus, maximizeGame, scrollToBoard } from './index';
 import { settings } from './settings';
 import { storage } from './storage';
+import { games } from './game';
 
 // list of channels
 const channels = {
@@ -197,11 +198,11 @@ export class Chat {
   public getWatchers(tab: any): string[] {
     var match = tab.attr('id').match(/tab-game-(\d+)(?:-and-(\d+))?/);
     if(match) {
-      var game1 = findGame(+match[1]);
+      var game1 = games.findGame(+match[1]);
       if(game1) {
         var watchers = game1.watchers.map(str => str.replace('#', ''));
         if(match[2]) {
-          var game2 = findGame(+match[2]);
+          var game2 = games.findGame(+match[2]);
           if(game2) {
             // For bughouse chat rooms, add watchers from the other game
             var watchers2 = game2.watchers.map(str => str.replace('#', ''));
@@ -265,7 +266,7 @@ export class Chat {
   public getGameFromTab(tab: any): any {
     var match = tab.attr('id').match(/tab-game-(\d+)/);
     if(match)
-      return findGame(+match[1]);
+      return games.findGame(+match[1]);
   }
 
   private updateViewedState(tab: any, closingTab: boolean = false, incrementCounter: boolean = true) {
@@ -348,7 +349,7 @@ export class Chat {
         var match = chName.match(/^Game (\d+)/);
         var tooltip = '';
         if(match && match.length > 1) {
-          var game = findGame(+match[1]);
+          var game = games.findGame(+match[1]);
           if(game) {
             var tags = game.history.metatags;
             var gameDescription = `${tags.White || game.wname} vs. ${tags.Black || game.bname}`;

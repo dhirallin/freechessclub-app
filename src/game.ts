@@ -103,3 +103,87 @@ export class Game extends GameData {
   mexamineMovelist: string[] = null;   // Used to restore the current move after retrieving the move list when given mexamine privilages
   gameListFilter: string = ''          // Stores the filter text for the game selector menu (when loading a PGN with multiple games)
 }
+
+export class GameList {
+  private gamelist: Game[] = [];
+
+  public get length(): number {
+    return this.gamelist.length;
+  }
+
+  public includes(game: Game): boolean {
+    return this.gamelist.includes(game);
+  }
+
+  public add(game: Game) {
+    this.gamelist.push(game);
+  }
+
+  public remove(game: Game) {
+    let index = this.gamelist.indexOf(game);
+    if(index !== -1)
+      this.gamelist.splice(index, 1);
+  }
+
+  [Symbol.iterator](): Iterator<Game> {
+    let index = 0;
+    const items = this.gamelist;
+
+    return {
+      next(): IteratorResult<Game> {
+        if (index < items.length) {
+          return { value: items[index++], done: false };
+        } else {
+          return { value: undefined, done: true };
+        }
+      },
+    };
+  }
+
+  public findGame(id: number): Game {
+    return this.gamelist.find(item => item.id === id);
+  }
+  
+  public getMainGame(): Game {
+    return this.gamelist.find(g => g.element.parent().is('#main-board-area'));
+  }
+  
+  public getPlayingExaminingGame(): Game {
+    return this.gamelist.find(g => g.isPlayingOnline() || g.isExamining());
+  }
+  
+  public getFreeGame(): Game {
+    var game = this.getMainGame();
+    if(game.role === Role.NONE && !game.preserved && !game.history?.editMode && !game.setupBoard)
+      return game;
+  
+    return this.gamelist.find(g => g.role === Role.NONE && !g.preserved && !g.history?.editMode && !g.setupBoard);
+  }
+  
+  public getComputerGame(): Game {
+    return this.gamelist.find(g => g.role === Role.PLAYING_COMPUTER);
+  }
+  
+  public getMostImportantGame(): Game {
+    // find most important board
+    // out of playing/examining game, then computer game, then observed game on main board, then other observed game
+    var game = this.getPlayingExaminingGame();
+    if(!game)
+      game = this.getComputerGame();
+    if(!game) {
+      var mainGame = this.getMainGame();
+      if(mainGame && mainGame.isObserving())
+        game = mainGame;
+    }
+    if(!game)
+      game = this.gamelist.find(g => g.isObserving());
+    if(!game)
+      game = mainGame;
+    if(!game)
+      game = this.gamelist[0];
+  
+    return game;
+  }
+}
+
+export const games = new GameList();

@@ -14,7 +14,7 @@ import * as Dialogs from './dialogs';
 import Chat from './chat';
 import { Clock } from './clock';
 import { Engine, EvalEngine } from './engine';
-import { Game, GameData, Role, NewVariationMode } from './game';
+import { Game, GameData, Role, NewVariationMode, games } from './game';
 import { History, HEntry } from './history';
 import { GetMessageType, MessageType, Session } from './session';
 import * as Sounds from './sounds';
@@ -73,7 +73,6 @@ let book; // Opening book used in 'Play Computer' mode
 let isRegistered = false;
 let lastComputerGame = null; // Attributes of the last game played against the Computer. Used for Rematch and alternating colors each game.
 let gameWithFocus: Game = null;
-let games: Game[] = [];
 let partnerGameId = null;
 let lastPointerCoords = {x: 0, y: 0}; // Stores the pointer coordinates from the last touch/mouse event
 let credential: CredentialStorage = null; // The persistently stored username/password
@@ -165,7 +164,7 @@ $(window).on('load', function() {
 
 /** Prompt before unloading page if in a game */
 $(window).on('beforeunload', () => {
-  var game = getPlayingExaminingGame();
+  var game = games.getPlayingExaminingGame();
   if(game && game.isPlaying())
     return true;
 });
@@ -239,7 +238,7 @@ $(window).on('resize', () => {
 
 function setPanelSizes() {
   // Reset player status panels that may have been previously slimmed down on single column screen
-  var maximizedGame = getMainGame();
+  var maximizedGame = games.getMainGame();
   var maximizedGameCard = maximizedGame.element;
   var topPanel = maximizedGameCard.find('.top-panel');
   var bottomPanel = maximizedGameCard.find('.bottom-panel');
@@ -374,7 +373,8 @@ function setRightColumnSizes() {
   else
     $('#secondary-board-area').css('overflow-y', 'hidden');
 
-  games.forEach((game) => {
+  console.log('iterator used');    
+  for(let game of games) {
     if(game.element.parent().is($('#secondary-board-area'))) {
       if(Utils.isLargeWindow()) {
         var cardsPerRow = Math.min(2, numCards);
@@ -397,7 +397,8 @@ function setRightColumnSizes() {
       bottomPanel.css('--panel-height', bottomPanel.css('height'));
       bottomPanel.css('--panel-width', bottomPanel.css('width'));
     }
-  });
+  }
+
   if(Utils.isSmallWindow())
     $('#secondary-board-area').css('height', '');
   else
@@ -558,7 +559,7 @@ function messageHandler(data) {
 
       // If in single-board mode, check we are not examining/observing another game already
       if(!settings.multiboardToggle) {
-        var game = getMainGame();
+        var game = games.getMainGame();
         if(game.isPlayingOnline() && game.id !== data.id) {
           if(data.role === Role.OBSERVING || data.role === Role.OBS_EXAMINED)
             session.send(`unobs ${data.id}`);
@@ -597,9 +598,9 @@ function messageHandler(data) {
       else {
         if(settings.multiboardToggle) {
           // Get game object
-          var game = findGame(data.id);
+          var game = games.findGame(data.id);
           if(!game)
-            game = getFreeGame();
+            game = games.getFreeGame();
           if(!game)
             game = createGame();
         }
@@ -634,7 +635,7 @@ function messageHandler(data) {
     case MessageType.GameStart:
       break;
     case MessageType.GameEnd:
-      var game = findGame(data.game_id);
+      var game = games.findGame(data.game_id);
       if(!game)
         return;
 
@@ -685,7 +686,7 @@ function messageHandler(data) {
       cleanupGame(game);
       break;
     case MessageType.GameHoldings:
-      var game = findGame(data.game_id);
+      var game = games.findGame(data.game_id);
       if(!game)
         return;
 
@@ -846,7 +847,7 @@ function messageHandler(data) {
       if (match != null && match.length > 1) {
         if (allobsRequested) {
           allobsRequested--;
-          var game = findGame(+match[1]);
+          var game = games.findGame(+match[1]);
           if(!game)
             return;
 
@@ -888,7 +889,7 @@ function messageHandler(data) {
 
       match = msg.match(/^Game (\d+): (\S+) has lagged for 30 seconds\./m);
       if(match) {
-        var game = findGame(+match[1]);
+        var game = games.findGame(+match[1]);
         if(game && game.isPlaying()) {
           var bodyText = `${match[2]} has lagged for 30 seconds.<br>You may courtesy adjourn the game.<br><br>If you believe your opponent has intentionally disconnected, you can request adjudication of an adjourned game. Type 'help adjudication' in the console for more info.`;
           var dialog = Dialogs.showBoardDialog({type: 'Opponent Lagging', msg: bodyText, btnFailure: ['', 'Wait'], btnSuccess: ['adjourn', 'Adjourn'], useSessionSend: true});
@@ -1091,7 +1092,7 @@ function messageHandler(data) {
 
       match = msg.match(/(?:^|\n)\s*Movelist for game (\d+):\s+(\S+) \((\d+|UNR)\) vs\. (\S+) \((\d+|UNR)\)[^\n]+\s+(\w+) (\S+) match, initial time: (\d+) minutes, increment: (\d+) seconds\./);
       if (match != null && match.length > 9) {
-        var game = findGame(+match[1]);
+        var game = games.findGame(+match[1]);
         if(game && (game.movelistRequested || game.gameStatusRequested)) {
           if(game.isExamining()) {
             var id = match[1];
@@ -1198,7 +1199,7 @@ function messageHandler(data) {
           session.send('pobserve');
 
         partnerGameId = +match[1];
-        var mainGame = getPlayingExaminingGame();
+        var mainGame = games.getPlayingExaminingGame();
         if(mainGame) {
           mainGame.partnerGameId = partnerGameId;
           chat.createTab(`Game ${mainGame.id} and ${partnerGameId}`);
@@ -1208,11 +1209,11 @@ function messageHandler(data) {
       match = msg.match(/^(Creating|Game\s(\d+)): (\S+) \(([\d\+\-\s]+)\) (\S+) \(([\d\-\+\s]+)\) \S+ (\S+).+/m);
       if (match != null && match.length > 7) {
         if(!settings.multiboardToggle)
-          var game = getMainGame();
+          var game = games.getMainGame();
         else {
-          var game = findGame(+match[2]);
+          var game = games.findGame(+match[2]);
           if(!game)
-            game = getFreeGame();
+            game = games.getFreeGame();
           if(!game)
             game = createGame();
         }
@@ -1245,7 +1246,7 @@ function messageHandler(data) {
       /* Parse score and termination reason for examined games */
       match = msg.match(/^Game (\d+): ([a-zA-Z]+)(?:' game|'s)?\s([^\d\*]+)\s([012/]+-[012/]+)/m);
       if(match != null && match.length > 3) {
-        var game = findGame(+match[1]);
+        var game = games.findGame(+match[1]);
         if(game && game.history) {
           const who = match[2];
           const action = match[3];
@@ -1260,7 +1261,7 @@ function messageHandler(data) {
       if(!match)
         match = msg.match(/^You are no longer examining game (\d+)./m);
       if(match != null && match.length > 1) {
-        var game = findGame(+match[1]);
+        var game = games.findGame(+match[1]);
         if(game) {
           mexamineGame = game; // Stores the game in case a 'mexamine' is about to be issued.
           if(game === gameWithFocus)
@@ -1307,8 +1308,8 @@ function messageHandler(data) {
       // Suppress messages when 'moves' command issued internally
       match = msg.match(/^You're at the (?:beginning|end) of the game\./m);
       if(match) {
-        for(let i = 0; i < games.length; i++) {
-          if(games[i].movelistRequested) {
+        for(let game of games) {
+          if(game.movelistRequested) {
             return;
           }
         }
@@ -1328,9 +1329,9 @@ function messageHandler(data) {
         match = msg.match(/^Game (\d+): \w+ enters setup mode\./m);
       if(match) {
         if(match.length > 1)
-          var game = findGame(+match[1]);
+          var game = games.findGame(+match[1]);
         else
-          var game = getPlayingExaminingGame();
+          var game = games.getPlayingExaminingGame();
 
         if(game) {
           if(!game.commitingMovelist && !game.setupBoard)
@@ -1345,9 +1346,9 @@ function messageHandler(data) {
         match = msg.match(/^Game (\d+): \w+ has validated the position. Entering examine mode\./m);
       if(match) {
         if(match.length > 1)
-          var game = findGame(+match[1]);
+          var game = games.findGame(+match[1]);
         else
-          var game = getPlayingExaminingGame();
+          var game = games.getPlayingExaminingGame();
 
         if(game && !game.commitingMovelist && game.setupBoard)
           leaveSetupBoard(game, true);
@@ -1372,7 +1373,7 @@ function messageHandler(data) {
       if(!match)
         match = msg.match(/^done: Command not found\./m);
       if(match) {
-        var game = getPlayingExaminingGame();
+        var game = games.getPlayingExaminingGame();
         if(game && game.commitingMovelist) {
           if(match[0] === 'done: Command not found.') // This was sent by us to indicate when we are done
             game.commitingMovelist = false;
@@ -1383,7 +1384,7 @@ function messageHandler(data) {
       // Support for multiple examiners, we need to handle other users commiting or truncating moves from the main line
       match = msg.match(/^Game (\d+): \w+ commits the subvariation\./m);
       if(match) {
-        var game = findGame(+match[1]);
+        var game = games.findGame(+match[1]);
         if(game) {
           // An examiner has commited the current move to the mainline. So we need to also make it the mainline.
           game.history.scratch(false);
@@ -1397,7 +1398,7 @@ function messageHandler(data) {
       }
       match = msg.match(/^Game (\d+): \w+ truncates the game at halfmove (\d+)\./m);
       if(match) {
-        var game = findGame(+match[1]);
+        var game = games.findGame(+match[1]);
         if(game) {
           var index = +match[2];
           if(index === 0)
@@ -1450,7 +1451,7 @@ function gameStart(game: Game) {
     $('#exit-subvariation').hide();
 
   // for bughouse set game.color of partner to opposite of us
-  var mainGame = getPlayingExaminingGame();
+  var mainGame = games.getPlayingExaminingGame();
   var partnerColor = (mainGame && mainGame.partnerGameId === game.id && mainGame.color === 'w' ? 'b' : 'w');
 
   // Determine the player's color
@@ -1564,7 +1565,7 @@ function gameStart(game: Game) {
     game.element.find($('[title="Close"]')).css('visibility', 'hidden');
 
   var focusSet = false;
-  if(!game.isObserving() || getMainGame().role === Role.NONE) {
+  if(!game.isObserving() || games.getMainGame().role === Role.NONE) {
     if(game !== gameWithFocus) {
       setGameWithFocus(game);
       focusSet = true;
@@ -1786,10 +1787,10 @@ export function cleanup() {
   gameExitPending = [];
   clearMatchRequests();
   Dialogs.clearNotifications();
-  games.forEach((game) => {
+  for(let game of games) {
     if(game.role !== Role.PLAYING_COMPUTER)
       cleanupGame(game);
-  });
+  }
 }
 
 export function disableOnlineInputs(disable: boolean) {
@@ -3130,7 +3131,7 @@ function createGame(): Game {
   });
 
   game.element.on('dblclick', (event) => {
-    if(getMainGame() === game)
+    if(games.getMainGame() === game)
       return;
 
     setGameWithFocus(game);
@@ -3138,7 +3139,7 @@ function createGame(): Game {
   });
 
   game.clock = new Clock(game, checkGameEnd);
-  games.push(game);
+  games.add(game);
   setRightColumnSizes();
 
   return game;
@@ -3251,11 +3252,11 @@ function makeSecondaryBoard(game: Game) {
 }
 
 export function maximizeGame(game: Game) {
-  if(getMainGame() !== game) {
+  if(games.getMainGame() !== game) {
     Utils.animateBoundingRects(game.element, $('#main-board-area'), game.element.css('--border-expand-color'), game.element.css('--border-expand-width'));
 
     // Move currently maximized game card to secondary board area
-    var prevMaximized = getMainGame();
+    var prevMaximized = games.getMainGame();
     if(prevMaximized)
       makeSecondaryBoard(prevMaximized);
     else
@@ -3266,51 +3267,6 @@ export function maximizeGame(game: Game) {
     setFontSizes();
   }
   scrollToBoard(game);
-}
-
-export function findGame(id: number): Game {
-  return games.find(item => item.id === id);
-}
-
-function getMainGame(): Game {
-  return games.find(g => g.element.parent().is('#main-board-area'));
-}
-
-export function getPlayingExaminingGame(): Game {
-  return games.find(g => g.isPlayingOnline() || g.isExamining());
-}
-
-function getFreeGame(): Game {
-  var game = getMainGame();
-  if(game.role === Role.NONE && !game.preserved && !game.history?.editMode && !game.setupBoard)
-    return game;
-
-  return games.find(g => g.role === Role.NONE && !g.preserved && !g.history?.editMode && !g.setupBoard);
-}
-
-function getComputerGame(): Game {
-  return games.find(g => g.role === Role.PLAYING_COMPUTER);
-}
-
-function getMostImportantGame(): Game {
-  // find most important board
-  // out of playing/examining game, then computer game, then observed game on main board, then other observed game
-  var game = getPlayingExaminingGame();
-  if(!game)
-    game = getComputerGame();
-  if(!game) {
-    var mainGame = getMainGame();
-    if(mainGame && mainGame.isObserving())
-      game = mainGame;
-  }
-  if(!game)
-    game = games.find(g => g.isObserving());
-  if(!game)
-    game = mainGame;
-  if(!game)
-    game = games[0];
-
-  return game;
 }
 
 function closeGameDialog(game: Game) {
@@ -3343,19 +3299,17 @@ function closeGame(game: Game) {
 
 function removeGame(game: Game) {
   // remove game from games list
-  let index = games.indexOf(game);
-  if(index !== -1)
-    games.splice(index, 1);
+  games.remove(game);
 
   // if we are removing the main game, choose the most important secondary game to maximize
   if(game.element.parent().is('#main-board-area')) {
-    var newMainGame = getMostImportantGame();
+    var newMainGame = games.getMostImportantGame();
     maximizeGame(newMainGame);
   }
 
   // If game currently had the focus, switch focus to the main game
   if(game === gameWithFocus)
-    setGameWithFocus(getMainGame());
+    setGameWithFocus(games.getMainGame());
 
   cleanupGame(game);
 
@@ -3728,7 +3682,7 @@ $(document).on('hidden.bs.tab', 'button[data-bs-target="#pills-play"]', (e) => {
 });
 
 $('#quick-game').on('click', (event) => {
-  if(!getPlayingExaminingGame())
+  if(!games.getPlayingExaminingGame())
     session.send('getga');
 });
 
@@ -3795,15 +3749,15 @@ $('#play-computer-form').on('submit', (event) => {
 });
 
 function playComputer(params: any) {
-  var computerGame = getComputerGame();
+  var computerGame = games.getComputerGame();
   if(computerGame) {
     cleanupGame(computerGame);
     var game = computerGame;
   }
   else if(!settings.multiboardToggle)
-    var game = getMainGame();
+    var game = games.getMainGame();
   else {
-    var game = getFreeGame();
+    var game = games.getFreeGame();
     if(!game)
       game = createGame();
   }
@@ -4107,7 +4061,7 @@ function getGame(min: number, sec: number) {
   matchRequested++;
 
   const cmd: string = (opponent !== '') ? `match ${opponent}` : 'seek';
-  var mainGame = getPlayingExaminingGame();
+  var mainGame = games.getPlayingExaminingGame();
   if(mainGame && mainGame.isExamining())
     session.send('unex');
   session.send(`${cmd} ${min} ${sec} ${ratedUnrated} ${color}${newGameVariant}`);
@@ -4154,7 +4108,7 @@ $(document).on('shown.bs.tab', 'button[data-bs-target="#pills-lobby"]', (e) => {
 });
 
 function initLobbyPane() {
-  var game = getPlayingExaminingGame();
+  var game = games.getPlayingExaminingGame();
   if(!session || !session.isConnected())
     $('#lobby').hide();
   else if(game && (game.isExamining() || game.isPlayingOnline())) {
@@ -4387,7 +4341,7 @@ function showHistory(user: string, history: string) {
 }
 
 (window as any).examineGame = (user, id) => {
-  var game = getPlayingExaminingGame();
+  var game = games.getPlayingExaminingGame();
   if(game && game.isExamining())
     session.send('unex');
   session.send(`ex ${user} ${id}`);
@@ -4609,7 +4563,7 @@ function initGameTools(game: Game) {
     $('#game-tools-clone').parent().toggle(settings.multiboardToggle); // Only show 'Duplicate GAme' option in multiboard mode
     $('#game-tools-clone').toggleClass('disabled', game.isPlaying()); // Don't allow cloning of a game while playing (could allow cheating)
 
-    var mainGame = getPlayingExaminingGame();
+    var mainGame = games.getPlayingExaminingGame();
     $('#game-tools-examine').toggleClass('disabled', (mainGame && mainGame.isPlayingOnline()) || game.isPlaying() || game.isExamining()
         || game.category === 'wild/fr' || game.category === 'wild/0' // Due to a bug in 'bsetup' it's not possible to convert some wild variants to examine mode
         || game.category === 'wild/1' || game.category === 'bughouse');
@@ -5415,7 +5369,7 @@ function cloneGame(game: Game): Game {
 /** Triggered when the 'Examine Mode (Shared)' menu option is selected */
 $('#game-tools-examine').on('click', (event) => {
   examineModeRequested = gameWithFocus;
-  var mainGame = getPlayingExaminingGame();
+  var mainGame = games.getPlayingExaminingGame();
   if(mainGame && mainGame.isExamining())
     session.send('unex');
   session.send('ex');
@@ -6373,14 +6327,14 @@ $('#multiboard-toggle').on('click', (event) => {
   settings.multiboardToggle = !settings.multiboardToggle;
   if(!settings.multiboardToggle) {
     // close all games except one
-    var game = getMostImportantGame();
+    var game = games.getMostImportantGame();
     setGameWithFocus(game);
     maximizeGame(game);
 
     // close all games in the secondary board area
-    for(let i = games.length - 1; i >= 0; i--) {
-      if(games[i].element.parent().is('#secondary-board-area'))
-        closeGame(games[i]);
+    for(let g of [...games]) {
+      if(g.element.parent().is('#secondary-board-area'))
+        closeGame(g);
     }
   }
   initGameTools(gameWithFocus);
@@ -6408,7 +6362,7 @@ $('#input-form').on('submit', (event) => {
   else if(tab !== 'console') {
     if (tab.startsWith('game-')) {
       var gameNum = tab.split('-')[1];
-      var game = findGame(+gameNum);
+      var game = games.findGame(+gameNum);
       if(game && game.role === Role.OBSERVING)
         var xcmd = 'xwhisper';
       else

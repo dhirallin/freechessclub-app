@@ -2,7 +2,6 @@
 // Use of this source code is governed by a GPL-style
 // license that can be found in the LICENSE file.
 
-import { closeSync } from 'original-fs';
 import { updateBoard } from './index';
 import { Role } from './game';
 import { Reason } from './parser';

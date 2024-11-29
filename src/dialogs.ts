@@ -4,7 +4,7 @@
 
 import { getTouchClickCoordinates, createTooltip } from './utils';
 import { settings } from './settings';
-import { getPlayingExaminingGame } from './index';
+import { games } from './game';
 
 let dialogCounter = 0;
 
@@ -145,7 +145,7 @@ export function createNotification(params: DialogParams): any {
   $('#notifications-number').text($('.notification:not([data-remove="true"])').length);
   $('#notifications-bubble').show();
 
-  var game = getPlayingExaminingGame();
+  var game = games.getPlayingExaminingGame();
   var playingGame = (game && game.isPlayingOnline() ? true : false); // Don't show notifications if playing a game
   if((settings.notificationsToggle && !playingGame) || $('#notifications-header').attr('data-show'))
     showNotifications(dialog);
