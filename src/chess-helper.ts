@@ -15,7 +15,7 @@ export function parseMove(fen: string, move: any, startFen: string, category: st
   // Parse variant move
   const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
   if(!standardCategories.includes(category))
-    return parseVariantMove(fen, move, startFen, category);
+    return parseVariantMove(fen, move, startFen, category, variantData);
 
   // Parse standard move
   const chess = new Chess(fen);

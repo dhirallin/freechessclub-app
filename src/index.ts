@@ -4166,9 +4166,8 @@ function newGameDialog(game: Game, category: string = 'untimed') {
   let bodyText = '';
 
   if(category === 'wild/fr') {
-    let bodyText =
-      `<label for"chess960idn">Chess960 Starting Position ID (Optional)</label>
-      <input type="number" min="0" max="959" placeholder="0-959" class="form-control text-center chess960idn"><br>`;
+    bodyText = `<label for"chess960idn">Chess960 Starting Position ID (Optional)</label>
+        <input type="number" min="0" max="959" placeholder="0-959" class="form-control text-center chess960idn"><br>`;
   }
 
   var overwriteHandler = function(event) {
