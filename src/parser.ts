@@ -227,7 +227,7 @@ export class Parser {
     msg = msg.trim();
 
     // FICS uses 'fics%' to separate multiple multi-line messages when sent together
-    msgs = this.splitMessage(msg, /fics%/);
+    const msgs = this.splitMessage(msg, /fics%/);
     if(msgs)
       return msgs;
 

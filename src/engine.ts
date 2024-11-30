@@ -192,7 +192,7 @@ export class Engine {
       hEntry = hEntry.prev;
     }
 
-    movesStr = movelist.length ? ` moves ${movelist.reverse().join(' ')}` : '';
+    const movesStr = movelist.length ? ` moves ${movelist.reverse().join(' ')}` : '';
     return movesStr;
   }
 

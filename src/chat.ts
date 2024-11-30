@@ -535,7 +535,7 @@ export class Chat {
     text = text.replace(this.userRE, `<strong class="mention">${this.user}</strong>`);
 
     // Suffix for whispers
-    const suffixText = data.type === 'whisper' && !suffixText ? '(whispered)' : data.suffix;
+    const suffixText = data.type === 'whisper' && !data.suffix ? '(whispered)' : data.suffix;
     const suffix = (suffixText ? ` <span class="chat-text-suffix">${suffixText}</span>`: '');
 
     text = `${autoLink(text, {
