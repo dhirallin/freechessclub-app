@@ -4143,7 +4143,7 @@ function updateGamePreserved(game: Game, preserved?: boolean) {
 
 /** New Game menu item selected */
 $('#game-tools-new').on('click', (event) => {
-  newGameDialog();
+  newGameDialog(games.focused);
 });
 
 /** New Variant Game menu item selected */
@@ -4153,14 +4153,14 @@ $('#new-variant-game-submenu a').on('click', (event) => {
     category = 'wild/fr';
 
   category = category.toLowerCase();
-  newGameDialog(category);
+  newGameDialog(games.focused, category);
 });
 
 /**
  * When creating a new (empty game), shows a dialog asking if the user wants to Overwrite the
  * current game or open a New Board. For Chess960, also lets select Chess960 starting position
  */
-function newGameDialog(category: string = 'untimed') {
+function newGameDialog(game: Game, category: string = 'untimed') {
   let bodyText = '';
 
   if(category === 'wild/fr') {
@@ -4173,14 +4173,14 @@ function newGameDialog(category: string = 'untimed') {
     const chess960idn = category === 'wild/fr'
         ? this.closest('.toast').querySelector('.chess960idn').value
         : undefined;
-    newGame(false, category, null, chess960idn);
+    newGame(false, game, category, null, chess960idn);
   };
 
   var newBoardHandler = function(event) {
     const chess960idn = category === 'wild/fr'
         ? this.closest('.toast').querySelector('.chess960idn').value
         : undefined;
-    newGame(true, category, null, chess960idn);
+    newGame(true, game, category, null, chess960idn);
   };
 
   if(games.focused.role === Role.NONE || (category === 'wild/fr' && settings.multiboardToggle)) {
@@ -4208,7 +4208,7 @@ function newGameDialog(category: string = 'untimed') {
     Dialogs.showFixedDialog({type: headerTitle, title: bodyTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, icons: showIcons});
   }
   else if(settings.multiboardToggle)
-    newGame(true, category);
+    newGame(true, game, category);
 }
 
 /**
@@ -4219,8 +4219,12 @@ function newGameDialog(category: string = 'untimed') {
  * @param fen The starting position for the new game (used for Chess960)
  * @param chess960idn Alternatively the starting IDN for Chess960
  */
-function newGame(createNewBoard: boolean, category: string = 'untimed', fen?: string, chess960idn?: string): Game {
-  const game = createNewBoard ? createGame() : games.focused;
+function newGame(createNewBoard: boolean, game?: Game, category: string = 'untimed', fen?: string, chess960idn?: string): Game {
+  if(createNewBoard)
+    game = createGame()
+  else 
+    game = (game && games.includes(game) ? game : games.focused);
+   
   if(!createNewBoard)
     cleanupGame(game);
 
@@ -4338,11 +4342,11 @@ function openGamesOverwriteDialog(fileStrings: string[]) {
  * @param files FileList object
  */
 async function openGameFiles(files: any): Promise<string[]> {
-  var fileStrings = [];
+  const fileStrings = [];
 
   // Wait for all selected files to be read before displaying the first game
   for(const file of Array.from<File>(files)) {
-    var readFile = async function(): Promise<string> {
+    const readFile = async function(): Promise<string> {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = async function(e) {
@@ -4351,16 +4355,14 @@ async function openGameFiles(files: any): Promise<string[]> {
         };
         reader.onerror = function(e) {
           const error = e.target?.error;
-          let errorMessage = 'An unknown error occurred';
-          if(error)
-            errorMessage = `${error.name} - ${error.message}`;
+          const errorMessage = error ? `${error.name} - ${error.message}` : 'An unknown error occurred';
           Dialogs.showFixedDialog({type: 'Failed to open game file', msg: errorMessage, btnSuccess: ['', 'OK']});
           reject(error);
         };
         reader.readAsText(file);
       });
     };
-    var fileStr = await readFile();
+    const fileStr = await readFile();
     if(fileStr)
       fileStrings.push(fileStr);
   }
@@ -4380,7 +4382,7 @@ async function openGameFiles(files: any): Promise<string[]> {
  * @param createNewBoard If false, overwrites existing game, otherwise opens new board when in multiboard mode
  */
 async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBoard: boolean = false) {
-  var game = newGame(createNewBoard);
+  game = newGame(createNewBoard, game);
 
   for(let gameStr of gameFileStrings) {
     var regex = /(((?:\s*\[[^\]]+\]\s+)+)([^\[]+?(?=\n\s*(?:[\w]+\/){7}[\w-]+|\[|$))|\s*(?:[\w]+\/){7}[^\n]+)/g; // Splits up the PGN games or FENs in the string (yes there is probably a less ghastly way to do this than a big regex)
