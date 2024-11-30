@@ -1180,7 +1180,7 @@ function handleMiscMessage(data: any) {
         chat.updateNumWatchers(chatTab);
       let req = '';
       let numWatchers = 0;
-      for (let i = 0; i < watchers.length; i++) {
+      for(let i = 0; i < watchers.length; i++) {
         if(watchers[i].replace('#', '') === session.getUser())
           continue;
         numWatchers++;
@@ -1628,7 +1628,7 @@ function handleMiscMessage(data: any) {
   // Suppress messages when 'moves' command issued internally
   match = msg.match(/^You're at the (?:beginning|end) of the game\./m);
   if(match) {
-    for(let game of games) {
+    for(const game of games) {
       if(game.movelistRequested) {
         return;
       }
@@ -1853,7 +1853,7 @@ function showCapturedMaterial(game: Game) {
   }
 
   if(game.captured !== undefined) {
-    for(let key in captured) {
+    for(const key in captured) {
       if(game.captured[key] != captured[key]) {
         if(key === key.toUpperCase())
           blackChanged = true;
@@ -3889,7 +3889,7 @@ function createMoveContextMenu(event: any) {
   contextMenu.append(`<li><a class="dropdown-item noselect" data-action="clear-all-analysis">Clear All Analysis</a></li>`);
   contextMenu.append(`<li><hr class="dropdown-divider"></li>`);
   var annotationsHtml = `<div class="annotations-menu annotation">`;
-  for(let a of History.annotations)
+  for(const a of History.annotations)
     annotationsHtml += `<li><a class="dropdown-item noselect" data-bs-toggle="tooltip" data-nags="${a.nags}" title="${a.description}">${a.symbol}</a></li>`;
   annotationsHtml += `</div>`;
   contextMenu.append(annotationsHtml);
@@ -4173,7 +4173,9 @@ function newGameDialog(game: Game, category: string = 'untimed') {
     const chess960idn = category === 'wild/fr'
         ? this.closest('.toast').querySelector('.chess960idn').value
         : undefined;
-    newGame(false, game, category, null, chess960idn);
+
+    if(games.includes(game))
+      newGame(false, game, category, null, chess960idn);
   };
 
   var newBoardHandler = function(event) {
@@ -4183,18 +4185,18 @@ function newGameDialog(game: Game, category: string = 'untimed') {
     newGame(true, game, category, null, chess960idn);
   };
 
-  if(games.focused.role === Role.NONE || (category === 'wild/fr' && settings.multiboardToggle)) {
+  if(game.role === Role.NONE || (category === 'wild/fr' && settings.multiboardToggle)) {
     const headerTitle = 'Create new game';
     const bodyTitle = '';
     let showIcons = false;
     let button1: any, button2: any;
-    if(games.focused.role === Role.NONE && settings.multiboardToggle) {
+    if(game.role === Role.NONE && settings.multiboardToggle) {
       bodyText = `${bodyText}Overwrite existing game or open new board?`;
       button1 = [overwriteHandler, 'Overwrite'];
       button2 = [newBoardHandler, 'New Board'];
       showIcons = false;
     }
-    else if(games.focused.role === Role.NONE) {
+    else if(game.role === Role.NONE) {
       bodyText = `${bodyText}This will clear the current game.`;
       button1 = [overwriteHandler, 'OK'];
       button2 = ['', 'Cancel'];
@@ -4215,6 +4217,7 @@ function newGameDialog(game: Game, category: string = 'untimed') {
  * Creates a new (empty) game.
  * @param createNewBoard If false, will clear the move-list of the existing game and start over. If true
  * will open a new board when in multiboard mode.
+ * @param game The game to overwrite if createNewBoard is false
  * @param category The category (variant) for the new game
  * @param fen The starting position for the new game (used for Chess960)
  * @param chess960idn Alternatively the starting IDN for Chess960
@@ -4222,9 +4225,9 @@ function newGameDialog(game: Game, category: string = 'untimed') {
 function newGame(createNewBoard: boolean, game?: Game, category: string = 'untimed', fen?: string, chess960idn?: string): Game {
   if(createNewBoard)
     game = createGame()
-  else 
-    game = (game && games.includes(game) ? game : games.focused);
-   
+  else if(!game || !games.includes(game))
+    return;
+
   if(!createNewBoard)
     cleanupGame(game);
 
@@ -4279,7 +4282,7 @@ $('#open-files').on('click', (event) => {
     fileInput.remove();
     const target = event.target as HTMLInputElement;
     const gameFileStrings = await openGameFiles(target.files);
-    openGamesOverwriteDialog(gameFileStrings);
+    openGamesOverwriteDialog(games.focused, gameFileStrings);
   });
 });
 
@@ -4288,41 +4291,40 @@ $('#add-games-button').on('click', (event) => {
   inputStr = inputStr.trim();
   if(inputStr) {
     $('#open-games-modal').modal('hide');
-    openGamesOverwriteDialog([inputStr]);
+    openGamesOverwriteDialog(games.focused, [inputStr]);
   }
 });
 
 /**
- * When opening PGN file(s), hows a dialog asking if the user wants to Overwrite the
+ * When opening PGN file(s), shows a dialog asking if the user wants to Overwrite the
  * current game or open a New Board.
  *
  * @param fileStrings an array of strings representing each opened PGN file (or the Add Games textarea)
  */
-function openGamesOverwriteDialog(fileStrings: string[]) {
-  const game = games.focused;
-
-  var overwriteHandler = function(event) {
-    parseGameFiles(game, fileStrings, false);
+function openGamesOverwriteDialog(game: Game, fileStrings: string[]) {
+  const overwriteHandler = function(event) {
+    if(games.includes(game))
+      parseGameFiles(game, fileStrings, false);
   };
 
-  var newBoardHandler = function(event) {
+  const newBoardHandler = function(event) {
     parseGameFiles(game, fileStrings, true);
   };
 
-  if(games.focused.role === Role.NONE) {
-    if(games.focused.history.length()) {
+  if(game.role === Role.NONE) {
+    if(game.history.length()) {
       let bodyText = '';
       let button1: any, button2: any;
       let showIcons = false;
       const headerTitle = 'Open Games';
       const bodyTitle = '';
-      if(games.focused.role === Role.NONE && settings.multiboardToggle) {
+      if(game.role === Role.NONE && settings.multiboardToggle) {
         bodyText = `${bodyText}Overwrite existing game or open new board?`;
         button1 = [overwriteHandler, 'Overwrite'];
         button2 = [newBoardHandler, 'New Board'];
         showIcons = false;
       }
-      else if(games.focused.role === Role.NONE) {
+      else if(game.role === Role.NONE) {
         bodyText = `${bodyText}This will clear the current game.`;
         button1 = [overwriteHandler, 'OK'];
         button2 = ['', 'Cancel'];
@@ -4385,34 +4387,34 @@ async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBo
   game = newGame(createNewBoard, game);
 
   for(let gameStr of gameFileStrings) {
-    var regex = /(((?:\s*\[[^\]]+\]\s+)+)([^\[]+?(?=\n\s*(?:[\w]+\/){7}[\w-]+|\[|$))|\s*(?:[\w]+\/){7}[^\n]+)/g; // Splits up the PGN games or FENs in the string (yes there is probably a less ghastly way to do this than a big regex)
-    var match;
-    var chunkSize = 200;
-    var done = false;
-    var fenCount = 1;
+    const regex = /(((?:\s*\[[^\]]+\]\s+)+)([^\[]+?(?=\n\s*(?:[\w]+\/){7}[\w-]+|\[|$))|\s*(?:[\w]+\/){7}[^\n]+)/g; // Splits up the PGN games or FENs in the string (yes there is probably a less ghastly way to do this than a big regex)
+    const chunkSize = 200;
+    let done = false;
+    let fenCount = 1;
     while(!done) {
       // Parse games in chunks so as not to tie up the event loop
       await new Promise<void>(resolve => {
         setTimeout(() => {
           for(let i = 0; i < chunkSize; i++) {
-            if((match = regex.exec(gameStr)) === null) {
+            const match = regex.exec(gameStr);
+            if(!match) {
               done = true;
               break;
             }
-            if(match.length > 3 && match[2] && match[3]) { // match is a PGN
-              var history = new History(game);
+            else if(match.length > 3 && match[2] && match[3]) { // match is a PGN
+              const history = new History(game);
               history.pgn = match[3];
-              var metatags = parsePGNMetadata(match[2]);
+              const metatags = parsePGNMetadata(match[2]);
               if(metatags) {
                 history.setMetatags(metatags, true);
                 game.historyList.push(history);
               }
             }
             else { // match is a FEN
-              var fen = match[1].trim();
-              var err = ChessHelper.validateFEN(fen);
+              const fen = match[1].trim();
+              const err = ChessHelper.validateFEN(fen);
               if(!err) {
-                var history = new History(game, fen);
+                const history = new History(game, fen);
                 history.setMetatags({Event: `FEN ${fenCount}`});
                 game.historyList.push(history);
                 fenCount++;
@@ -4438,15 +4440,14 @@ async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBo
 /**
  * Parse a string of PGN metatags
  */
- function parsePGNMetadata(pgnStr: string) {
+function parsePGNMetadata(pgnStr: string) {
   try {
-    var pgn = PgnParser.parse(pgnStr, {startRule: "tags"}) as PgnParser.ParseTree;
+    const pgn = PgnParser.parse(pgnStr, {startRule: "tags"}) as PgnParser.ParseTree;
+    return pgn.tags;
   }
   catch(err) {
     Dialogs.showFixedDialog({type: 'Failed to parse PGN', msg: err.message, btnSuccess: ['', 'OK']});
-    return;
   }
-  return pgn.tags;
 }
 
 /**
@@ -4454,15 +4455,13 @@ async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBo
  */
 async function parsePGNMoves(game: Game, pgnStr: string) {
   try {
-    var pgn = PgnParser.parse(pgnStr, {startRule: "pgn"}) as PgnParser.ParseTree;
+    const pgn = PgnParser.parse(pgnStr, {startRule: "pgn"}) as PgnParser.ParseTree;
+    parsePGNVariation(game, pgn.moves);
+    game.history.goto(game.history.first());
   }
   catch(err) {
     Dialogs.showFixedDialog({type: 'Failed to parse PGN', msg: err.message, btnSuccess: ['', 'OK']});
-    return;
   }
-
-  parsePGNVariation(game, pgn.moves);
-  game.history.goto(game.history.first());
 }
 
 /**
@@ -4470,11 +4469,11 @@ async function parsePGNMoves(game: Game, pgnStr: string) {
  * and puts them in the provided Game's History object
  */
 function parsePGNVariation(game: Game, variation: any) {
-  var prevHEntry = game.history.current();
-  var newSubvariation = !!prevHEntry.next;
+  let prevHEntry = game.history.current();
+  let newSubvariation = !!prevHEntry.next;
 
-  for(let move of variation) {
-    var parsedMove = parseGameMove(game, prevHEntry.fen, move.notation.notation);
+  for(const move of variation) {
+    const parsedMove = parseGameMove(game, prevHEntry.fen, move.notation.notation);
     if(!parsedMove)
       break;
 
@@ -4483,7 +4482,7 @@ function parsePGNVariation(game: Game, variation: any) {
       continue;
     }
 
-    var currHEntry = game.history.add(parsedMove.move, parsedMove.fen, newSubvariation);
+    const currHEntry = game.history.add(parsedMove.move, parsedMove.fen, newSubvariation);
     game.history.setCommentBefore(currHEntry, move.commentMove);
     game.history.setCommentAfter(currHEntry, move.commentAfter);
     if(move.nag)
@@ -4492,7 +4491,7 @@ function parsePGNVariation(game: Game, variation: any) {
     updateGameVariantMoveData(game);
     newSubvariation = false;
 
-    for(let subvariation of move.variations) {
+    for(const subvariation of move.variations) {
       game.history.editMode = true;
       game.history.goto(prevHEntry);
       parsePGNVariation(game, subvariation);
@@ -4516,7 +4515,7 @@ function setCurrentHistory(game: Game, historyIndex: number) {
   updateGameFromMetatags(game);
 
   if(game.history.pgn) { // lazy load game
-    var tags = game.history.metatags;
+    const tags = game.history.metatags;
     if(tags.SetUp === '1' && tags.FEN)
       game.history.first().fen = tags.FEN;
     parsePGNMoves(game, game.history.pgn);
@@ -4535,11 +4534,11 @@ function setCurrentHistory(game: Game, historyIndex: number) {
  */
 function updateGameFromMetatags(game: Game) {
   if(game.role === Role.NONE || game.isExamining()) { // Don't allow user to change the game's attributes while the game is in progress
-    var metatags = game.history.metatags;
-    var whiteName = metatags.White.slice(0, 17).trim().replace(/[^\w]+/g, '_'); // Convert multi-word names into a single word format that FICS can handle
-    var blackName = metatags.Black.slice(0, 17).trim().replace(/[^\w]+/g, '_');
-    var whiteStatus = game.element.find(game.color === 'w' ? '.player-status' : '.opponent-status');
-    var blackStatus = game.element.find(game.color === 'b' ? '.player-status' : '.opponent-status');
+    const metatags = game.history.metatags;
+    const whiteName = metatags.White.slice(0, 17).trim().replace(/[^\w]+/g, '_'); // Convert multi-word names into a single word format that FICS can handle
+    const blackName = metatags.Black.slice(0, 17).trim().replace(/[^\w]+/g, '_');
+    const whiteStatus = game.element.find(game.color === 'w' ? '.player-status' : '.opponent-status');
+    const blackStatus = game.element.find(game.color === 'b' ? '.player-status' : '.opponent-status');
     if(whiteName !== game.wname) {
       game.wname = whiteName;
       if(game.isExamining())
@@ -4553,23 +4552,23 @@ function updateGameFromMetatags(game: Game) {
       blackStatus.find('.name').text(metatags.Black);
     }
 
-    var whiteElo = metatags.WhiteElo;
+    const whiteElo = metatags.WhiteElo;
     if(whiteElo && whiteElo !== '0' && whiteElo !== '-' && whiteElo !== '?')
       game.wrating = whiteElo;
     else
       game.wrating = '';
     whiteStatus.find('.rating').text(game.wrating);
 
-    var blackElo = metatags.BlackElo;
+    const blackElo = metatags.BlackElo;
     if(blackElo && blackElo !== '0' && blackElo !== '-' && blackElo !== '?')
       game.brating = blackElo;
     else
       game.brating = '';
     blackStatus.find('.rating').text(game.brating);
 
-    var supportedVariants = ['losers', 'suicide', 'crazyhouse', 'bughouse', 'atomic', 'chess960',
+    const supportedVariants = ['losers', 'suicide', 'crazyhouse', 'bughouse', 'atomic', 'chess960',
       'blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
-    var variant = metatags.Variant?.toLowerCase();
+    const variant = metatags.Variant?.toLowerCase();
     if(variant && (supportedVariants.includes(variant) || variant.startsWith('wild'))) {
       if(variant === 'chess960')
         game.category = 'wild/fr';
@@ -4581,10 +4580,9 @@ function updateGameFromMetatags(game: Game) {
 
     // Set the status panel text
     if(!game.statusElement.find('.game-status').html()) {
-      if(!metatags.White && !metatags.Black)
-        var status = '';
-      else {
-        var status = `${metatags.White || 'Unknown'} (${metatags.WhiteElo || '?'}) `
+      let status = '';
+      if(metatags.White || metatags.Black) {
+        status = `${metatags.White || 'Unknown'} (${metatags.WhiteElo || '?'}) `
             + `${metatags.Black || 'Unknown'} (${metatags.BlackElo || '?'})`
             + `${metatags.Variant ? ` ${metatags.Variant}` : ''}`;
 
@@ -4609,7 +4607,7 @@ function updateGameFromMetatags(game: Game) {
  * multiple games are opened from PGN(s) at once.
  */
 $('#game-list-button').on('show.bs.dropdown', function(event) {
-  var game = games.focused;
+  const game = games.focused;
   if(game.historyList.length > 1) {
     $('#game-list-filter').val(game.gameListFilter);
     addGameListItems(game);
@@ -4622,7 +4620,7 @@ $('#game-list-button').on('show.bs.dropdown', function(event) {
  * be performance intensive
  */
 var gameListFilterHandler = Utils.debounce((event) => {
-  var game = games.focused;
+  const game = games.focused;
   game.gameListFilter = $(event.target).val() as string;
   addGameListItems(game);
 }, 500);
@@ -4633,10 +4631,10 @@ $('#game-list-filter').on('input', gameListFilterHandler);
  */
 function addGameListItems(game: Game) {
   $('#game-list-menu').remove();
-  var listElements = '';
+  let listElements = '';
   for(let i = 0; i < game.historyList.length; i++) {
-    var h = game.historyList[i];
-    var description = getGameListDescription(h, true);
+    const h = game.historyList[i];
+    const description = getGameListDescription(h, true);
     if(description.toLowerCase().includes(game.gameListFilter.toLowerCase()))
       listElements += `<li style="width: max-content;" class="game-list-item"><a class="dropdown-item" data-index="${i}">${description}</a></li>`
   }
@@ -4649,21 +4647,22 @@ function addGameListItems(game: Game) {
  * in the dropdown button text
  */
 function getGameListDescription(history: History, longDescription: boolean = false) {
-  var tags = history.metatags;
+  const tags = history.metatags;
+  let description = '';
 
   if(/FEN \d+/.test(tags.Event)) {
-    var description = tags.Event;
+    description = tags.Event;
     if(longDescription)
       description += `, ${history.first().fen}`;
     return description;
   }
 
-  var dateTimeStr = (tags.Date || tags.UTCDate || '');
+  let dateTimeStr = (tags.Date || tags.UTCDate || '');
   if(tags.Time || tags.UTCTime)
     dateTimeStr += `${tags.Date || tags.UTCDate ? ' - ' : ''}${tags.Time || tags.UTCTime}`;
 
   if(tags.White || tags.Black) {
-    var description = tags.White || 'unknown';
+    description = tags.White || 'unknown';
     if(tags.WhiteElo && tags.WhiteElo !== '0' && tags.WhiteElo !== '-' && tags.WhiteElo !== '?')
       description += ` (${tags.WhiteElo})`;
     description += ` - ${tags.Black || 'unknown'}`;
@@ -4705,29 +4704,29 @@ $('#game-list-button').on('hidden.bs.dropdown', function(event) {
 
 /** Triggered when a game is selected from the game list */
 $('#game-list-dropdown').on('click', '.dropdown-item', (event) => {
-  var index = +$(event.target).attr('data-index');
+  const index = +$(event.target).attr('data-index');
   setCurrentHistory(games.focused, index);
 });
 
 $('#save-game-modal').on('show.bs.modal', function() {
-  var fenOutput = $('#save-fen-output');
+  const fenOutput = $('#save-fen-output');
   fenOutput.val('');
   fenOutput.val(games.focused.history.current().fen);
 
-  var pgn = gameToPGN(games.focused);
-  var pgnOutput = $('#save-pgn-output');
+  const pgn = gameToPGN(games.focused);
+  const pgnOutput = $('#save-pgn-output');
   pgnOutput.val('');
   pgnOutput.val(pgn);
 
-  var numRows = 1;
+  let numRows = 1;
   for(let i = 0; i < pgn.length; i++) {
     if(pgn[i] === '\n')
       numRows++;
   }
   pgnOutput.css('padding-right', '');
   if(numRows > +pgnOutput.attr('rows')) {
-    var scrollbarWidth = Utils.getScrollbarWidth();
-    var padding = pgnOutput.css('padding-right');
+    const scrollbarWidth = Utils.getScrollbarWidth();
+    const padding = pgnOutput.css('padding-right');
     pgnOutput.css('padding-right', `calc(${padding} + ${scrollbarWidth}px)`);
     $('#save-pgn-copy').css('right', `${scrollbarWidth}px`);
   }
@@ -4747,7 +4746,7 @@ $('#save-pgn-copy').on('click', (event) => {
  * Takes a game object and returns the game in PGN format
  */
 function gameToPGN(game: Game): string {
-  var movesStr = Utils.breakAtMaxLength(game.history.movesToString(), 80);
+  const movesStr = Utils.breakAtMaxLength(game.history.movesToString(), 80);
   return `${game.history.metatagsToString()}\n\n${movesStr ? `${movesStr} ` : ''}${game.history.metatags.Result}`;
 }
 
@@ -4761,28 +4760,29 @@ $('#save-pgn-button').on('click', (event) => {
  */
 function savePGN(game: Game, pgn: string) {
   // Construct file name
-  var metatags = game.history.metatags;
-  var wname = metatags.White;
-  var bname = metatags.Black;
-  var event = metatags.Event;
-  var date = metatags.Date;
-  var time = metatags.Time;
+  const metatags = game.history.metatags;
+  const wname = metatags.White;
+  const bname = metatags.Black;
+  let event = metatags.Event;
+  let date = metatags.Date;
+  let time = metatags.Time;
   if(date) {
     date = date.replace(/\./g, '-');
-    var match = date.match(/^\d+(-\d+)?(-\d+)?/);
+    const match = date.match(/^\d+(-\d+)?(-\d+)?/);
     date = (match ? match[0] : null);
   }
   if(time) {
     time = time.replace(/:/g, '.');
-    match = time.match(/^\d+(.\d+)?(.\d+)?/);
+    const match = time.match(/^\d+(.\d+)?(.\d+)?/);
     time = (match ? match[0] : null);
   }
 
+  let filename: string;
   if(wname || bname)
-    var filename = `${wname || 'unknown'}_vs_${bname || 'unknown'}${date ? `_${date}` : ''}${time ? `_${time}` : ''}.pgn`;
+    filename = `${wname || 'unknown'}_vs_${bname || 'unknown'}${date ? `_${date}` : ''}${time ? `_${time}` : ''}.pgn`;
   else {
     event = event.replace(/^FEN (\d+)$/, 'Analysis-$1');
-    var filename = `${event || 'Analysis'}${date ? `_${date}` : ''}${time ? `_${time}` : ''}.pgn`;
+    filename = `${event || 'Analysis'}${date ? `_${date}` : ''}${time ? `_${time}` : ''}.pgn`;
   }
 
   // Save file
@@ -4807,10 +4807,10 @@ $('#game-tools-clone').on('click', (event) => {
  * The clone will not be in examine or observe mode, regardless of the original.
 */
 function cloneGame(game: Game): Game {
-  var clonedGame = createGame();
+  const clonedGame = createGame();
 
   // Copy GameData properties
-  var gameData = new GameData(); // Create temp instance in order to iterate its proeprties
+  const gameData = new GameData(); // Create temp instance in order to iterate its proeprties
   for(const key of Object.keys(gameData))
     clonedGame[key] = game[key];
 
@@ -4830,7 +4830,7 @@ function cloneGame(game: Game): Game {
 /** Triggered when the 'Examine Mode (Shared)' menu option is selected */
 $('#game-tools-examine').on('click', (event) => {
   examineModeRequested = games.focused;
-  var mainGame = games.getPlayingExaminingGame();
+  const mainGame = games.getPlayingExaminingGame();
   if(mainGame && mainGame.isExamining())
     session.send('unex');
   session.send('ex');
@@ -4841,12 +4841,8 @@ $('#game-tools-examine').on('click', (event) => {
  */
 function setupGameInExamineMode(game: Game) {
   /** Setup the board */
-  if(game.setupBoard)
-    var fen: string = getSetupBoardFEN(game);
-  else
-    var fen: string  = game.history.first().fen;
-
-  var fenWords = ChessHelper.splitFEN(fen);
+  const fen = game.setupBoard ? getSetupBoardFEN(game) : game.history.first().fen;
+  const fenWords = ChessHelper.splitFEN(fen);
 
   game.commitingMovelist = true;
 
@@ -4866,12 +4862,12 @@ function setupGameInExamineMode(game: Game) {
   session.send(`bsetup tomove ${fenWords.color === 'w' ? 'white' : 'black'}`);
 
   // castling rights
-  var castlingRights = fenWords.castlingRights;
+  const castlingRights = fenWords.castlingRights;
   sendWhiteCastlingRights(castlingRights);
   sendBlackCastlingRights(castlingRights);
 
   // en passant rights
-  var enPassant = fenWords.enPassant;
+  const enPassant = fenWords.enPassant;
   if(enPassant !== '-')
     session.send(`bsetup eppos ${enPassant[0]}`);
 
@@ -4880,18 +4876,17 @@ function setupGameInExamineMode(game: Game) {
 
   if(!game.setupBoard) {
     session.send('bsetup done');
-
+    
     // Send and commit move list
-    if(game.history.current() !== game.history.last())
-      var currMove = game.history.current();
+    const currMove = game.history.current() !== game.history.last() ? game.history.current() : null;
     game.history.goto(game.history.first());
-    var hEntry = game.history.first();
+    let hEntry = game.history.first();
     while(hEntry) {
       if(hEntry.move)
         sendMove(hEntry.move);
       session.send(`wclock ${Clock.MSToHHMMSS(hEntry.wtime)}`);
       session.send(`bclock ${Clock.MSToHHMMSS(hEntry.btime)}`);
-      var hEntry = hEntry.next;
+      hEntry = hEntry.next;
     }
     if(!game.history.scratch() && game.history.length())
       session.send('commit');
@@ -4918,14 +4913,15 @@ function setupGameInExamineMode(game: Game) {
  * @param castlingRights castling rights string in typical FEN format e.g. 'KQkq'
  */
 function sendWhiteCastlingRights(castlingRights: string) {
+  let wcastling: string;
   if(castlingRights.includes('K') && castlingRights.includes('Q'))
-    var wcastling = 'both';
+    wcastling = 'both';
   else if(castlingRights.includes('K'))
-    var wcastling = 'kside';
+    wcastling = 'kside';
   else if(castlingRights.includes('Q'))
-    var wcastling = 'qside';
+    wcastling = 'qside';
   else
-    var wcastling = 'none';
+    wcastling = 'none';
   session.send(`bsetup wcastle ${wcastling}`);
 }
 
@@ -4934,14 +4930,15 @@ function sendWhiteCastlingRights(castlingRights: string) {
  * @param castlingRights castling rights string in typical FEN format e.g. 'KQkq'
  */
 function sendBlackCastlingRights(castlingRights: string) {
+  let bcastling: string;
   if(castlingRights.includes('k') && castlingRights.includes('q'))
-    var bcastling = 'both';
+    bcastling = 'both';
   else if(castlingRights.includes('k'))
-    var bcastling = 'kside';
+    bcastling = 'kside';
   else if(castlingRights.includes('q'))
-    var bcastling = 'qside';
+    bcastling = 'qside';
   else
-    var bcastling = 'none';
+    bcastling = 'none';
   session.send(`bsetup bcastle ${bcastling}`);
 }
 
@@ -5019,8 +5016,8 @@ function updateSetupBoard(game: Game, fen?: string, serverIssued: boolean = fals
  * Resets the board to the first move in the move list
  */
 $(document).on('click', '.reset-board', (event) => {
-  var game = games.focused;
-  var fen = games.focused.history.first().fen;
+  const game = games.focused;
+  let fen = games.focused.history.first().fen;
   if(fen === '8/8/8/8/8/8/8/8 w - - 0 1') // No initial position because user sent 'bsetup' without first examining a game
     fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   updateSetupBoard(games.focused, fen);
@@ -5033,8 +5030,8 @@ $(document).on('click', '.clear-board', (event) => {
 
 /** Triggered when user checks/unchecks the castling rights controls in Setup Board mode */
 $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-white, .can-kingside-castle-black, .can-queenside-castle-black', (event) => {
-  var game = games.focused;
-  var castlingRights = ChessHelper.splitFEN(getSetupBoardFEN(game)).castlingRights;
+  const game = games.focused;
+  const castlingRights = ChessHelper.splitFEN(getSetupBoardFEN(game)).castlingRights;
   if(game.isExamining()) {
     if($(event.target).hasClass('can-queenside-castle-white') || $(event.target).hasClass('can-kingside-castle-white'))
       sendWhiteCastlingRights(castlingRights);
@@ -5047,21 +5044,17 @@ $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-whit
 
 /** Sets the color to move using the Setup Board dropdown button */
 (window as any).setupBoardColorToMove = (color: string) => {
-  var game = games.focused;
+  const game = games.focused;
   setupBoardColorToMove(game, color);
   game.fen = getSetupBoardFEN(game);
   updateEngine();
 };
 function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean = false) {
-  var oldColor = ChessHelper.splitFEN(getSetupBoardFEN(game)).color;
+  const oldColor = ChessHelper.splitFEN(getSetupBoardFEN(game)).color;
+  const colorName = (color === 'w' ? 'White' : 'Black');
+  const label = Utils.isSmallWindow() ? `${colorName}'s move` : `${colorName} to move`;
 
-  var colorName = (color === 'w' ? 'White' : 'Black');
-  if(Utils.isSmallWindow())
-    var label = `${colorName}'s move`;
-  else
-    var label = `${colorName} to move`;
-
-  var button = game.element.find('.color-to-move-button');
+  const button = game.element.find('.color-to-move-button');
   button.text(label);
   button.attr('data-color', color);
 
@@ -5070,7 +5063,7 @@ function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean 
 }
 
 function setupBoardCastlingRights(game: Game, castlingRights: string, serverIssued: boolean = false) {
-  var oldCastlingRights = ChessHelper.splitFEN(getSetupBoardFEN(game)).castlingRights;
+  const oldCastlingRights = ChessHelper.splitFEN(getSetupBoardFEN(game)).castlingRights;
 
   game.element.find('.can-kingside-castle-white').prop('checked', castlingRights.includes('K'));
   game.element.find('.can-queenside-castle-white').prop('checked', castlingRights.includes('Q'));
@@ -5104,9 +5097,9 @@ $('#setup-done').on('click', (event) => {
  * Leave setup board mode and reset the move list with the current board position as the starting position
  */
 function setupDone(game: Game) {
-  var fen = getSetupBoardFEN(game);
+  const fen = getSetupBoardFEN(game);
 
-  var err = ChessHelper.validateFEN(fen, game.category);
+  const err = ChessHelper.validateFEN(fen, game.category);
   if(err) {
     Dialogs.showFixedDialog({type: 'Invalid Position', msg: err, btnSuccess: ['', 'OK']});
     return;
@@ -5140,7 +5133,7 @@ function cancelSetup(game: Game) {
  * Whereas on desktop, they are shown in the top left just below the navigation buttons.
  */
 function moveLeftPanelSetupBoard() {
-  var setupBoardPanel = $('#left-panel-setup-board');
+  const setupBoardPanel = $('#left-panel-setup-board');
   if(Utils.isSmallWindow()) {
     setupBoardPanel.removeClass('card-header');
     setupBoardPanel.addClass('card-footer');
@@ -5162,14 +5155,12 @@ function moveLeftPanelSetupBoard() {
  * and castling rights controls.
  */
 function getSetupBoardFEN(game: Game): string {
-  var colorToMove = game.element.find('.color-to-move-button').attr('data-color');
-  var wK = (game.element.find('.can-kingside-castle-white').is(':checked') ? 'K' : '');
-  var wQ = (game.element.find('.can-queenside-castle-white').is(':checked') ? 'Q' : '');
-  var bK = (game.element.find('.can-kingside-castle-black').is(':checked') ? 'k' : '');
-  var bQ = (game.element.find('.can-queenside-castle-black').is(':checked') ? 'q' : '');
-  var castlingRights = `${wK}${wQ}${bK}${bQ}`;
-  if(!castlingRights)
-    castlingRights = '-';
+  const colorToMove = game.element.find('.color-to-move-button').attr('data-color');
+  const wK = (game.element.find('.can-kingside-castle-white').is(':checked') ? 'K' : '');
+  const wQ = (game.element.find('.can-queenside-castle-white').is(':checked') ? 'Q' : '');
+  const bK = (game.element.find('.can-kingside-castle-black').is(':checked') ? 'k' : '');
+  const bQ = (game.element.find('.can-queenside-castle-black').is(':checked') ? 'q' : '');
+  const castlingRights = `${wK}${wQ}${bK}${bQ}` || '-';
   return `${game.board.getFen()} ${colorToMove} ${castlingRights} - 0 1`;
 }
 
@@ -5179,25 +5170,25 @@ function getSetupBoardFEN(game: Game): string {
  * The game state is updated to reflect the modified metatags.
  */
 $('#game-tools-properties').on('click', (event) => {
-  var okHandler = function(event) {
-    var metatagsStr = this.closest('.toast').querySelector('.game-properties-input').value;
+  const okHandler = function(event) {
+    const metatagsStr = this.closest('.toast').querySelector('.game-properties-input').value;
     try {
-      var pgn = PgnParser.parse(metatagsStr, {startRule: "tags"}) as PgnParser.ParseTree;
+      const pgn = PgnParser.parse(metatagsStr, {startRule: "tags"}) as PgnParser.ParseTree;
+      games.focused.history.setMetatags(pgn.tags, true);
+      updateGameFromMetatags(games.focused);
     }
     catch(err) {
       Dialogs.showFixedDialog({type: 'Failed to update properties', msg: err.message, btnSuccess: ['', 'OK']});
       return;
     }
-    games.focused.history.setMetatags(pgn.tags, true);
-    updateGameFromMetatags(games.focused);
   };
 
-  var headerTitle = 'Game Properties';
-  var bodyText = `<textarea style="resize: none" class="form-control game-properties-input" rows="10" type="text" `
+  const headerTitle = 'Game Properties';
+  const bodyText = `<textarea style="resize: none" class="form-control game-properties-input" rows="10" type="text" `
       + `autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">`
       + `${games.focused.history.metatagsToString()}</textarea>`;
-  var button1 = [okHandler, 'Keep Changes'];
-  var button2 = ['', 'Cancel'];
+  const button1 = [okHandler, 'Keep Changes'];
+  const button2 = ['', 'Cancel'];
   Dialogs.showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, htmlMsg: true});
 });
 
@@ -5206,7 +5197,7 @@ $('#game-tools-properties').on('click', (event) => {
  * Closes the game.
  */
 $('#game-tools-close').on('click', (event) => {
-  var game = games.focused;
+  const game = games.focused;
   if(game.preserved || game.history.editMode)
     closeGameDialog(game);
   else
@@ -5269,7 +5260,7 @@ $('#left-panel-bottom').on('shown.bs.tab', '.nav-link', (e) => {
 });
 
 $('#left-bottom-tabs .closeTab').on('click', (event) => {
-  var id = $(event.target).parent().siblings('.nav-link').attr('id');
+  const id = $(event.target).parent().siblings('.nav-link').attr('id');
   if(id === 'engine-tab' || id === 'eval-graph-tab')
     hideAnalysis();
 });
@@ -5300,7 +5291,7 @@ async function showOpeningName(game: Game) {
   if(!game.history)
     return;
 
-  var hEntry = game.history.current();
+  let hEntry = game.history.current();
   if(!hEntry.move)
     hEntry = game.history.last();
 
@@ -5326,8 +5317,8 @@ async function showOpeningName(game: Game) {
 };
 
 function showAnalysis() {
-  var game = games.focused;
-  var currentStatusTab = game.currentStatusTab;
+  const game = games.focused;
+  const currentStatusTab = game.currentStatusTab;
 
   openLeftBottomTab($('#engine-tab'));
   openLeftBottomTab($('#eval-graph-tab'));
@@ -5381,7 +5372,7 @@ $('#start-engine').on('click', (event) => {
 });
 
 function startEngine() {
-  var game = games.focused;
+  const game = games.focused;
 
   if(Engine.categorySupported(game.category)) {
     $('#start-engine').text('Stop');
@@ -5452,9 +5443,9 @@ function displayEnginePV(game: Game, pvNum: number, pvEval: string, pvMoves: str
   $('#engine-pvs li').eq(pvNum - 1).html(`<b>(${pvEval})</b> ${pvMoves}<b/>`);
 
   if(pvNum === 1 && pvMoves) {
-    var words = pvMoves.split(/\s+/);
-    var san = words[0].split(/\.+/)[1];
-    var parsed = parseGameMove(game, game.history.current().fen, san);
+    const words = pvMoves.split(/\s+/);
+    const san = words[0].split(/\.+/)[1];
+    const parsed = parseGameMove(game, game.history.current().fen, san);
     game.board.setAutoShapes([{
       orig: parsed.move.from || parsed.move.to, // For crazyhouse, just draw a circle on dest square
       dest: parsed.move.to,
@@ -5466,7 +5457,7 @@ function displayEnginePV(game: Game, pvNum: number, pvEval: string, pvMoves: str
 function createEvalEngine(game: Game) {
   if(game.category && Engine.categorySupported(game.category)) {
     // Configure for variants
-    var options = {};
+    const options = {};
     if(game.category === 'wild/fr')
       options['UCI_Chess960'] = true;
     else if(game.category === 'crazyhouse')
@@ -5502,24 +5493,23 @@ function showAnalyzeButton() {
 }
 
 /*******************************
-/* PLAYING-GAME ACTION BUTTONS *
+ * PLAYING-GAME ACTION BUTTONS *
  *******************************/
 
 $('#resign').on('click', (event) => {
-  var game = games.focused;
-
+  const game = games.focused;
   if(!game.isPlaying()) {
     showStatusMsg(game, 'You are not playing a game.');
     return;
   }
 
   if(game.role === Role.PLAYING_COMPUTER) {
-    var winner = (game.color === 'w' ? game.bname : game.wname);
-    var loser = (game.color === 'w' ? game.wname : game.bname);
-    var gameStr = `(${game.wname} vs. ${game.bname})`;
-    var reasonStr = `${loser} resigns`;
-    var scoreStr = (winner === game.wname ? '1-0' : '0-1');
-    var gameEndData = {
+    const winner = (game.color === 'w' ? game.bname : game.wname);
+    const loser = (game.color === 'w' ? game.wname : game.bname);
+    const gameStr = `(${game.wname} vs. ${game.bname})`;
+    const reasonStr = `${loser} resigns`;
+    const scoreStr = (winner === game.wname ? '1-0' : '0-1');
+    const gameEndData = {
       game_id: -1,
       winner,
       loser,
@@ -5538,17 +5528,16 @@ $('#adjourn').on('click', (event) => {
 });
 
 $('#abort').on('click', (event) => {
-  var game = games.focused;
-
+  const game = games.focused;
   if(!game.isPlaying()) {
     showStatusMsg(game, 'You are not playing a game.');
     return;
   }
 
   if(game.role === Role.PLAYING_COMPUTER) {
-    var gameStr = `(${game.wname} vs. ${game.bname})`;
-    var reasonStr = 'Game aborted';
-    var gameEndData = {
+    const gameStr = `(${game.wname} vs. ${game.bname})`;
+    const reasonStr = 'Game aborted';
+    const gameEndData = {
       game_id: -1,
       winner: '',
       loser: '',
@@ -5563,9 +5552,8 @@ $('#abort').on('click', (event) => {
 });
 
 $('#takeback').on('click', (event) => {
-  var game = games.focused;
-
-  if (game.isPlaying()) {
+  const game = games.focused;
+  if(game.isPlaying()) {
     if(game.history.last().turnColor === game.color)
       session.send('take 2');
     else
@@ -5576,20 +5564,19 @@ $('#takeback').on('click', (event) => {
 });
 
 $('#draw').on('click', (event) => {
-  var game = games.focused;
-
+  const game = games.focused;
   if(game.isPlaying()) {
     if(game.role === Role.PLAYING_COMPUTER) {
       // Computer accepts a draw if they're behind or it's dead equal and the game is on move 30 or beyond
-      var gameEval = game.lastComputerMoveEval;
+      let gameEval = game.lastComputerMoveEval;
       if(gameEval === null)
         gameEval = '';
       gameEval = gameEval.replace(/[#+=]/, '');
       if(gameEval !== '' && game.history.length() >= 60 && (game.color === 'w' ? +gameEval >= 0 : +gameEval <= 0)) {
-        var gameStr = `(${game.wname} vs. ${game.bname})`;
-        var reasonStr = 'Game drawn by mutual agreement';
-        var scoreStr = '1/2-1/2';
-        var gameEndData = {
+        const gameStr = `(${game.wname} vs. ${game.bname})`;
+        const reasonStr = 'Game drawn by mutual agreement';
+        const scoreStr = '1/2-1/2';
+        const gameEndData = {
           game_id: -1,
           winner: '',
           loser: '',
@@ -5653,7 +5640,6 @@ $('#login-screen').on('show.bs.modal', async (e) => {
     $('#login-pass').val(credential.password);
 
   $('#remember-me').prop('checked', settings.rememberMeToggle);
-
   $('#login-user').removeClass('is-invalid');
 });
 
@@ -5788,12 +5774,12 @@ $('#multiboard-toggle').on('click', (event) => {
   settings.multiboardToggle = !settings.multiboardToggle;
   if(!settings.multiboardToggle) {
     // close all games except one
-    var game = games.getMostImportantGame();
+    const game = games.getMostImportantGame();
     setGameWithFocus(game);
     maximizeGame(game);
 
     // close all games in the secondary board area
-    for(let g of [...games]) {
+    for(const g of [...games]) {
       if(g.element.parent().is('#secondary-board-area'))
         closeGame(g);
     }
@@ -5808,12 +5794,12 @@ $('#multiboard-toggle').on('click', (event) => {
 
 $('#input-form').on('submit', (event) => {
   event.preventDefault();
-  let text;
-  let val: string = Utils.getValue('#input-text');
+  let text: string;
+  let val = Utils.getValue('#input-text');
   val = val.replace(/[“‘”]/g, "'");
   val = val.replace(/[^\S ]/g, ' '); // replace other whitespace chars with space
   val = val.replace(/[\x00-\x1F\x7F-\x9F]/g, ''); // Strip out ascii and unicode control chars
-  if (val === '' || val === '\n') {
+  if(val === '' || val === '\n') {
     return;
   }
 
@@ -5821,14 +5807,10 @@ $('#input-form').on('submit', (event) => {
   if(val.charAt(0) === '@')
     text = val.substring(1);
   else if(tab !== 'console') {
-    if (tab.startsWith('game-')) {
-      var gameNum = tab.split('-')[1];
-      var game = games.findGame(+gameNum);
-      if(game && game.role === Role.OBSERVING)
-        var xcmd = 'xwhisper';
-      else
-        var xcmd = 'xkibitz';
-
+    if(tab.startsWith('game-')) {
+      const gameNum = tab.split('-')[1];
+      const game = games.findGame(+gameNum);
+      const xcmd = game && game.role === Role.OBSERVING ? 'xwhisper' : 'xkibitz';
       text = `${xcmd} ${gameNum} ${val}`;
     }
     else
@@ -5838,13 +5820,14 @@ $('#input-form').on('submit', (event) => {
     text = val;
 
   // Check if input is a chat command, and if so do processing on the message before sending
-  var match = text.match(/^\s*(\S+)\s+(\S+)\s+(.+)$/);
+  let chatCmd: string, recipient: string, message: string;
+  let match = text.match(/^\s*(\S+)\s+(\S+)\s+(.+)$/);
   if(match && match.length === 4 &&
       ('tell'.startsWith(match[1]) ||
       (('xwhisper'.startsWith(match[1]) || 'xkibitz'.startsWith(match[1]) || 'xtell'.startsWith(match[1])) && match[1].length >= 2))) {
-    var chatCmd = match[1];
-    var recipient = match[2];
-    var message = match[3];
+    chatCmd = match[1];
+    recipient = match[2];
+    message = match[3];
   }
   else {
     match = text.match(/^\s*([.,])\s*(.+)$/);
@@ -5853,20 +5836,20 @@ $('#input-form').on('submit', (event) => {
     if(match && match.length === 3 &&
         ('kibitz'.startsWith(match[1]) || '.,'.includes(match[1]) ||
         (('whisper'.startsWith(match[1]) || 'say'.startsWith(match[1]) || 'ptell'.startsWith(match[1])) && match[1].length >= 2))) {
-      var chatCmd = match[1];
-      var message = match[2];
+      chatCmd = match[1];
+      message = match[2];
     }
   }
 
   if(chatCmd) {
-    var maxLength = (session.isRegistered() ? 400 : 200);
+    const maxLength = (session.isRegistered() ? 400 : 200);
     if(message.length > maxLength)
       message = message.slice(0, maxLength);
 
     message = Utils.unicodeToHTMLEncoding(message);
-    var messages = Utils.splitText(message, maxLength); // if message is now bigger than maxLength chars due to html encoding split it
+    const messages = Utils.splitText(message, maxLength); // if message is now bigger than maxLength chars due to html encoding split it
 
-    for(let msg of messages) {
+    for(const msg of messages) {
       if(('xtell'.startsWith(chatCmd) || 'tell'.startsWith(chatCmd)) && !/^\d+$/.test(recipient)) {
         chat.newMessage(recipient, {
           type: MessageType.PrivateTell,
@@ -5900,23 +5883,24 @@ $(document).on('shown.bs.tab', '#tabs button[data-bs-toggle="tab"]', (e) => {
 });
 
 function updateInputText() {
-  var element = $('#input-text')[0] as HTMLTextAreaElement;
-  var start = element.selectionStart;
-  var end = element.selectionEnd;
+  const element = $('#input-text')[0] as HTMLTextAreaElement;
+  const start = element.selectionStart;
+  const end = element.selectionEnd;
 
-  var val = element.value as string;
+  let val = element.value as string;
   val = val.replace(/[^\S ]/g, ' '); // replace all whitespace chars with spaces
 
   // Stop the user being able to type more than max length characters
   const tab = chat.currentTab();
+  let maxLength: number;
   if(val.charAt(0) === '@')
-    var maxLength = 1024;
+    maxLength = 1024;
   else if(tab === 'console')
-    var maxLength = 1023;
+    maxLength = 1023;
   else if(!session.isRegistered()) // Guests are limited to half the tell length
-    var maxLength = 200;
+    maxLength = 200;
   else
-    var maxLength = 400;
+    maxLength = 400;
 
   if(val.length > maxLength)
     val = val.substring(0, maxLength);
@@ -5930,21 +5914,21 @@ function updateInputText() {
 }
 
 function adjustInputTextHeight() {
-  var inputElem = $('#input-text');
-  var oldLines = +inputElem.attr('rows');
+  const inputElem = $('#input-text');
+  const oldLines = +inputElem.attr('rows');
   inputElem.attr('rows', 1);
   inputElem.css('overflow', 'hidden');
 
-  var lineHeight = parseFloat(inputElem.css('line-height'));
-  var numLines = Math.floor(inputElem[0].scrollHeight / lineHeight);
-  var maxLines = 0.33 * $('#chat-panel').height() / lineHeight;
+  const lineHeight = parseFloat(inputElem.css('line-height'));
+  const maxLines = 0.33 * $('#chat-panel').height() / lineHeight;
+  let numLines = Math.floor(inputElem[0].scrollHeight / lineHeight);
   if(numLines > maxLines)
     numLines = maxLines;
 
   inputElem.attr('rows', numLines);
   inputElem.css('overflow', '');
 
-  var heightDiff = (numLines - 1) * lineHeight;
+  const heightDiff = (numLines - 1) * lineHeight;
   $('#right-panel-footer').height($('#left-panel-footer').height() + heightDiff);
 
   if(numLines !== oldLines && chat)
