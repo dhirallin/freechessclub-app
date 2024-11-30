@@ -117,15 +117,15 @@ export class Chat {
     $(document).on('shown.bs.tab', '#tabs button[data-bs-toggle="tab"]', (e) => {
       const tab = $(e.target);
       this.updateViewedState(tab);
-      var contentPane = $(tab.attr('href'));
-      var chatText = contentPane.find('.chat-text');
+      const contentPane = $(tab.attr('href'));
+      const chatText = contentPane.find('.chat-text');
       if(this.scrolledToBottom[contentPane.attr('id')])
         chatText.scrollTop(chatText[0].scrollHeight);
       chatText.trigger('scroll');
     });
 
     $('#chat-scroll-button').on('click', (e) => {
-      var chatText = $('.tab-pane.active .chat-text');
+      const chatText = $('.tab-pane.active .chat-text');
       $('#chat-scroll-button').hide();
       chatText.scrollTop(chatText[0].scrollHeight);
     });
@@ -137,7 +137,7 @@ export class Chat {
     });
     
     $('#collapse-chat').on('shown.bs.collapse', () => {
-      var activeTab = $('#tabs button').filter('.active');
+      const activeTab = $('#tabs button').filter('.active');
       activeTab.trigger('shown.bs.tab');
       $(window).trigger('resize');
       this.scrollToChat();
@@ -172,7 +172,7 @@ export class Chat {
     });
 
     $('#chat-maximize-btn').on('click', () => {
-      if (maximized) {
+      if(maximized) {
         $('#chat-maximize-icon').removeClass('fa-toggle-right').addClass('fa-toggle-left');
         $('#chat-maximize-btn').attr('aria-label', 'Maximize Chat');
         $('#chat-maximize-btn .tooltip-overlay').attr('title', 'Maximize Chat');
@@ -196,13 +196,13 @@ export class Chat {
   }
 
   public getWatchers(tab: any): string[] {
-    var match = tab.attr('id').match(/tab-game-(\d+)(?:-and-(\d+))?/);
+    const match = tab.attr('id').match(/tab-game-(\d+)(?:-and-(\d+))?/);
     if(match) {
-      var game1 = games.findGame(+match[1]);
+      const game1 = games.findGame(+match[1]);
       if(game1) {
         var watchers = game1.watchers.map(str => str.replace('#', ''));
         if(match[2]) {
-          var game2 = games.findGame(+match[2]);
+          const game2 = games.findGame(+match[2]);
           if(game2) {
             // For bughouse chat rooms, add watchers from the other game
             var watchers2 = game2.watchers.map(str => str.replace('#', ''));
@@ -218,7 +218,7 @@ export class Chat {
   }
 
   public updateNumWatchers(tab: any): boolean {
-    var watchers = this.getWatchers(tab);
+    const watchers = this.getWatchers(tab);
     if(watchers != null) {
       $(tab.attr('href')).find('.chat-watchers-text').text(`${watchers.length} Watchers`);
       return true;
@@ -227,25 +227,25 @@ export class Chat {
   }
 
   public updateGameDescription(tab: any): boolean {
-    var game = this.getGameFromTab(tab);
+    const game = this.getGameFromTab(tab);
     if(game) {
-      var tags = game.history.metatags;
-      var wname = tags.White;
-      var bname = tags.Black;
-      var wrating = tags.WhiteElo || '?';
-      var brating = tags.BlackElo || '?';
-      var match = wname.match(/Guest[A-Z]{4}/);
+      const tags = game.history.metatags;
+      const wname = tags.White;
+      const bname = tags.Black;
+      let wrating = tags.WhiteElo || '?';
+      let brating = tags.BlackElo || '?';
+      let match = wname.match(/Guest[A-Z]{4}/);
       if(match)
         wrating = '++++';
       else if(wrating === '-')
         wrating = '----';
 
-      var match = bname.match(/Guest[A-Z]{4}/);
+      match = bname.match(/Guest[A-Z]{4}/);
       if(match)
         brating = '++++';
       else if(brating === '-')
         brating = '----';
-      var description = `${wname || game.wname} (${wrating}) ${bname || game.bname} (${brating})`;
+      const description = `${wname || game.wname} (${wrating}) ${bname || game.bname} (${brating})`;
 
       $(tab.attr('href')).find('.chat-game-description').text(description);
       return true;
@@ -254,8 +254,8 @@ export class Chat {
   }
 
   public getTabFromGameID(id: number) {
-    var tab = $('#tabs .nav-link').filter((index, element) => {
-      var match = $(element).attr('id').match(/tab-game-(\d+)(?:-and-(\d+))?/);
+    const tab = $('#tabs .nav-link').filter((index, element) => {
+      const match = $(element).attr('id').match(/tab-game-(\d+)(?:-and-(\d+))?/);
       return match && (+match[1] === id || (match[2] && +match[2] === id));
     });
     if(tab.length)
@@ -264,7 +264,7 @@ export class Chat {
   }
 
   public getGameFromTab(tab: any): any {
-    var match = tab.attr('id').match(/tab-game-(\d+)/);
+    const match = tab.attr('id').match(/tab-game-(\d+)/);
     if(match)
       return games.findGame(+match[1]);
   }
@@ -319,16 +319,17 @@ export class Chat {
   }
 
   public createTab(name: string, showTab = false) {
+    let from: string;
     if(!settings.chattabsToggle)
-      var from = "console";
+      from = "console";
     else
-      var from = name.toLowerCase().replace(/\s/g, '-');
+      from = name.toLowerCase().replace(/\s/g, '-');
 
     // Check whether this is a bughouse chat tab, e.g. 'Game 23 and 42'
-    var match = from.match(/^game-(\d+)/);
+    let match = from.match(/^game-(\d+)/);
     if(match && match.length > 1) {
-      var gameId = match[1];
-      for(let key in this.tabs) {
+      const gameId = match[1];
+      for(const key in this.tabs) {
         if(this.tabs.hasOwnProperty(key)) {
           match = key.match(/^game-(\d+)-and-(\d+)/)
           if(match && match.length > 2 && (match[1] === gameId || match[2] === gameId)) {
@@ -339,24 +340,23 @@ export class Chat {
       }
     }
 
-    if (!this.tabs.hasOwnProperty(from)) {
+    if(!this.tabs.hasOwnProperty(from)) {
       let chName = name;
-      if (channels[name] !== undefined) {
+      if (channels[name] !== undefined) 
         chName = channels[name];
-      }
 
       if(!$('#tabs').find(`#tab-${from}`).length) {
-        var match = chName.match(/^Game (\d+)/);
-        var tooltip = '';
+        match = chName.match(/^Game (\d+)/);
+        let tooltip = '', infoBar: JQuery<HTMLElement>;
         if(match && match.length > 1) {
-          var game = games.findGame(+match[1]);
+          const game = games.findGame(+match[1]);
           if(game) {
-            var tags = game.history.metatags;
-            var gameDescription = `${tags.White || game.wname} vs. ${tags.Black || game.bname}`;
+            const tags = game.history.metatags;
+            const gameDescription = `${tags.White || game.wname} vs. ${tags.Black || game.bname}`;
             tooltip = `data-bs-toggle="tooltip" data-tooltip-hover-only title="${gameDescription}" `;
 
             // Show Game chat room info bar
-            var infoBar = $(`
+            infoBar = $(`
             <div class="d-flex flex-shrink-0 w-100 chat-info">
               <div class="d-flex align-items-center flex-grow-1 overflow-hidden me-2" style="min-width: 0">
                 <button class="chat-game-description btn btn-outline-secondary btn-transparent p-0 chat-info-text"></button>
@@ -368,7 +368,7 @@ export class Chat {
             </div>`);
           }
         }
-        var tabElement = $(`<li ${tooltip}class="nav-item position-relative">
+        const tabElement = $(`<li ${tooltip}class="nav-item position-relative">
             <button class="text-sm-center nav-link" data-bs-toggle="tab" href="#content-${from}" ` 
               + `id="tab-${from}" role="tab" style="padding-right: 30px">${chName}</button>
             <container class="d-flex align-items-center h-100 position-absolute" style="top: 0; right: 12px; z-index: 10">
@@ -376,7 +376,7 @@ export class Chat {
             </container>
           </li>`).appendTo('#tabs');
 
-        var tabContent = $(`<div class="tab-pane" id="content-${from}" role="tabpanel">
+        const tabContent = $(`<div class="tab-pane" id="content-${from}" role="tabpanel">
           <div class="d-flex flex-column chat-content-wrapper h-100">
             <div class="chat-text flex-grow-1 mt-3" style="min-height: 0"></div>
           </div>
@@ -389,17 +389,16 @@ export class Chat {
 
           // Display watchers-list tooltip when hovering button in info bar
           tabContent.find('.chat-watchers').on('mouseenter', (e) => {
-            var curr = $(e.currentTarget);
-            var activeTab = $('#tabs button').filter('.active');
-            var watchers = this.getWatchers(activeTab);
+            const curr = $(e.currentTarget);
+            const activeTab = $('#tabs button').filter('.active');
+            const watchers = this.getWatchers(activeTab);
             if(watchers) {
-              var description = watchers.join('<br>');
-              var numWatchers = watchers.length;
-              var title = `${numWatchers} Watchers`;
-              if(!watchers.length)
-                var tooltipText = `<b>${title}</b>`;
-              else
-                var tooltipText = `<b>${title}</b><hr class="tooltip-separator"><div>${description}</div>`;
+              const description = watchers.join('<br>');
+              const numWatchers = watchers.length;
+              const title = `${numWatchers} Watchers`;
+              const tooltipText = !watchers.length 
+                  ? `<b>${title}</b>`
+                  : `<b>${title}</b><hr class="tooltip-separator"><div>${description}</div>`;
 
               curr.tooltip('dispose').tooltip({
                 title: tooltipText,
@@ -415,7 +414,7 @@ export class Chat {
           });
 
           $('.chat-game-description').on('click', (e) => {
-            var game = this.getGameFromTab($('#tabs button.active'));
+            const game = this.getGameFromTab($('#tabs button.active'));
             if(game) {
               setGameWithFocus(game);
               maximizeGame(game);
@@ -432,11 +431,11 @@ export class Chat {
 
       // Scroll event listener for auto scroll to bottom etc
       $(`#content-${from}`).find('.chat-text').on('scroll', (e) => {
-        var panel = e.target;
-        var tab = panel.closest('.tab-pane');
+        const panel = e.target;
+        const tab = panel.closest('.tab-pane');
 
         if($(tab).hasClass('active')) {
-          var atBottom = panel.scrollHeight - panel.clientHeight < panel.scrollTop + 1.5;
+          const atBottom = panel.scrollHeight - panel.clientHeight < panel.scrollTop + 1.5;
           if(atBottom) {
             $('#chat-scroll-button').hide();
             this.scrolledToBottom[$(tab).attr('id')] = true;
@@ -461,8 +460,8 @@ export class Chat {
 
   public fixScrollPosition() {
     // If scrollbar moves due to resizing, move it back to the bottom
-    var panel = $('.tab-pane.active .chat-text');
-    var tab = panel.closest('.tab-pane');
+    const panel = $('.tab-pane.active .chat-text');
+    const tab = panel.closest('.tab-pane');
     if(this.scrolledToBottom[tab.attr('id')])
       panel.scrollTop(panel[0].scrollHeight);
 
@@ -498,7 +497,7 @@ export class Chat {
 
   private escapeHTML(text: string) {
     return text.replace(/[<>"]/g, (tag) => {
-      var charsToReplace = {
+      const charsToReplace = {
           '<': '&lt;',
           '>': '&gt;',
           '"': '&#34;'
@@ -508,7 +507,7 @@ export class Chat {
   }
 
   public newMessage(from: string, data: any, html: boolean = false) {
-    let tabName = settings.chattabsToggle ? from : 'console';
+    const tabName = settings.chattabsToggle ? from : 'console';
 
     if(!/^[\w- ]+$/.test(from))
       return;
@@ -530,17 +529,14 @@ export class Chat {
     let text = data.message;
     if(!html)
       text = this.escapeHTML(text);
-    if (this.emojisLoaded) {
+    if(this.emojisLoaded) 
       text = parseEmojis(text);
-    }
-
+    
     text = text.replace(this.userRE, `<strong class="mention">${this.user}</strong>`);
 
     // Suffix for whispers
-    var suffixText = data.suffix;
-    if(data.type === 'whisper' && !suffixText)
-      suffixText = '(whispered)';
-    var suffix = (suffixText ? ` <span class="chat-text-suffix">${suffixText}</span>`: '');
+    const suffixText = data.type === 'whisper' && !suffixText ? '(whispered)' : data.suffix;
+    const suffix = (suffixText ? ` <span class="chat-text-suffix">${suffixText}</span>`: '');
 
     text = `${autoLink(text, {
       target: '_blank',
@@ -552,12 +548,11 @@ export class Chat {
       },
     })}${suffix}</br>`;
 
-    let timestamp = '';
-    if (settings.timestampToggle) {
-      timestamp = `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `;
-    }
+    const timestamp = settings.timestampToggle 
+        ? `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `
+        : '';
 
-    var chatText = tab.find('.chat-text');
+    const chatText = tab.find('.chat-text');
     chatText.append(`${timestamp}${who}${text}`);
 
     const tabheader = $(`#tab-${from.toLowerCase().replace(/\s/g, '-')}`);
@@ -574,21 +569,22 @@ export class Chat {
   }
 
   public newNotification(msg: string) {
+    let currentTab: string;
     if(!msg.startsWith('Notification:') || settings.notificationsToggle) {
-      var currentTab = this.currentTab().toLowerCase().replace(/\s/g, '-');
+      currentTab = this.currentTab().toLowerCase().replace(/\s/g, '-');
       msg = `<strong class="chat-notification">${msg}</strong>`;
     }
     else
-      var currentTab = 'console';
+      currentTab = 'console';
 
     this.newMessage(currentTab, {message: msg}, true);
   }
 
   public closeUnusedPrivateTabs() {
     $('#tabs .nav-link').each((index, element) => {
-      var id = $(element).attr('id');
+      const id = $(element).attr('id');
       if(id !== 'tab-console' && !/^tab-(game-|\d+)/.test(id)) {
-        var chatText = $($(element).attr('href')).find('.chat-text');
+        const chatText = $($(element).attr('href')).find('.chat-text');
         if(chatText.html() === '')
           this.closeTab($(element))
       }
@@ -600,7 +596,7 @@ export class Chat {
       return;
 
     $('#tabs .nav-link').each((index, element) => {
-      var match = $(element).attr('id').match(/^tab-game-(\d+)(?:-|$)/);
+      const match = $(element).attr('id').match(/^tab-game-(\d+)(?:-|$)/);
       if(match && match.length > 1 && +match[1] === gameId) {
         $($(element).attr('href')).find('.chat-watchers').tooltip('dispose');
         this.closeTab($(element));

@@ -13,14 +13,14 @@ export interface VariantData {
 
 export function parseMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>) {
   // Parse variant move
-  var standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
+  const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
   if(!standardCategories.includes(category))
     return parseVariantMove(fen, move, startFen, category);
 
   // Parse standard move
-  var chess = new Chess(fen);
-  var outMove = chess.move(move);
-  var outFen = chess.fen();
+  const chess = new Chess(fen);
+  const outMove = chess.move(move);
+  const outFen = chess.fen();
 
   if(!outMove || !outFen)
     return null;
@@ -29,21 +29,20 @@ export function parseMove(fen: string, move: any, startFen: string, category: st
 }
 
 function parseVariantMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>) {
-  var supportedCategories = ['crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
+  const supportedCategories = ['crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
   if(!supportedCategories.includes(category))
     return null;
 
-  var category = category;
-  var chess = new Chess(fen);
-  var san = '';
+  let chess = new Chess(fen);
+  let san = '';
 
   // Convert algebraic coordinates to SAN for non-standard moves
-  if (typeof move !== 'string') {
-    if(move.from)
-      var fromPiece = chess.get(move.from);
-    else
+  if(typeof move !== 'string') {
+    const fromPiece = move.from ? chess.get(move.from) : undefined; 
+    const toPiece = chess.get(move.to);
+
+    if(!move.from)
       san = `${move.piece.toUpperCase()}@${move.to}`; // Crazyhouse/bughouse piece placement
-    var toPiece = chess.get(move.to);
 
     if(fromPiece && fromPiece.type === 'k') {
       if((toPiece && toPiece.type === 'r' && toPiece.color === chess.turn())) { // Fischer random rook-castling
@@ -67,18 +66,19 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     san = move;
 
   // Pre-processing of FEN before calling chess.move()
-  var beforePre = splitFEN(fen); // Stores FEN components from before pre-processing of FEN starts
-  var afterPre = Object.assign({}, beforePre); // Stores FEN components for after pre-procesisng is finished
+  const beforePre = splitFEN(fen); // Stores FEN components from before pre-processing of FEN starts
+  const afterPre = Object.assign({}, beforePre); // Stores FEN components for after pre-procesisng is finished
 
+  let opponentRights: string, castlingRights: string;
   if(category.startsWith('wild')) {
     // Remove opponent's castling rights since it confuses chess.js
     if(beforePre.color === 'w') {
-      var opponentRights = beforePre.castlingRights.replace(/[KQ-]/g,'');
-      var castlingRights = beforePre.castlingRights.replace(/[kq]/g,'');
+      opponentRights = beforePre.castlingRights.replace(/[KQ-]/g,'');
+      castlingRights = beforePre.castlingRights.replace(/[kq]/g,'');
     }
     else {
-      var opponentRights = beforePre.castlingRights.replace(/[kq-]/g,'');
-      var castlingRights = beforePre.castlingRights.replace(/[KQ]/g,'');
+      opponentRights = beforePre.castlingRights.replace(/[kq-]/g,'');
+      castlingRights = beforePre.castlingRights.replace(/[KQ]/g,'');
     }
     if(castlingRights === '')
       castlingRights = '-';
@@ -97,21 +97,22 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       || (category.startsWith('wild') && san.toUpperCase().startsWith('O-O'))) {
     san = san.replace(/[+#]/, ''); // remove check and checkmate, we'll add it back at the end
     chess = new Chess(fen);
+
+    const board = afterPre.board;
+    const color = afterPre.color;
+    const castlingRights = afterPre.castlingRights;
+    const enPassant = afterPre.enPassant;
+    const plyClock = afterPre.plyClock;
+    const moveNo = afterPre.moveNo;
+
+    let boardAfter = board;
+    let colorAfter = (color === 'w' ? 'b' : 'w');
+    let castlingRightsAfter = castlingRights;
+    let enPassantAfter = '-';
+    let plyClockAfter = +plyClock + 1;
+    let moveNoAfter = (colorAfter === 'w' ? +moveNo + 1 : moveNo);
+
     outMove = {color: color, san: san};
-
-    var board = afterPre.board;
-    var color = afterPre.color;
-    var castlingRights = afterPre.castlingRights;
-    var enPassant = afterPre.enPassant;
-    var plyClock = afterPre.plyClock;
-    var moveNo = afterPre.moveNo;
-
-    var boardAfter = board;
-    var colorAfter = (color === 'w' ? 'b' : 'w');
-    var castlingRightsAfter = castlingRights;
-    var enPassantAfter = '-';
-    var plyClockAfter = +plyClock + 1;
-    var moveNoAfter = (colorAfter === 'w' ? +moveNo + 1 : moveNo);
 
     if(san.includes('@')) {
       // Parse crazyhouse or bughouse piece placement
@@ -119,8 +120,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       outMove.to = san.substring(2);
 
       // Can't place a pawn on the 1st or 8th rank
-      var rank = outMove.to.charAt(1);
-
+      const rank = outMove.to.charAt(1);
       if(outMove.piece === 'p' && (rank === '1' || rank === '8'))
         return null;
 
@@ -135,50 +135,51 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     }
     else if(san.toUpperCase() === 'O-O' || san.toUpperCase() === 'O-O-O') {
       // Parse irregular castling moves for fischer random and wild variants
-      var rank = (color === 'w' ? '1' : '8');
-      var cPieces = getCastlingPieces(startFen, color, category);
-      var kingFrom = cPieces.king;
-      var leftRook = cPieces.leftRook;
-      var rightRook = cPieces.rightRook;
+      const rank = (color === 'w' ? '1' : '8');
+      const cPieces = getCastlingPieces(startFen, color, category);
+      const kingFrom = cPieces.king;
+      const leftRook = cPieces.leftRook;
+      const rightRook = cPieces.rightRook;
+      let kingTo: string, rookFrom: string, rookTo: string;
 
       if(san.toUpperCase() === 'O-O') {
         if(category === 'wild/fr') {
           // fischer random
-          var kingTo = `g${rank}`;
-          var rookFrom = rightRook;
-          var rookTo = `f${rank}`;
+          kingTo = `g${rank}`;
+          rookFrom = rightRook;
+          rookTo = `f${rank}`;
         }
         else {
           // wild/0, wild/1 etc
           if(kingFrom[0] === 'e') {
-            var kingTo = `g${rank}`;
-            var rookFrom = rightRook;
-            var rookTo = `f${rank}`;
+            kingTo = `g${rank}`;
+            rookFrom = rightRook;
+            rookTo = `f${rank}`;
           }
           else {
-            var kingTo = `b${rank}`;
-            var rookFrom = leftRook;
-            var rookTo = `c${rank}`;
+            kingTo = `b${rank}`;
+            rookFrom = leftRook;
+            rookTo = `c${rank}`;
           }
         }
       }
       else if(san.toUpperCase() === 'O-O-O') {
         if(category === 'wild/fr') {
-          var kingTo = `c${rank}`;
-          var rookFrom = leftRook;
-          var rookTo = `d${rank}`;
+          kingTo = `c${rank}`;
+          rookFrom = leftRook;
+          rookTo = `d${rank}`;
         }
         else {
           // wild/0, wild/1
           if(kingFrom[0] === 'e') {
-            var kingTo = `c${rank}`;
-            var rookFrom = leftRook;
-            var rookTo = `d${rank}`;
+            kingTo = `c${rank}`;
+            rookFrom = leftRook;
+            rookTo = `d${rank}`;
           }
           else {
-            var kingTo = `f${rank}`;
-            var rookFrom = rightRook;
-            var rookTo = `e${rank}`;
+            kingTo = `f${rank}`;
+            rookFrom = rightRook;
+            rookTo = `e${rank}`;
           }
         }
       }
@@ -199,16 +200,17 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
 
       // Check castling is legal
       // Can king pass through all squares between start and end squares?
+      let startCode: number, endCode: number;
       if(kingFrom.charCodeAt(0) < kingTo.charCodeAt(0)) {
-        var startCode = kingFrom.charCodeAt(0);
-        var endCode = kingTo.charCodeAt(0);
+        startCode = kingFrom.charCodeAt(0);
+        endCode = kingTo.charCodeAt(0);
       }
       else {
-        var startCode = kingTo.charCodeAt(0);
-        var endCode = kingFrom.charCodeAt(0);
+        startCode = kingTo.charCodeAt(0);
+        endCode = kingFrom.charCodeAt(0);
       }
       for(let code = startCode; code <= endCode; code++) {
-        var square = `${String.fromCharCode(code)}${kingFrom[1]}`;
+        const square = `${String.fromCharCode(code)}${kingFrom[1]}`;
         // square blocked?
         if(square !== kingFrom && square !== rookFrom && chess.get(square))
           return null;
@@ -218,15 +220,15 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       }
       // Can rook pass through all squares between start and end squares?
       if(rookFrom.charCodeAt(0) < rookTo.charCodeAt(0)) {
-        var startCode = rookFrom.charCodeAt(0);
-        var endCode = rookTo.charCodeAt(0);
+        startCode = rookFrom.charCodeAt(0);
+        endCode = rookTo.charCodeAt(0);
       }
       else {
-        var startCode = rookTo.charCodeAt(0);
-        var endCode = rookFrom.charCodeAt(0);
+        startCode = rookTo.charCodeAt(0);
+        endCode = rookFrom.charCodeAt(0);
       }
       for(let code = startCode; code <= endCode; code++) {
-        var square = `${String.fromCharCode(code)}${rookFrom[1]}`;
+        const square = `${String.fromCharCode(code)}${rookFrom[1]}`;
         // square blocked?
         if(square !== rookFrom && square !== kingFrom && chess.get(square))
           return null;
@@ -237,7 +239,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       chess.put({type: 'k', color: color}, kingTo);
       chess.put({type: 'r', color: color}, rookTo);
 
-      var castlingRightsAfter = castlingRights;
+      castlingRightsAfter = castlingRights;
       if(rookFrom === leftRook)
         castlingRightsAfter = castlingRightsAfter.replace((color === 'w' ? 'Q' : 'q'), '');
       else
@@ -264,7 +266,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
         outMove.to = kingTo;
     }
 
-    var boardAfter = chess.fen().split(/\s+/)[0];
+    boardAfter = chess.fen().split(/\s+/)[0];
     outFen = `${boardAfter} ${colorAfter} ${castlingRightsAfter} ${enPassantAfter} ${plyClockAfter} ${moveNoAfter}`;
 
     chess.load(outFen);
@@ -275,8 +277,8 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
   }
 
   // Post-processing on FEN after calling chess.move()
-  var beforePost = splitFEN(outFen); // Stores FEN components before post-processing starts
-  var afterPost = Object.assign({}, beforePost); // Stores FEN components after post-processing is completed
+  const beforePost = splitFEN(outFen); // Stores FEN components before post-processing starts
+  let afterPost = Object.assign({}, beforePost); // Stores FEN components after post-processing is completed
 
   if(category === 'crazyhouse' || category === 'bughouse') {
     afterPost.plyClock = '0'; // FICS doesn't use the 'irreversable moves count' for crazyhouse/bughouse, so set it to 0
@@ -285,18 +287,19 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     // (Yes this is a lot of code for something so simple)
     if(chess.in_checkmate()) {
       // Get square of king being checkmated
+      let kingSquare: string;
       for(const s of chess.SQUARES) {
-        var piece = chess.get(s);
+        const piece = chess.get(s);
         if(piece && piece.type === 'k' && piece.color === chess.turn()) {
-          var kingSquare = s;
+          kingSquare = s;
           break;
         }
       }
       // place a pawn on every adjacent square to the king and check if it blocks the checkmate
       // If so the checkmate can potentially be blocked by a held piece
-      var adjacent = getAdjacentSquares(kingSquare);
-      var blockingSquare = null;
-      for(let adj of adjacent) {
+      const adjacent = getAdjacentSquares(kingSquare);
+      let blockingSquare = null;
+      for(const adj of adjacent) {
         if(!chess.get(adj)) {
           chess.put({type: 'p', color: chess.turn()}, adj);
           if(!chess.in_checkmate()) {
@@ -307,10 +310,10 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
         }
       };
       if(blockingSquare) {
+        let canBlock = false;
         if(category === 'crazyhouse') {
           // check if we have a held piece capable of occupying the blocking square
-          var canBlock = false;
-          for(let k in variantData.holdings) {
+          for(const k in variantData.holdings) {
             if(variantData.holdings[k] === 0)
               continue;
 
@@ -319,7 +322,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
               continue;
 
             // held pawns can't be placed on the 1st or 8th rank
-            var rank = blockingSquare.charAt(1);
+            const rank = blockingSquare.charAt(1);
             if(k.toLowerCase() !== 'p' || (rank !== '1' && rank !== '8'))
               canBlock = true;
           }
@@ -341,7 +344,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     }
     if(opponentRights) {
       // Restore opponent's castling rights (which were removed at the start so as not to confuse chess.js)
-      var castlingRights = afterPost.castlingRights;
+      castlingRights = afterPost.castlingRights;
       if(castlingRights === '-')
         castlingRights = '';
       if(afterPost.color === 'w')
@@ -363,14 +366,14 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
 }
 
 export function toDests(fen: string, startFen: string, category: string, variantData?: Partial<VariantData>): Map<string, string[]> {
-  var standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse'];
+  const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse'];
   if(!standardCategories.includes(category))
     return variantToDests(fen, startFen, category);
 
-  var dests = new Map();
-  var chess = new Chess(fen);
+  const dests = new Map();
+  const chess = new Chess(fen);
   chess.SQUARES.forEach(s => {
-    var ms = chess.moves({square: s, verbose: true});
+    const ms = chess.moves({square: s, verbose: true});
     if(ms.length)
       dests.set(s, ms.map(m => m.to));
   });
@@ -379,17 +382,18 @@ export function toDests(fen: string, startFen: string, category: string, variant
 }
 
 function variantToDests(fen: string, startFen: string, category: string, variantData?: Partial<VariantData>): Map<string, string[]> {
-  var supportedCategories = ['crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
+  const supportedCategories = ['crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
   if(!supportedCategories.includes(category))
     return null;
 
-  var chess = new Chess(fen);
+  const chess = new Chess(fen);
 
   // In 'losers' variant, if a capture is possible then include only captures in dests
+  let dests: Map<any, any>;
   if(category === 'losers') {
-    var dests = new Map();
+    dests = new Map();
     chess.SQUARES.forEach(s => {
-      var ms = chess.moves({square: s, verbose: true}).filter((m) => {
+      const ms = chess.moves({square: s, verbose: true}).filter((m) => {
         return /[ec]/.test(m.flags);
       });
       if(ms.length)
@@ -398,9 +402,9 @@ function variantToDests(fen: string, startFen: string, category: string, variant
   }
 
   if(!dests || !dests.size) {
-    var dests = new Map();
+    const dests = new Map();
     chess.SQUARES.forEach(s => {
-      var ms = chess.moves({square: s, verbose: true});
+      const ms = chess.moves({square: s, verbose: true});
       if(ms.length)
         dests.set(s, ms.map(m => m.to));
     });
@@ -408,13 +412,13 @@ function variantToDests(fen: string, startFen: string, category: string, variant
 
   // Add irregular castling moves for wild variants
   if(category.startsWith('wild')) {
-    var cPieces = getCastlingPieces(startFen, chess.turn(), category);
-    var king = cPieces.king;
-    var leftRook = cPieces.leftRook;
-    var rightRook = cPieces.rightRook;
+    const cPieces = getCastlingPieces(startFen, chess.turn(), category);
+    const king = cPieces.king;
+    const leftRook = cPieces.leftRook;
+    const rightRook = cPieces.rightRook;
 
     // Remove any castling moves already in dests
-    var kingDests = dests.get(king);
+    let kingDests = dests.get(king);
     if(kingDests) {
       kingDests.filter((dest) => {
         return Math.abs(dest.charCodeAt(0) - king.charCodeAt(0)) > 1;
@@ -425,26 +429,20 @@ function variantToDests(fen: string, startFen: string, category: string, variant
         dests.delete(king);
     }
 
-    var parsedMove = parseMove(chess.fen(), 'O-O', startFen, category, variantData);
+    let parsedMove = parseMove(chess.fen(), 'O-O', startFen, category, variantData);
     if(parsedMove) {
-      var from = parsedMove.move.from;
-      if(category === 'wild/fr')
-        var to = rightRook;
-      else
-        var to = parsedMove.move.to;
-      var kingDests = dests.get(from);
+      const from = parsedMove.move.from;
+      const to = category === 'wild/fr' ? rightRook : parsedMove.move.to;
+      kingDests = dests.get(from);
       if(kingDests)
         kingDests.push(to);
       else dests.set(from, [to]);
     }
-    var parsedMove = parseMove(chess.fen(), 'O-O-O', startFen, category, variantData);
+    parsedMove = parseMove(chess.fen(), 'O-O-O', startFen, category, variantData);
     if(parsedMove) {
-      var from = parsedMove.move.from;
-      if(category === 'wild/fr')
-        var to = leftRook;
-      else
-        var to = parsedMove.move.to;
-      var kingDests = dests.get(from);
+      const from = parsedMove.move.from;
+      const to = category === 'wild/fr' ? leftRook : parsedMove.move.to;
+      kingDests = dests.get(from);
       if(kingDests)
         kingDests.push(to);
       else dests.set(from, [to]);
@@ -456,29 +454,29 @@ function variantToDests(fen: string, startFen: string, category: string, variant
 
 export function updateVariantMoveData(fen: string, move: any, prevVariantData: Partial<VariantData>, category: string): Partial<VariantData> {
   // Maintain map of captured pieces for crazyhouse variant
-  var currVariantData: Partial<VariantData> = {};
+  const currVariantData: Partial<VariantData> = {};
 
   if(category === 'crazyhouse' || category === 'bughouse') {
     if(prevVariantData.holdings === undefined)
       prevVariantData.holdings = {P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0};
 
-    var holdings = { ...prevVariantData.holdings };
+    const holdings = { ...prevVariantData.holdings };
 
     if(category === 'crazyhouse') {
       if(prevVariantData.promoted === undefined)
         prevVariantData.promoted = [];
 
-      var promoted = prevVariantData.promoted.slice();
+      let promoted = prevVariantData.promoted.slice();
 
       if(move.flags && move.flags.includes('c')) {
-        var chess = new Chess(fen);
-        var piece = chess.get(move.to);
+        const chess = new Chess(fen);
+        const piece = chess.get(move.to);
         let pieceType = (promoted.indexOf(move.to) !== -1 ? 'p' : piece.type);
         pieceType = (piece.color === 'w' ? pieceType.toUpperCase() : pieceType.toLowerCase());
         holdings[pieceType]++;
       }
       else if(move.flags && move.flags.includes('e')) {
-        var color = getTurnColorFromFEN(fen);
+        const color = getTurnColorFromFEN(fen);
         let pieceType = (color === 'w' ? 'p' : 'P');
         holdings[pieceType]++;
       }
@@ -488,8 +486,8 @@ export function updateVariantMoveData(fen: string, move: any, prevVariantData: P
     }
 
     if(move.san && move.san.includes('@')) {
-      var color = getTurnColorFromFEN(fen);
-      let pieceType = (color === 'w' ? move.piece.toLowerCase() : move.piece.toUpperCase());
+      const color = getTurnColorFromFEN(fen);
+      const pieceType = (color === 'w' ? move.piece.toLowerCase() : move.piece.toUpperCase());
       holdings[pieceType]--;
     }
 
@@ -503,12 +501,12 @@ export function updateVariantMoveData(fen: string, move: any, prevVariantData: P
 // This is used by crazyhouse and bughouse variants, since capturing a promoted piece only gives you a pawn
 function updatePromotedList(move: any, promoted: any) {
   // Remove captured piece
-  var index = promoted.indexOf(move.to);
+  let index = promoted.indexOf(move.to);
   if(index !== -1)
     promoted.splice(index, 1);
   // Update piece's location
   if(move.from) {
-    var index = promoted.indexOf(move.from);
+    index = promoted.indexOf(move.from);
     if(index !== -1)
       promoted[index] = move.to;
   }
@@ -523,7 +521,7 @@ function updatePromotedList(move: any, promoted: any) {
  * Split a FEN into its component parts 
  */
 export function splitFEN(fen: string) {
-  var words = fen.split(/\s+/);
+  const words = fen.split(/\s+/);
   return {
     board: words[0],
     color: words[1],
@@ -562,17 +560,17 @@ export function getTurnColorFromFEN(fen: string): string {
  * @returns null if fen is valid, otherwise an error string
  */
 export function validateFEN(fen: string, category?: string): string {
-  var chess = new Chess(fen);
+  const chess = new Chess(fen);
   if(!chess)
     return 'Invalid FEN format.';
 
-  var fenWords = splitFEN(fen);
-  var color = fenWords.color;
-  var board = fenWords.board;
-  var castlingRights = fenWords.castlingRights;
+  const fenWords = splitFEN(fen);
+  const color = fenWords.color;
+  const board = fenWords.board;
+  const castlingRights = fenWords.castlingRights;
 
-  var oppositeColor = color === 'w' ? 'b' : 'w';
-  var tempFen = fen.replace(` ${color} `, ` ${oppositeColor} `);
+  const oppositeColor = color === 'w' ? 'b' : 'w';
+  const tempFen = fen.replace(` ${color} `, ` ${oppositeColor} `);
   chess.load(tempFen);
   if(chess.in_check()) {
     if(color === 'w')
@@ -588,22 +586,22 @@ export function validateFEN(fen: string, category?: string): string {
   if(/(K.*K|k.*k)/.test(board))
     return 'Too many kings.';
 
-  var match = board.match(/(\w+)(?:\/\w+){6}\/(\w+)/);
-  var rank8 = match[1];
-  var rank1 = match[2];
+  const match = board.match(/(\w+)(?:\/\w+){6}\/(\w+)/);
+  const rank8 = match[1];
+  const rank1 = match[2];
   if(/[pP]/.test(rank1) || /[pP]/.test(rank8))
     return 'Pawn on 1st or 8th rank.';
 
   // Check castling rights
   if(castlingRights.includes('K') || castlingRights.includes('Q')) {
-    var castlingPieces = getCastlingPieces(fen, 'w', category);
+    const castlingPieces = getCastlingPieces(fen, 'w', category);
     if(!castlingPieces.king
         || (!castlingPieces.leftRook && castlingRights.includes('Q'))
         || (!castlingPieces.rightRook && castlingRights.includes('K')))
       return 'White\'s king or rooks aren\'t in valid locations for castling.';
   }
   if(castlingRights.includes('k') || castlingRights.includes('q')) {
-    var castlingPieces = getCastlingPieces(fen, 'b', category);
+    const castlingPieces = getCastlingPieces(fen, 'b', category);
     if(!castlingPieces.king
         || (!castlingPieces.leftRook && castlingRights.includes('q'))
         || (!castlingPieces.rightRook && castlingRights.includes('k')))
@@ -620,34 +618,34 @@ export function validateFEN(fen: string, category?: string): string {
  * @returns An object in the form { king: '<square>', leftRook: '<square>', rightRook: '<square>' }
  */
 export function getCastlingPieces(fen: string, color: string, category?: string): { [key: string]: string } {
-  var chess = new Chess(fen);
+  const chess = new Chess(fen);
 
-  var oppositeColor = (color === 'w' ? 'b' : 'w');
-  var rank = (color === 'w' ? '1' : '8');
-  var files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  var leftRook = '', rightRook = '', king = '';
+  const oppositeColor = (color === 'w' ? 'b' : 'w');
+  const rank = (color === 'w' ? '1' : '8');
+  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  let leftRook = '', rightRook = '', king = '';
   for(const file of files) {
-    let square = `${file}${rank}`;
-    let p = chess.get(square);
+    const square = `${file}${rank}`;
+    const p = chess.get(square);
     if(p && p.type === 'r' && p.color === color) { // Get starting location of rooks
       if(category === 'wild/fr') {
         // Note in weird cases where the starting position has more than 2 rooks on the back row
         // We try to guess which are the real castling rooks. If a rook has an opposite coloured rook in
         // the equivalent position on the other side of the board, then it's more likely to be a genuine
         // castling rook. Otherwise we use the rook which is closest to the king on either side.
-        var hasOppositeRook = false, oppositeLeftRookFound = false, oppositeRightRookFound = false;
-        let opSquare = `${file}${rank === '1' ? '8' : '1'}`;
-        let opP = chess.get(opSquare);
+        let hasOppositeRook = false, oppositeLeftRookFound = false, oppositeRightRookFound = false;
+        const opSquare = `${file}${rank === '1' ? '8' : '1'}`;
+        const opP = chess.get(opSquare);
         if(opP && opP.type === 'r' && p.color === oppositeColor)
           hasOppositeRook = true;
 
         if(!king && (hasOppositeRook || !oppositeLeftRookFound)) {
-          var leftRook = square;
+          leftRook = square;
           if(hasOppositeRook)
             oppositeLeftRookFound = true;
         }
         else if(!rightRook || (hasOppositeRook && !oppositeRightRookFound)) {
-          var rightRook = square;
+          rightRook = square;
           if(hasOppositeRook)
             oppositeRightRookFound = true;
         }
@@ -681,42 +679,42 @@ export function getCastlingPieces(fen: string, color: string, category?: string)
  * @returns the fen with some castling rights possibly removed
  */
 export function adjustCastlingRights(fen: string, startFen: string, category?: string): string {
-  var fenWords = splitFEN(fen);
-  var castlingRights = fenWords.castlingRights;
-  var chess = new Chess(fen);
+  const fenWords = splitFEN(fen);
+  let castlingRights = fenWords.castlingRights;
+  const chess = new Chess(fen);
   if(!chess)
     return fen;
 
-  var cp = getCastlingPieces(startFen, 'w', category); // Gets the initial locations of the 'castle-able' king and rooks
+  let cp = getCastlingPieces(startFen, 'w', category); // Gets the initial locations of the 'castle-able' king and rooks
   if(cp.king) {
-    var piece = chess.get(cp.king);
+    const piece = chess.get(cp.king);
     if(!piece || piece.type !== 'k' || piece.color !== 'w')
       castlingRights = castlingRights.replace(/[KQ]/g, '');
   }
   if(cp.leftRook) {
-    var piece = chess.get(cp.leftRook);
+    const piece = chess.get(cp.leftRook);
     if(!piece || piece.type !== 'r' || piece.color !== 'w')
       castlingRights = castlingRights.replace('Q', '');
   }
   if(cp.rightRook) {
-    var piece = chess.get(cp.rightRook);
+    const piece = chess.get(cp.rightRook);
     if(!piece || piece.type !== 'r' || piece.color !== 'w')
       castlingRights = castlingRights.replace('K', '');
   }
 
-  var cp = getCastlingPieces(startFen, 'b', category);
+  cp = getCastlingPieces(startFen, 'b', category);
   if(cp.king) {
-    var piece = chess.get(cp.king);
+    const piece = chess.get(cp.king);
     if(!piece || piece.type !== 'k' || piece.color !== 'b')
       castlingRights = castlingRights.replace(/[kq]/g, '');
   }
   if(cp.leftRook) {
-    var piece = chess.get(cp.leftRook);
+    const piece = chess.get(cp.leftRook);
     if(!piece || piece.type !== 'r' || piece.color !== 'b')
       castlingRights = castlingRights.replace('q', '');
   }
   if(cp.rightRook) {
-    var piece = chess.get(cp.rightRook);
+    const piece = chess.get(cp.rightRook);
     if(!piece || piece.type !== 'r' || piece.color !== 'b')
       castlingRights = castlingRights.replace('k', '');
   }
@@ -739,7 +737,7 @@ export function inCheck(san: string) {
 // Check if square is under attack. We can remove this after upgrading to latest version of chess.js,
 // since it has its own version of the function
 export function isAttacked(fen: string, square: string, color: string) : boolean {
-  var oppositeColor = color === 'w' ? 'b' : 'w';
+  const oppositeColor = color === 'w' ? 'b' : 'w';
 
   // Switch to the right turn
   if(getTurnColorFromFEN(fen) !== color)
@@ -749,7 +747,7 @@ export function isAttacked(fen: string, square: string, color: string) : boolean
 
   // Find king and replace it with a placeholder pawn
   for(const s in Chess.SQUARES) {
-    var piece = chess.get(s);
+    const piece = chess.get(s);
     if(piece && piece.type === 'k' && piece.color === color) {
       chess.remove(s);
       chess.put({type: 'p', color: color}, s);
@@ -765,9 +763,9 @@ export function isAttacked(fen: string, square: string, color: string) : boolean
 
 // Helper function which returns an array of square coordinates which are adjacent (including diagonally) to the given square
 export function getAdjacentSquares(square: string) : string[] {
-  var adjacent = [];
-  var file = square[0];
-  var rank = square[1];
+  const adjacent = [];
+  const file = square[0];
+  const rank = square[1];
   if(rank !== '1')
     adjacent.push(`${file}${+rank - 1}`);
   if(rank !== '8')
@@ -781,7 +779,7 @@ export function getAdjacentSquares(square: string) : string[] {
       adjacent.push(`${prevFile}${+rank + 1}`);
   }
   if(file !== 'h') {
-    var nextFile = String.fromCharCode(file.charCodeAt(0) + 1);
+    const nextFile = String.fromCharCode(file.charCodeAt(0) + 1);
     adjacent.push(`${nextFile}${rank}`);
     if(rank !== '1')
       adjacent.push(`${nextFile}${+rank - 1}`);
@@ -829,14 +827,14 @@ export function generateChess960FEN(idn?: number): string {
   ];
 
   if(!(idn >= 0 && idn <= 959))
-    var idn = Math.floor(Math.random() * 960); // Get random Chess960 starting position identification number
-  var kIndex = idn - idn % 16; // Index into King's Table
-  var bIndex = idn - kIndex; // Index into Bishop's Table
-  var kEntry = kingsTable[kIndex];
+    idn = Math.floor(Math.random() * 960); // Get random Chess960 starting position identification number
+  const kIndex = idn - idn % 16; // Index into King's Table
+  const bIndex = idn - kIndex; // Index into Bishop's Table
+  const kEntry = kingsTable[kIndex];
 
   // Fill in empty spots in the row from Bishop's Table with pieces from the row in King's Table
-  var backRow = [...bishopsTable[bIndex]]; // Copy row from array
-  var p = 0;
+  const backRow = [...bishopsTable[bIndex]]; // Copy row from array
+  let p = 0;
   for(let sq = 0; sq < 8; sq++) {
     if(backRow[sq] === '-') {
       backRow[sq] = kEntry[p];
@@ -844,9 +842,9 @@ export function generateChess960FEN(idn?: number): string {
     }
   }
 
-  var whiteBackRow = backRow.join('');
-  var blackBackRow = whiteBackRow.toLowerCase();
-  var fen = `${blackBackRow}/pppppppp/8/8/8/8/PPPPPPPP/${whiteBackRow} w KQkq - 0 1`;
+  const whiteBackRow = backRow.join('');
+  const blackBackRow = whiteBackRow.toLowerCase();
+  const fen = `${blackBackRow}/pppppppp/8/8/8/8/PPPPPPPP/${whiteBackRow} w KQkq - 0 1`;
 
   return fen;
 }
@@ -855,7 +853,7 @@ export function generateChess960FEN(idn?: number): string {
  * Returns move as a string in coordinate form (e.g a1-d4)
  */
  export function moveToCoordinateString(move: any): string {  
-  var moveStr = '';
+  let moveStr = '';
   if(move.san && move.san.startsWith('O-O')) // support for variants
     moveStr = move.san;
   else if(!move.from)

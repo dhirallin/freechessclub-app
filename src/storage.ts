@@ -39,15 +39,15 @@ export class CredentialStorage {
    * using username and password getters
    */
   public async retrieve() {
-    var username = undefined, password = undefined;
-    var requirePassword = storage.get('require-password');
-    var secureStorageMethod = false;
+    let username = undefined, password = undefined;
+    const requirePassword = storage.get('require-password');
+    let secureStorageMethod = false;
 
     if(requirePassword) {
       if(isElectron()) {
         secureStorageMethod = true;
         username = storage.get('user');
-        var encryptedPassword = storage.get('pass');
+        const encryptedPassword = storage.get('pass');
         if(encryptedPassword) {
           try {
             password = await (window as any).electron.decrypt(encryptedPassword);
@@ -73,7 +73,7 @@ export class CredentialStorage {
         try {
           // Note mediation: 'silent' stops the browser from prompting the user to enter their
           // login/password when they aren't stored already
-          var credential = await navigator.credentials.get({ password: true } as CredentialRequestOptions);
+          const credential = await navigator.credentials.get({ password: true } as CredentialRequestOptions);
           if(credential instanceof (window as any).PasswordCredential) {
             username = credential['id'];
             password = credential['password'];
@@ -90,14 +90,14 @@ export class CredentialStorage {
     
     if(password == null) {
       username = storage.get('user');
-      var loginFormUser = $('#login-user').val() as string; // get password from login form autofill (Firefox)
+      const loginFormUser = $('#login-user').val() as string; // get password from login form autofill (Firefox)
       if(loginFormUser && loginFormUser === username) 
         password = $('#login-pass').val() as string;
       else if(!requirePassword)
         password = '';
     }
 
-    var unsecurePass = storage.get('pass');
+    const unsecurePass = storage.get('pass');
     if(unsecurePass) {
       if(password == null) 
         password = atob(unsecurePass);    
@@ -129,7 +129,7 @@ export class CredentialStorage {
 
     if(isElectron()) {
       try {
-        var encryptedPassword = await (window as any).electron.encrypt(password);
+        const encryptedPassword = await (window as any).electron.encrypt(password);
         storage.set('pass', encryptedPassword);
         return;
       }
@@ -207,7 +207,7 @@ export class Storage {
       // Retrieve and cache all the Capacitor Preferences. This so we can make the get() function synchronous
       // even though Preferences is asynchronous.
       const { keys } = await (window as any).Capacitor.Plugins.Preferences.keys();
-      for (const key of keys) {
+      for(const key of keys) {
         try {
           const { value } = await (window as any).Capacitor.Plugins.Preferences.get({ key });
           this.cache[key] = value;
@@ -251,7 +251,7 @@ export class Storage {
    * If still not found checks if there is a matching cookie.
    */
   public get(name: string): string {
-    var value = this.cache[name];
+    let value = this.cache[name];
     if(value == null)
       value = localStorage.getItem(name);
     if(value == null)

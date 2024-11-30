@@ -79,7 +79,7 @@ export class Clock {
     if(time === null)
       time = 0;
     
-    var element = this.game.element;
+    const element = this.game.element;
     const clockElement = this.game.color === color ? element.find('.player-status .clock') : element.find('.opponent-status .clock');  
     const clockTimeElement = clockElement.find('.clock-time'); 
     const fractionalTimeElement = clockElement.find('.fractional-clock-time');    
@@ -94,7 +94,7 @@ export class Clock {
     if(time >= this.lowTimeThreshold || time === 0) 
       fractionalTimeElement.hide();
     else {
-      var msPart = Math.abs(time) - (Math.floor(Math.abs(time) / 1000) * 1000); // Get fractional part of time remaining
+      const msPart = Math.abs(time) - (Math.floor(Math.abs(time) / 1000) * 1000); // Get fractional part of time remaining
       fractionalTimeElement.text(`.${Math.floor(msPart / 100)}`); // Get 10ths of a second digit
       fractionalTimeElement.show();
     }
@@ -111,7 +111,7 @@ export class Clock {
   public startClock(color: string) {
     this.stopClocks();
         
-    var initialTime = (color === 'w' ? this.wtime : this.btime);
+    const initialTime = (color === 'w' ? this.wtime : this.btime);
     if(initialTime === null) // player is untimed
       return;
 
@@ -125,19 +125,19 @@ export class Clock {
     // The timer waits a fractional amount until the next second ticks over
     // e.g. if btime is 60.533 it waits until 59.999 
     // After that the clock will be updated once a second.
-    var waitTime = this.msTilNextInterval(initialTime);
+    let waitTime = this.msTilNextInterval(initialTime);
     this.timestamp = performance.now();
-    var expectedTimeDiff = 0;
+    let expectedTimeDiff = 0;
 
-    var timerFunc = () => { 
+    const timerFunc = () => { 
       this.timer = null;
 
       // Use timestamp to account for timing drift
       expectedTimeDiff += waitTime;
-      var timeDiff = performance.now() - this.timestamp;
-      var timeAdjustment = expectedTimeDiff - timeDiff;
+      const timeDiff = performance.now() - this.timestamp;
+      const timeAdjustment = expectedTimeDiff - timeDiff;
 
-      var time = initialTime - timeDiff;
+      const time = initialTime - timeDiff;
 
       if(time < this.lowTimeThreshold) 
         this.interval = 100;    
@@ -145,7 +145,7 @@ export class Clock {
       this.updateClockElement(color, time);
 
       waitTime = this.interval;
-      var adjustedWaitTime = Math.max(0, waitTime + timeAdjustment);
+      const adjustedWaitTime = Math.max(0, waitTime + timeAdjustment);
       this.timer = setTimeout(timerFunc, adjustedWaitTime);
 
       if(time < 0 && this.flagFallCallback)

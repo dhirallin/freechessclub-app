@@ -38,13 +38,11 @@ export function createTooltips() {
 // Make tooltips stay after click/focus on mobile, but only when hovering on desktop.
 // Allow the creation of "descriptive" tooltips
 export function createTooltip(element: JQuery<HTMLElement>) {
-  var fallbacksStr = element.attr('data-fallback-placements');
-  if(fallbacksStr)
-    var fallbackPlacements = fallbacksStr.split(',').map(part => part.trim());
+  const fallbacksStr = element.attr('data-fallback-placements');
+  const fallbackPlacements = fallbacksStr ? fallbacksStr.split(',').map(part => part.trim()) : undefined;
+  let title = element.attr('title') || element.attr('data-bs-original-title');
 
-  var title = element.attr('title') || element.attr('data-bs-original-title');
-
-  var description = element.attr('data-description');
+  const description = element.attr('data-description');
   if(description)
     title = `<b>${title}</b><hr class="tooltip-separator"><div>${description}</div>`;
 
@@ -64,7 +62,7 @@ $(document).on('click', '.tooltip-overlay', (event) => {
 
 // If a tooltip is marked as 'hover only' then only show it on mouseover not on touch
 document.addEventListener('touchstart', (event) => {
-  var tooltipTrigger = $(event.target).closest('[data-tooltip-hover-only]');
+  const tooltipTrigger = $(event.target).closest('[data-tooltip-hover-only]');
   tooltipTrigger.tooltip('disable');
   setTimeout(() => { tooltipTrigger.tooltip('enable'); }, 1000);
 }, {passive: true});
@@ -83,14 +81,14 @@ export function removeWithTooltips(element: JQuery<HTMLElement>) {
  * Initialize the event listeners used to create and destroy dropdown submenus
  */
 export function initDropdownSubmenus() { 
-  let toggleSubmenu = function(e) {
+  const toggleSubmenu = function(e) {
     e.preventDefault();
     e.stopPropagation();
 
     if(e.type === 'click')
       return;
 
-    let container = $(e.target).parent();
+    const container = $(e.target).parent();
     let dropdown = window.bootstrap.Dropdown.getInstance(e.target);
     if(!dropdown) {
       dropdown = new window.bootstrap.Dropdown(e.target, {
@@ -183,8 +181,7 @@ export function selectOnFocus(input: any) {
   $(input).on('focus', function (e) {
     $(this).one('mouseup', function (e) {
       setTimeout(() => { $(this).trigger('select'); }, 0);
-    })
-      .trigger('select');
+    }).trigger('select');
   });
 }
 
@@ -193,8 +190,8 @@ export function selectOnFocus(input: any) {
  */
 export function setCaretToEnd(element: JQuery<HTMLElement>) {
   // Set cursor to end of content
-  var range = document.createRange();
-  var sel = window.getSelection();
+  const range = document.createRange();
+  const sel = window.getSelection();
   range.selectNodeContents(element[0]);
   range.collapse(false);
   sel.removeAllRanges();
@@ -227,7 +224,7 @@ export function hideButton(button: any) {
  * Scroll to the given offset, adjusting for the top safe area.
  */
 export function safeScrollTo(offset: number) {
-  var topPadding = parseInt($('body').css('--safe-area-inset-top'), 10) || 0;
+  const topPadding = parseInt($('body').css('--safe-area-inset-top'), 10) || 0;
   $(document).scrollTop(offset - topPadding);
 }
 
@@ -288,7 +285,7 @@ export function createContextMenuTrigger(isTriggered: (event: any) => boolean, t
     if(!isTriggered(event))
       return;
 
-    var longPressTimeout = setTimeout(() => {
+    const longPressTimeout = setTimeout(() => {
       $(document).off('touchend.longPress touchcancel.longPress touchmove.longPress wheel.longPress');
       triggerHandler(event);
     }, 500);
@@ -296,9 +293,9 @@ export function createContextMenuTrigger(isTriggered: (event: any) => boolean, t
     // Don't show the context menu if the user starts scrolling during the long press.
     // iOS is very sensitive to inadvertant finger movements, so we don't acknowledge a touchmove unless
     // the movement is greater than 15px.
-    var startCoords = getTouchClickCoordinates(event);
+    const startCoords = getTouchClickCoordinates(event);
     $(document).on('touchmove.longPress', function(event) {
-      var coords = getTouchClickCoordinates(event);
+      const coords = getTouchClickCoordinates(event);
       if(Math.abs(coords.x - startCoords.x) > 15 || Math.abs(coords.y - startCoords.y) > 15)
         clearTimeout(longPressTimeout);
     });
@@ -378,7 +375,7 @@ export function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: numbe
 
   // Handle event listeners for the user to close the context menu, either by pressing escape,
   // or clicking outside it, or scrolling the mouse wheel.
-  var closeMenuEventHandler = function(event) {
+  const closeMenuEventHandler = function(event) {
     if(event.type === 'touchstart') // Allow simulated mousedown events again (these were blocked by the touchend handler)
       $(document).off('touchend.closeMenu');
     if(event.type === 'mousedown' && touchStarted) // If a touch is in progress then ignore simulated mousedown events
@@ -398,7 +395,7 @@ export function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: numbe
   $(document).on('touchmove.closeMenu', function(event) {
     // We close the context menu when the user scrolls. However browsers on iOS have very sensitive
     // touchmove events. So we define a movement threshold of 15px before acknowledging a touchmove.
-    var coords = getTouchClickCoordinates(event);
+    const coords = getTouchClickCoordinates(event);
     if(Math.abs(coords.x - x) > 15 || Math.abs(coords.y - y) > 15)
       closeMenuEventHandler(event);
   });
@@ -422,7 +419,7 @@ export function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: numbe
  * in quick succession only the final call will be executed after the specified wait time (from the final call).
  */
 export function debounce(func, wait) {
-  let timeout;
+  let timeout: any;
   return function(...args) {
     clearTimeout(timeout);
     timeout = setTimeout(() => func.apply(this, args), wait);
@@ -431,14 +428,16 @@ export function debounce(func, wait) {
 
 export function getTouchClickCoordinates(event: any, relativeToPage: boolean = false) {
   event = (event.originalEvent || event);
+  let x: number, y: number;
+
   if(event.type == 'touchstart' || event.type == 'touchmove' || event.type == 'touchend' || event.type == 'touchcancel') {
-    var touch = event.touches[0] || event.changedTouches[0];
-    var x = relativeToPage ? touch.pageX : touch.clientX;
-    var y = relativeToPage ? touch.pageY : touch.clientY;
+    const touch = event.touches[0] || event.changedTouches[0];
+    x = relativeToPage ? touch.pageX : touch.clientX;
+    y = relativeToPage ? touch.pageY : touch.clientY;
   }
-  else if (event.type == 'mousedown' || event.type == 'mouseup' || event.type == 'mousemove' || event.type == 'mouseover' || event.type=='mouseout' || event.type=='mouseenter' || event.type=='mouseleave' || event.type == 'contextmenu') {
-    var x = relativeToPage ? event.pageX : event.clientX;
-    var y = relativeToPage ? event.pageY : event.clientY;
+  else if(event.type == 'mousedown' || event.type == 'mouseup' || event.type == 'mousemove' || event.type == 'mouseover' || event.type=='mouseout' || event.type=='mouseenter' || event.type=='mouseleave' || event.type == 'contextmenu') {
+    x = relativeToPage ? event.pageX : event.clientX;
+    y = relativeToPage ? event.pageY : event.clientY;
   }
   return {x, y};
 }
@@ -468,14 +467,14 @@ export function removeLine(text: string, searchString: string): string {
  * Ensures that splits never occur in the middle of HTML entities. 
  */
 export function splitText(text: string, maxLength: number): string[] {
-  let result = [];
+  const result = [];
   let currentMessage = '';
   let currentLength = 0;
   const regex = /&#\d+;|./g; // Match HTML entities or any character
 
   text.replace(regex, (match) => {
     const matchLength = match.length;
-    if (currentLength + matchLength > maxLength) {
+    if(currentLength + matchLength > maxLength) {
       result.push(currentMessage);
       currentMessage = match;
       currentLength = matchLength;
@@ -486,7 +485,7 @@ export function splitText(text: string, maxLength: number): string[] {
     }
     return match;
   });
-  if (currentMessage)
+  if(currentMessage)
     result.push(currentMessage);
 
   return result;

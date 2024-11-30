@@ -247,7 +247,7 @@ export class Parser {
     // game move
     match = msg.match(/(?:^|\n)<12>\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([BW\-])\s(\-?[0-7])\s([01])\s([01])\s([01])\s([01])\s([0-9]+)\s([0-9]+)\s(\S+)\s(\S+)\s(\-?[0-3])\s([0-9]+)\s([0-9]+)\s([0-9]+)\s([0-9]+)\s(\-?[0-9]+)\s(\-?[0-9]+)\s([0-9]+)\s(\S+)\s\(([0-9]+)\:([0-9]+)\.([0-9]+)\)\s(\S+)\s([01])\s([0-9]+)\s([0-9]+)\s*/);
     if (match != null && match.length >= 34) {
-      var msgs = this.splitMessage(msg);
+      const msgs = this.splitMessage(msg);
       if(msgs)
         return msgs;
 
@@ -277,7 +277,7 @@ export class Parser {
 
       // Parse move in long format (from, to, promotion)
       const moveMatches = match[27].match(/(\S+)\/(\S{2})-(\S{2})=?(\S?)/);
-      let moveVerbose;
+      let moveVerbose: any;
       if(moveMatches) {
         moveVerbose = {
           piece: moveMatches[1].toLowerCase(),
@@ -349,7 +349,7 @@ export class Parser {
     // game end
     match = msg.match(/(?:^|\n)[^\(\):]*(?:Game\s[0-9]+:.*)?\{Game\s([0-9]+)\s\(([a-zA-Z]+)\svs\.\s([a-zA-Z]+)\)\s([a-zA-Z]+)(?:' game|'s)?\s([^\}]+)\}\s(\*|[012/]+-[012/]+).*/s);
     if (match != null && match.length > 5) {
-      var msgs = this.splitMessage(msg);
+      const msgs = this.splitMessage(msg);
       if(msgs)
         return msgs;
 
@@ -392,11 +392,7 @@ export class Parser {
     // kibitz/whispers
     match = msg.match(/(?:^|\n)([a-zA-Z]+)(?:\([A-Z0-9\*\-]+\))*\[([0-9]+)\] (kibitzes|whispers):\s+(.*)(?:\n(.+))?/);
     if (match != null && match.length > 4) {
-      if(match[3] === 'kibitzes')
-        var type = 'kibitz';
-      else
-        var type = 'whisper';
-
+      const type = match[3] === 'kibitzes' ? 'kibitz' : 'whisper';
       return {
         channel: `Game ${match[2]}`,
         user: match[1],
@@ -407,22 +403,22 @@ export class Parser {
     }
 
     // offers info (seekinfo and pendinfo)
-    var index = msg.search(/^<(pt|pf|pr|s|sc|sn|sr)>/m)
+    const index = msg.search(/^<(pt|pf|pr|s|sc|sn|sr)>/m)
     if(index !== -1) {
       // if plain text componenet, split into 2 messages
-      let plainText = msg.slice(0, index).trim();
+      const plainText = msg.slice(0, index).trim();
       if(plainText)
         return [this._parse(plainText), this._parse(msg.slice(index))];
 
-      let offers = [];
-      let lines = msg.split('\n');
+      const offers = [];
+      const lines = msg.split('\n');
       for(let line of lines) {
         line = line.trim();
         // parse pendinfo
         match = line.match(/^<(pt|pf)> (\d+) w=(\S+) t=(\S+) p=((\S+)(?: \((\S+)\)(?: \[(black|white)\])? (\S+) \((\S+)\) (rated|unrated) (\S+)(?: (\d+) (\d+))?(?: Loaded from (\S+))?( \(adjourned\))?)?)/);
         if(match) {
-          let type = match[1];
-          let subtype = match[4];
+          const type = match[1];
+          const subtype = match[4];
 
           if(subtype === 'match') {
             offers.push({

@@ -140,11 +140,10 @@ export class GameList {
 
     return {
       next(): IteratorResult<Game> {
-        if (index < items.length) {
+        if (index < items.length) 
           return { value: items[index++], done: false };
-        } else {
+        else 
           return { value: undefined, done: true };
-        }
       },
     };
   }
@@ -162,7 +161,7 @@ export class GameList {
   }
   
   public getFreeGame(): Game {
-    var game = this.getMainGame();
+    const game = this.getMainGame();
     if(game.role === Role.NONE && !game.preserved && !game.history?.editMode && !game.setupBoard)
       return game;
   
@@ -176,18 +175,18 @@ export class GameList {
   public getMostImportantGame(): Game {
     // find most important board
     // out of playing/examining game, then computer game, then observed game on main board, then other observed game
-    var game = this.getPlayingExaminingGame();
+    let game = this.getPlayingExaminingGame();
     if(!game)
       game = this.getComputerGame();
     if(!game) {
-      var mainGame = this.getMainGame();
+      const mainGame = this.getMainGame();
       if(mainGame && mainGame.isObserving())
         game = mainGame;
     }
     if(!game)
       game = this.gamelist.find(g => g.isObserving());
     if(!game)
-      game = mainGame;
+      game = this.getMainGame();
     if(!game)
       game = this.gamelist[0];
   

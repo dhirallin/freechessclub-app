@@ -15,7 +15,7 @@ let dialogCounter = 0;
 /** DIALOG FUNCTIONS **/
 
 export function showBoardDialog(params: DialogParams): any {
-  var dialog = createDialog(params);
+  const dialog = createDialog(params);
   dialog.appendTo($('#game-requests'));
   dialog.addClass('board-dialog');
   dialog.toast('show');
@@ -28,8 +28,8 @@ export function showBoardDialog(params: DialogParams): any {
 }
 
 export function showFixedDialog(params: DialogParams): any {
-  var dialog = createDialog(params);
-  var container = $('<div class="toast-container position-fixed top-50 start-50 translate-middle" style="z-index: 101">');
+  const dialog = createDialog(params);
+  const container = $('<div class="toast-container position-fixed top-50 start-50 translate-middle" style="z-index: 101">');
   container.appendTo('body');
   dialog.appendTo(container);
   dialog.toast('show');
@@ -74,14 +74,16 @@ export function createDialog({type = '', title = '', msg = '', btnFailure, btnSu
     req += `</div>`;
   }
 
+  let btnSuccessHandler = null, btnFailureHandler = null;
+
   if((btnSuccess && btnSuccess.length === 2) || (btnFailure && btnFailure.length === 2)) {
     req += `<div class="mt-2 pt-2 border-top center">`;
     if(btnSuccess && btnSuccess.length === 2) {
-      var successCmd = '';
+      let successCmd = '';
       if(typeof btnSuccess[0] === 'function')
-        var btnSuccessHandler = btnSuccess[0];
+        btnSuccessHandler = btnSuccess[0];
       if(typeof btnSuccess[0] === 'string') {
-        var successCmd = `onclick="`;
+        successCmd = `onclick="`;
         if(useSessionSend)
           successCmd += `sessionSend('${btnSuccess[0]}');`;
         else
@@ -95,11 +97,11 @@ export function createDialog({type = '', title = '', msg = '', btnFailure, btnSu
           + `${btnSuccess[1]}</button>`;
     }
     if (btnFailure && btnFailure.length === 2) {
-      var failureCmd = '';
+      let failureCmd = '';
       if(typeof btnFailure[0] === 'function')
-        var btnFailureHandler = btnFailure[0];
+        btnFailureHandler = btnFailure[0];
       if(typeof btnFailure[0] === 'string') {
-        var failureCmd = `onclick="`;
+        failureCmd = `onclick="`;
         if(useSessionSend)
           failureCmd += `sessionSend('${btnFailure[0]}');`;
         else
@@ -130,7 +132,7 @@ export function createDialog({type = '', title = '', msg = '', btnFailure, btnSu
 /** NOTIFICATIONS FUNCTIONS **/
 
 export function createNotification(params: DialogParams): any {
-  var dialog = createDialog(params);
+  const dialog = createDialog(params);
   dialog.insertBefore($('#notifications-footer'));
   dialog.find('[data-bs-dismiss="toast"]').removeAttr('data-bs-dismiss');
   dialog.on('click', 'button', (event) => {
@@ -145,8 +147,8 @@ export function createNotification(params: DialogParams): any {
   $('#notifications-number').text($('.notification:not([data-remove="true"])').length);
   $('#notifications-bubble').show();
 
-  var game = games.getPlayingExaminingGame();
-  var playingGame = (game && game.isPlayingOnline() ? true : false); // Don't show notifications if playing a game
+  const game = games.getPlayingExaminingGame();
+  const playingGame = (game && game.isPlayingOnline() ? true : false); // Don't show notifications if playing a game
   if((settings.notificationsToggle && !playingGame) || $('#notifications-header').attr('data-show'))
     showNotifications(dialog);
 
@@ -182,9 +184,9 @@ export function removeNotification(element: any) {
   // Remove notification half way through its slide, because remove() takes a while.
   setTimeout(() => element.remove(), 400);
 
-  var transformMatrix = element.css('transform');
-  var matrix = transformMatrix.replace(/[^0-9\-.,]/g, '').split(',');
-  var x = matrix[12] || matrix[4]; // translate x
+  const transformMatrix = element.css('transform');
+  const matrix = transformMatrix.replace(/[^0-9\-.,]/g, '').split(',');
+  const x = matrix[12] || matrix[4]; // translate x
   slideNotification(element, (x < 0 ? 'left' : 'right'));
 }
 
@@ -193,7 +195,7 @@ export function showNotifications(dialogs: any) {
     return;
 
   // If not all notifications are displayed, add a 'Show All' button to the footer
-  var allShown = true;
+  let allShown = true;
   $('.notification').each((index, element) => {
     if(!$(element).attr('data-show') && !$(element).attr('data-remove') && dialogs.index($(element)) === -1)
       allShown = false;
@@ -243,7 +245,7 @@ export function hideAllNotifications() {
 }
 
 export function clearNotifications() {
-  var delay = 0;
+  let delay = 0;
   $('.notification').each((index, element) => {
     $(element).removeAttr('data-show');
     if($(element).hasClass('show')) {
@@ -334,7 +336,7 @@ function slideUpAllNotifications() {
   $('#notifications').css('transform', 'translateY(-100%)');
   $('#notifications').one('transitionend', (event) => {
     $(event.currentTarget).removeClass('slide-up');
-    var shown = false;
+    let shown = false;
     $(event.currentTarget).children().each((index, element) => {
       if(!$(element).attr('data-show'))
         $(element).toast('hide');
@@ -375,7 +377,7 @@ function notificationMouseDown(e) {
   $('#notifications').css('--opacityY', 1);
   $('#notifications').css('--opacityX', 1);
 
-  var dialog = $(e.target).closest('.toast');
+  const dialog = $(e.target).closest('.toast');
   dialog.css('transition', 'none');
 
   // Prevent mouse pointer events on webpage while dragging panel
@@ -390,15 +392,15 @@ function notificationMouseDown(e) {
     }
   }).appendTo('body');
 
-  var swipeStart = getTouchClickCoordinates(e);
-  var swipeLocked = '';
+  let swipeStart = getTouchClickCoordinates(e);
+  let swipeLocked = '';
   const mouseMoveHandler = (e) => {
     var mouse = getTouchClickCoordinates(e);
     if(swipeLocked) {
-      var xMax = $('#notifications').outerWidth(true);
-      var yMax = $('#notifications').outerHeight(true);
-      var xOffset = Math.min(xMax, Math.max(-xMax, mouse.x - swipeStart.x));
-      var yOffset = Math.min(0, mouse.y - swipeStart.y);
+      const xMax = $('#notifications').outerWidth(true);
+      const yMax = $('#notifications').outerHeight(true);
+      const xOffset = Math.min(xMax, Math.max(-xMax, mouse.x - swipeStart.x));
+      const yOffset = Math.min(0, mouse.y - swipeStart.y);
       $('#notifications').css('--dragX', `${xOffset}px`);
       $('#notifications').css('--dragY', `${yOffset}px`);
       $('#notifications').css('--opacityY', (yMax - Math.abs(yOffset)) / yMax);
@@ -424,7 +426,7 @@ function notificationMouseDown(e) {
   $(document).on('mousemove touchmove', mouseMoveHandler);
 
   $(document).one('mouseup touchend touchcancel', (e) => {
-    var mouse = getTouchClickCoordinates(e);
+    const mouse = getTouchClickCoordinates(e);
     $('#mouse-capture-layer').remove();
     $(document).off('mousemove touchmove', mouseMoveHandler);
     if(swipeLocked === 'vertical') {
