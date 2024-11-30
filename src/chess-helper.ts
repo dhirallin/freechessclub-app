@@ -402,7 +402,7 @@ function variantToDests(fen: string, startFen: string, category: string, variant
   }
 
   if(!dests || !dests.size) {
-    const dests = new Map();
+    dests = new Map();
     chess.SQUARES.forEach(s => {
       const ms = chess.moves({square: s, verbose: true});
       if(ms.length)
