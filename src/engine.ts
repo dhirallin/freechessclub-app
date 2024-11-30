@@ -44,15 +44,13 @@ export class Engine {
       let depth0 = false;
 
       if (response.data.startsWith('info')) {
-        var fen = this.currFen;
-        
+        const fen = this.currFen;      
         const info = response.data.substring(5, response.data.length);
-
         const infoArr: string[] = info.trim().split(/\s+/);
 
         let bPV = false;
         const pvArr = [];
-        let scoreStr;
+        let scoreStr: string;
         let pvNum = 1;
         for(let i = 0; i < infoArr.length; i++) {
           if(infoArr[i] === 'lowerbound' || infoArr[i] === 'upperbound')
@@ -66,6 +64,7 @@ export class Engine {
             if(pvNum > this.numPVs)
               return;
           }
+
           if(infoArr[i] === 'score') {
             let score = +infoArr[i + 2];
             const turn = fen.split(/\s+/)[1];
@@ -93,38 +92,34 @@ export class Engine {
             else
               scoreStr = `${prefix}${(score / 100).toFixed(2)}`;
           }
-          else if(infoArr[i] === 'pv') {
+          else if(infoArr[i] === 'pv') 
             bPV = true;
-          }
-          else if(bPV) {
+          else if(bPV) 
             pvArr.push(infoArr[i]);
-          }
         }
 
         if(pvArr.length) {
-          var pv = '';
-          var currFen = fen;
+          let pv = '';
+          let currFen = fen;
           for(const move of pvArr) {
-            var moveParam;
-            if(move[1] === '@') // Crazyhouse/bughouse
-              moveParam = move;
-            else
-              moveParam = { 
-                from: move.slice(0, 2), 
-                to: move.slice(2, 4),
-                promotion: (move.length === 5 ? move.charAt(4) : undefined)
-              };
+            const moveParam = move[1] === '@' 
+              ? move
+              : { 
+                  from: move.slice(0, 2), 
+                  to: move.slice(2, 4),
+                  promotion: (move.length === 5 ? move.charAt(4) : undefined)
+                };
                      
-            var parsedMove = parseMove(currFen, moveParam, game.history.first().fen, game.category, game.history.holdings);    
+            const parsedMove = parseMove(currFen, moveParam, game.history.first().fen, game.category, game.history.holdings);    
             if(!parsedMove) {
               // Non-standard or unsupported moves were passed to Engine.
               this.terminate();
               return;
             }
             
-            var turnColor = getTurnColorFromFEN(currFen);
-            var moveNumber = getMoveNoFromFEN(currFen);
-            var moveNumStr = '';
+            const turnColor = getTurnColorFromFEN(currFen);
+            const moveNumber = getMoveNoFromFEN(currFen);
+            let moveNumStr = '';
             if(turnColor === 'w')
               moveNumStr = `${moveNumber}.`;
             else if(fen === currFen && turnColor === 'b')
@@ -147,7 +142,7 @@ export class Engine {
           this.bestMoveCallback(this.game, '', this.currEval);
       }
       else if(response.data.startsWith('bestmove') && this.bestMoveCallback) {
-        var bestMove = response.data.trim().split(/\s+/)[1];
+        const bestMove = response.data.trim().split(/\s+/)[1];
         this.bestMoveCallback(this.game, bestMove, this.currEval);
       }
     };
@@ -177,8 +172,7 @@ export class Engine {
   public move(hEntry: HEntry) {
     this.currFen = hEntry.fen;
     
-    var movesStr = this.movesToCoordinatesString(hEntry);
-
+    const movesStr = this.movesToCoordinatesString(hEntry);
     this.uci(`position fen ${this.game.history.first().fen}${movesStr}`);
     this.uci(`go ${this.moveParams}`);
   }
@@ -188,20 +182,17 @@ export class Engine {
   * in coordinate notation as a string. Used to send the move list to Engine 
   */
   public movesToCoordinatesString(hEntry: HEntry): string {
-    var movelist = [];
+    const movelist = [];
     while(hEntry.move) {
-      var move = `${hEntry.move.from}${hEntry.move.to}${hEntry.move.promotion ? hEntry.move.promotion : ''}`;
-      if(!hEntry.move.from) // crazyhouse
-        move = hEntry.move.san.replace(/[+#]/, ''); // Stockfish crazyhouse implementation doesn't like + or # chars for piece placement
+      const move = !hEntry.move.from
+        ? hEntry.move.san.replace(/[+#]/, '')
+        : `${hEntry.move.from}${hEntry.move.to}${hEntry.move.promotion ? hEntry.move.promotion : ''}`;
 
       movelist.push(move);
       hEntry = hEntry.prev;
     }
 
-    var movesStr = '';
-    if(movelist.length)
-      var movesStr = ` moves ${movelist.reverse().join(' ')}`;
-
+    movesStr = movelist.length ? ` moves ${movelist.reverse().join(' ')}` : '';
     return movesStr;
   }
 
@@ -293,10 +284,11 @@ export class EvalEngine extends Engine {
 
   private drawGraph() {
     const dataset = [];
-    let currIndex;
+    let currIndex: number, moveEval: number;
     const that = this;
 
     let hEntry = this.game.history.first();
+
     for(let i = 0; hEntry !== undefined; i++) {
       if(hEntry === this.game.history.current())
         currIndex = i;
@@ -308,7 +300,7 @@ export class EvalEngine extends Engine {
           moveEval = 5;
       }
       else {
-        var moveEval = +hEntry.eval.replace(/[+=]/g,'');
+        moveEval = +hEntry.eval.replace(/[+=]/g,'');
         if(moveEval > 5)
           moveEval = 5;
         else if(moveEval < -5)
@@ -321,9 +313,9 @@ export class EvalEngine extends Engine {
     const container = $('#eval-graph-container');
     container.show();
 
-    const margin = {top: 6, right: 6, bottom: 6, left: 18}
-      ; const width = container.width() - margin.left - margin.right // Use the window's width
-      ; const height = container.height() - margin.top - margin.bottom; // Use the window's height
+    const margin = {top: 6, right: 6, bottom: 6, left: 18}; 
+    const width = container.width() - margin.left - margin.right; // Use the window's width
+    const height = container.height() - margin.top - margin.bottom; // Use the window's height
 
     // Prepare data set
     const n = this.numGraphMoves = dataset.length;
