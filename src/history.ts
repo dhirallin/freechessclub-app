@@ -43,7 +43,7 @@ export class HEntry {
     if(this._prev)
       return this._prev;
 
-    var parent = this.parent;
+    const parent = this.parent;
     if(parent) {
       if(getPlyFromFEN(parent.fen) === getPlyFromFEN(this.fen))
         return parent.prev; // this move was a subvariation
@@ -75,7 +75,7 @@ export class HEntry {
   }
 
   public get first(): HEntry {
-    var e: HEntry | null = this;
+    let e: HEntry | null = this;
     while(e._prev)
       e = e._prev;
 
@@ -83,7 +83,7 @@ export class HEntry {
   }
 
   public get last(): HEntry {
-    var e: HEntry | null = this;
+    let e: HEntry | null = this;
     while(e._next)
       e = e._next;
 
@@ -117,7 +117,7 @@ export class HEntry {
       this._prev._next = null;
     else if(this._parent) {
       // Element is the first move in a subvariation, so remove that subvariation
-      var subvariations = this._parent._subvariations;
+      const subvariations = this._parent._subvariations;
       for(let i = 0; i < subvariations.length; i++) {
         if(subvariations[i] === this)
           this._parent.removeSubvariation(i);
@@ -134,7 +134,7 @@ export class HEntry {
     if(entry.isContinuation())
       this._subvariations.push(entry);
     else {
-      var i = 0;
+      let i = 0;
       while(i < this._subvariations.length) {
         if(this._subvariations[i].isContinuation()) // insert subvariations before continuations
           break;
@@ -153,8 +153,8 @@ export class HEntry {
   }
 
   public depth(): number {
-    var p: HEntry | null = this;
-    var depth = 0;
+    let p: HEntry | null = this;
+    let depth = 0;
     while(p.parent) {
       p = p.parent;
       depth++;
@@ -163,7 +163,7 @@ export class HEntry {
   }
 
   public clone(): HEntry {
-    var c = new HEntry();
+    const c = new HEntry();
     for (const key of Object.keys(this)) {
       if(!key.startsWith('_'))
         c[key] = this[key];
@@ -172,7 +172,7 @@ export class HEntry {
   }
 
   public isPredecessor(entry: HEntry): boolean {
-    var c: HEntry = this;
+    let c: HEntry = this;
     while(c) {
       if(entry === c)
         return true;
@@ -245,7 +245,7 @@ export class History {
       btime = entry.btime;
 
     // if subvariation, use clock times from last mainline move
-    var p = entry;
+    let p = entry;
     while(p.isSubvariation()) {
       p = p.prev;
       wtime = p.wtime;
@@ -260,7 +260,7 @@ export class History {
   }
 
   public add(move: any, fen: string, newSubvariation: boolean = false, wtime: number = 0, btime: number = 0, score?: string): HEntry {
-    var newEntry = new HEntry(move, fen);
+    const newEntry = new HEntry(move, fen);
 
     if(newSubvariation) {
       if(!this.editMode)
@@ -274,7 +274,7 @@ export class History {
       if(this.currEntry.next)
         this.remove(this.currEntry.next);
 
-      for(let sub of this.currEntry.subvariations) {
+      for(const sub of this.currEntry.subvariations) {
         if(sub.isContinuation())
           this.remove(sub);
       }
@@ -299,7 +299,7 @@ export class History {
     else
       prevEntry.add(entry);
 
-    var e = entry.next;
+    let e = entry.next;
     while(e) {
       e.parent = entry.parent;
       e = e.next;
@@ -339,7 +339,7 @@ export class History {
   }
 
   public removeAllSubvariations() {
-    var c = this.firstEntry;
+    let c = this.firstEntry;
     while(c) {
       for(let i = c.subvariations.length - 1; i >= 0; i--)
         this.remove(c.subvariations[i]);
@@ -348,19 +348,17 @@ export class History {
   }
 
   public promoteSubvariation(entry: HEntry) {
-    var subvar = entry.first;
-    var mainvar = subvar.parent;
-    var mainvarPrev = mainvar.prev;
-    var current = this.currEntry;
-    var isContinuation = subvar.isContinuation();
+    const subvar = entry.first;
+    const mainvar = subvar.parent;
+    const isContinuation = subvar.isContinuation();
+    const mainvarPrev = isContinuation ? mainvar : mainvar.prev;
+    const current = this.currEntry;
 
     if(isContinuation) {
-      mainvarPrev = mainvar;
-
       this.remove(subvar);
       this.addHEntry(subvar, mainvarPrev);
 
-      var mainvarSubs = [...mainvar.subvariations];
+      const mainvarSubs = [...mainvar.subvariations];
       for(let i = 0; i < mainvarSubs.length; i++) {
         if(mainvarSubs[i].isContinuation()) {
           this.remove(mainvarSubs[i]);
@@ -369,7 +367,7 @@ export class History {
       }
     }
     else {
-      var last = mainvar.last;
+      const last = mainvar.last;
       for(let i = 0; i < last.subvariations.length; i++) {
         if(last.subvariations[i].isContinuation()) {
           this.promoteSubvariation(last.subvariations[i]);
@@ -397,10 +395,10 @@ export class History {
   }
 
   public makeContinuation(entry: HEntry) {
-    var current = this.currEntry;
-    var prev = entry.prev;
+    const current = this.currEntry;
+    const prev = entry.prev;
 
-    var last = entry.last;
+    const last = entry.last;
     for(let i = 0; i < last.subvariations.length; i++) {
       if(last.subvariations[i].isContinuation()) {
         this.promoteSubvariation(last.subvariations[i]);
@@ -408,7 +406,7 @@ export class History {
       }
     }
 
-    var subs = [...entry.subvariations];
+    const subs = [...entry.subvariations];
     for(let i = 0; i < subs.length; i++)
       this.remove(subs[i]);
 
@@ -424,7 +422,7 @@ export class History {
   }
 
   public clone(game: any): History {
-    var hist = new History(game);
+    const hist = new History(game);
     hist._scratch = this._scratch;
     hist.editMode = this.editMode;
     hist.metatags = this.metatags;
@@ -434,7 +432,7 @@ export class History {
   }
 
   private cloneVariation(orig: HEntry, clonedHistory: History, clonedParent: HEntry) {
-    var prevCloned = null;
+    let prevCloned = null;
     while(orig) {
       var cloned = orig.clone();
       if(!prevCloned) {
@@ -447,12 +445,12 @@ export class History {
       clonedHistory.addMoveElements(cloned);
 
       for(let i = 0; i < orig.subvariations.length; i++) {
-        var subVar = this.cloneVariation(orig.subvariations[i], clonedHistory, cloned);
+        const subVar = this.cloneVariation(orig.subvariations[i], clonedHistory, cloned);
         cloned.addSubvariation(subVar);
       }
 
       if(orig === this.currEntry)
-          clonedHistory.currEntry = cloned;
+        clonedHistory.currEntry = cloned;
 
       orig = orig.next;
 
@@ -462,8 +460,8 @@ export class History {
   }
 
   public length(): number {
-    var count = 0;
-    var entry = this.firstEntry;
+    let count = 0;
+    let entry = this.firstEntry;
     while(entry.next) {
       entry = entry.next;
       count++;
@@ -484,8 +482,8 @@ export class History {
   }
 
   public getByIndex(id: number): HEntry {
-    var c = this.firstEntry;
-    var i = 0;
+    let c = this.firstEntry;
+    let i = 0;
     while(c) {
       if(i === id)
         return c;
@@ -500,8 +498,8 @@ export class History {
   }
 
   public index(entry: HEntry): number {
-    var c = this.firstEntry;
-    var i = 0;
+    let c = this.firstEntry;
+    let i = 0;
     while(c) {
       if(c === entry)
         return i;
@@ -529,14 +527,14 @@ export class History {
 
   public find(fen: string): HEntry {
     // Search forward and back through the current line we're in
-    var c = this.currEntry;
+    let c = this.currEntry;
     while(c) {
       if(c.fen === fen)
         return c;
       c = c.next;
     }
 
-    var c = this.currEntry.prev;
+    c = this.currEntry.prev;
     while(c) {
       if(c.fen === fen)
         return c;
@@ -545,14 +543,14 @@ export class History {
 
     // Check whether the move is in a subvariation directly following the current move
     if(this.currEntry.next) {
-      for(let s of this.currEntry.next.subvariations) {
+      for(const s of this.currEntry.next.subvariations) {
         if(s.fen === fen)
           return s;
       }
     }
 
     // Check whether the move is a continuation following the currnet move
-    for(let s of this.currEntry.subvariations) {
+    for(const s of this.currEntry.subvariations) {
       if(s.fen === fen)
         return s;
     }
@@ -579,7 +577,7 @@ export class History {
     return this._scratch;
   }
   public hasSubvariation(): boolean {
-    var entry = this.first();
+    let entry = this.first();
     while(entry) {
       if(entry.subvariations.length)
         return true;
@@ -589,8 +587,8 @@ export class History {
   }
 
   public hasContinuation(): boolean {
-    var entry = this.last();
-    for(let sub of entry.subvariations) {
+    const entry = this.last();
+    for(const sub of entry.subvariations) {
       if(sub.isContinuation())
         return true;
     }
@@ -611,7 +609,7 @@ export class History {
       if(preOrderHandler)
         preOrderHandler(entry);
 
-      for(let sub of entry.subvariations)
+      for(const sub of entry.subvariations)
         this.traverse(preOrderHandler, postOrderHandler, sub);
 
       if(postOrderHandler)
@@ -621,22 +619,22 @@ export class History {
   }
 
   public movesToString(): string {
-    var movesStr = '';
-    var showMoveNo = true;
+    let movesStr = '';
+    let showMoveNo = true;
     this.traverse((entry) => { // Pre-order. Before a move's subvariation is parsed
       if(!entry.move)
         return;
 
       var isContinuation = entry === entry.first && entry.isContinuation();
       if(isContinuation) {
-        var parentMoveNo = getMoveNoFromFEN(entry.parent.fen);
-        var parentTurnColor = getTurnColorFromFEN(entry.parent.fen);
-        var parentPeriods = (parentTurnColor === 'w' ? '...' : '.');
+        const parentMoveNo = getMoveNoFromFEN(entry.parent.fen);
+        const parentTurnColor = getTurnColorFromFEN(entry.parent.fen);
+        const parentPeriods = (parentTurnColor === 'w' ? '...' : '.');
         movesStr += `(${parentMoveNo}${parentPeriods}${entry.parent.move.san} `;
         showMoveNo = false;
       }
 
-      var turnColor = getTurnColorFromFEN(entry.fen);
+      const turnColor = getTurnColorFromFEN(entry.fen);
       if((entry === entry.first && !isContinuation) || showMoveNo || entry.commentBefore || turnColor === 'b') {
         if(entry === entry.first && !isContinuation)
           movesStr += '(';
@@ -644,15 +642,15 @@ export class History {
         if(entry.commentBefore)
           movesStr += `{${entry.commentBefore}} `;
 
-        var moveNo = getMoveNoFromFEN(entry.fen);
-        var periods = (turnColor === 'w' ? '...' : '.');
+        const moveNo = getMoveNoFromFEN(entry.fen);
+        const periods = (turnColor === 'w' ? '...' : '.');
         movesStr += `${moveNo}${periods}`;
         showMoveNo = false;
       }
       movesStr += `${entry.move.san} `;
 
       if(entry.nags.length) {
-        for(let nag of entry.nags)
+        for(const nag of entry.nags)
           movesStr += `${nag} `;
         showMoveNo = true;
       }
@@ -674,7 +672,7 @@ export class History {
   }
 
   public highlightMove() {
-    var moveTable = this.game.moveTableElement;
+    const moveTable = this.game.moveTableElement;
     moveTable.find('.move').each(function () {
       $(this).removeClass('selected');
     });
@@ -684,7 +682,7 @@ export class History {
       this.scrollParentToChild($('#movelist-container'), cell);
     }
 
-    var moveList = this.game.moveListElement;
+    const moveList = this.game.moveListElement;
     moveList.find('.move').each(function () {
       $(this).removeClass('selected');
     });
@@ -693,8 +691,9 @@ export class History {
       cell.find('.move').addClass('selected');
       this.scrollParentToChild($('#movelist-container'), cell);
     }
-
-    else $('#movelist-container').scrollTop(0);
+    
+    if(!this.currEntry.move)
+      $('#movelist-container').scrollTop(0);
   }
 
   public addMoveElements(entry: HEntry) {
@@ -705,7 +704,7 @@ export class History {
     this.addMoveListElement(entry);
     this.setCommentBefore(entry, entry.commentBefore);
     this.setCommentAfter(entry, entry.commentAfter);
-    for(let nag of entry.nags)
+    for(const nag of entry.nags)
       this.setAnnotation(entry, nag);
   }
 
@@ -716,21 +715,19 @@ export class History {
   }
 
   private removeMoveListElement(entry: HEntry) {
-    var cell = entry.moveListCellElement;
-    var parent = entry.parent;
-    if(cell.parent().hasClass('subvariation'))
-      var subvar = cell.parent();
+    const cell = entry.moveListCellElement;
+    const parent = entry.parent;
+    const subvar = cell.parent().hasClass('subvariation') ? cell.parent() : undefined;
 
     // Also remove subvariation if this is the only move in it
     if(subvar && subvar.children('.outer-move').length === 1) {
       if(parent && parent.next) {
-        var lastSub = false;
-        var nextElem = subvar.next();
-        var prevElem = subvar.prev();
+        const nextElem = subvar.next();
+        const prevElem = subvar.prev();
         if(!prevElem.hasClass('subvariation') && !nextElem.hasClass('subvariation')) {
           // If parent's next move is black and there are no other subvariations, remove the move number from the start
           if(parent.next.ply % 2 === 1) {
-            var parentNextCell = parent.next.moveListCellElement;
+            const parentNextCell = parent.next.moveListCellElement;
             parentNextCell.find('.moveno').remove();
           }
         }
@@ -749,22 +746,17 @@ export class History {
   }
 
   private addMoveListElement(entry: HEntry) {
-    var moveList = this.game.moveListElement;
-    var san = entry.move?.san;
-    var glyphedSan = History.glyphifyHEntry(entry);
-    var color = entry.turnColor === 'w' ? 'b' : 'w';
-    var moveNo = Math.floor(entry.ply / 2);
+    const moveList = this.game.moveListElement;
+    const san = entry.move?.san;
+    const glyphedSan = History.glyphifyHEntry(entry);
+    const color = entry.turnColor === 'w' ? 'b' : 'w';
+    const moveNo = Math.floor(entry.ply / 2);
 
-    // Find previous html element before the insertion point
-
-    if(entry === entry.first) // First move in subvariation
-      var prevEntry = entry.parent;
-    else
-      var prevEntry = entry.prev;
-
+    const prevEntry = entry === entry.first ? entry.parent : entry.prev;
+    let prevElement: JQuery<HTMLElement>;
     if(prevEntry && prevEntry.move) {
       // Get previous html element before the insertion point including subvariation containers and comments
-      var prevElement = prevEntry.moveListCellElement;
+      prevElement = prevEntry.moveListCellElement;
       let i = 0;
       while(prevElement.next().length && !prevElement.next().hasClass('outer-move') && !prevElement.next().hasClass('comment-before')) {
         if(prevElement.next().hasClass('subvariation')) {
@@ -776,7 +768,7 @@ export class History {
       }
     }
 
-    var cell = $(`<span class="outer-move d-inline-flex"><span class="move annotation px-1" data-color="${color}" aria-label="${san}">${glyphedSan}</span></span>`);
+    const cell = $(`<span class="outer-move d-inline-flex"><span class="move annotation px-1" data-color="${color}" aria-label="${san}">${glyphedSan}</span></span>`);
     if(color === 'w')
       cell.prepend(`<span class="moveno ms-1">${moveNo}.</span>`); // Prepend move number for white move
 
@@ -784,12 +776,12 @@ export class History {
       if(color === 'b')
         cell.prepend(`<span class="moveno ms-1">${moveNo}...</span>`);
       moveList.append(cell);
-      var moveNoElement = cell.find('moveno');
+      const moveNoElement = cell.find('moveno');
       moveNoElement.removeClass('ms-1');
     }
     else {
       if(entry === entry.first) { // move is start of new subvariation
-        var subVar = $(`<span class="subvariation ms-2 ps-2"></span>`);
+        const subVar = $(`<span class="subvariation ms-2 ps-2"></span>`);
         subVar.append(cell);
         prevElement.after(subVar);
       }
@@ -821,17 +813,17 @@ export class History {
     }
     else {
       // Only move in this table row
-      var subvar = cell.parent().parent().closest('tr');
+      const subvar = cell.parent().parent().closest('tr');
       if(subvar.length && subvar.find('tr').length === 1) { // move is the only move in the subvariation
         // Check if this is the only subvariation in its parent and whether the previous
         // and next moves are in the same variation. If so we join the previous and next moves back
         // together into the same table row
         const prevRow = subvar.prev();
-        if(prevRow.length !== 0 && prevRow.children('td').length === 2)
-          var prevCell = prevRow.children('td').last();
+        const prevCell = prevRow.length !== 0 && prevRow.children('td').length === 2
+          ? prevRow.children('td').last() : undefined;
         const nextRow = subvar.next();
-        if(nextRow.length !== 0 && nextRow.children('td').length === 2)
-          var nextCell = nextRow.children('td').first();
+        const nextCell = nextRow.length !== 0 && nextRow.children('td').length === 2
+          ? nextRow.children('td').first() : undefined;
 
         if(prevCell && !prevCell.hasClass('selectable')
             && nextCell && !nextCell.hasClass('selectable')
@@ -855,27 +847,22 @@ export class History {
   }
 
   private addMoveTableElement(entry: HEntry): void {
-    var moveTable = this.game.moveTableElement;
-    var textColor = $('#move-table').css('color');
-    var san = entry.move?.san;
-    var glyphedSan = History.glyphifyHEntry(entry);
-    var color = entry.turnColor === 'w' ? 'b' : 'w';
-    var moveNo = Math.floor(entry.ply / 2);
+    const moveTable = this.game.moveTableElement;
+    const textColor = $('#move-table').css('color');
+    const san = entry.move?.san;
+    const glyphedSan = History.glyphifyHEntry(entry);
+    const color = entry.turnColor === 'w' ? 'b' : 'w';
+    const moveNo = Math.floor(entry.ply / 2);
 
     const cellBody = `<span class="move" class="annotation" data-color="${color}" aria-label="${san}">${glyphedSan}</a>`;
 
-    // Find previous td cell before the insertion point
-
-    if(entry === entry.first)
-      var prevEntry = entry.parent;
-    else
-      var prevEntry = entry.prev;
-
+    const prevEntry = entry === entry.first ? entry.parent : entry.prev;
+    let prevCell: JQuery<HTMLElement>;
     if(prevEntry && prevEntry.move) {
       // Get previous html element including subvariation containers
-      var prevCell = prevEntry.moveTableCellElement;
+      prevCell = prevEntry.moveTableCellElement;
       if(!prevCell.next('.selectable').length) {
-        var elem = prevCell.parent().next().children().first(); // Get the first td in the next row
+        let elem = prevCell.parent().next().children().first(); // Get the first td in the next row
         let i = 0;
         // Find the last subvariation before the insertion point
         while(elem.length && elem.children('table').length && prevEntry.subvariations[i] !== entry) {
@@ -886,7 +873,7 @@ export class History {
       }
     }
 
-    var cell;
+    let cell: JQuery<HTMLElement>;
     if(!prevCell || prevCell.length === 0) { // Move is the first move in the move table
       if(color === 'w') {
         moveTable.append(`<tr><th scope="row">${moveNo}</th><td class="selectable">${cellBody}</td><td></td></tr>`);
@@ -899,12 +886,12 @@ export class History {
     }
     else if(prevCell.children('table').length || entry === entry.first) { // Move is first move in subvariation or first move following a subvariation
       if(color === 'w') { // New move is a white move (column 1)
-        var newRow = $(`<tr><th scope="row">${moveNo}</th><td class="selectable">${cellBody}</td><td></td></tr>`);
+        const newRow = $(`<tr><th scope="row">${moveNo}</th><td class="selectable">${cellBody}</td><td></td></tr>`);
         cell = newRow.find('td:eq(0)');
 
         // Add new subvariation as a nested table
         if(entry === entry.first) {
-          var subVar = $('<tr class="subvariation"><td colspan="3"><table class="table-sm w-100"><tbody></tbody></table></td></tr>');
+          const subVar = $('<tr class="subvariation"><td colspan="3"><table class="table-sm w-100"><tbody></tbody></table></td></tr>');
           subVar.find('tbody').append(newRow);
           prevCell.parent().after(subVar);
 
@@ -912,11 +899,11 @@ export class History {
             // New subvariation is splitting 2 moves from the same table row
 
             // Split previous row into 2
-            var row1 = prevCell.parent();
+            const row1 = prevCell.parent();
             subVar.after(row1.clone(true));
-            var row2 = subVar.next();
-            var row2Cell1 = row2.find('td:eq(0)');
-            var row2Cell2 = row2Cell1.next();
+            const row2 = subVar.next();
+            const row2Cell1 = row2.find('td:eq(0)');
+            const row2Cell2 = row2Cell1.next();
 
             // Remove first cell from row 2
             row2Cell1.html('...');
@@ -926,7 +913,7 @@ export class History {
             entry.parent.next.moveTableCellElement = row2Cell2;
 
             // Remove second cell from row 1
-            var row1Cell2 = prevCell.next();
+            const row1Cell2 = prevCell.next();
             row1Cell2.html('');
             row1Cell2.removeClass('selectable');
             row1Cell2.removeData();
@@ -936,11 +923,11 @@ export class History {
           prevCell.parent().after(newRow);
       }
       else { // new move is a black move (column 2)
-        var newRow = $(`<tr><th scope="row">${moveNo}</th><td>...</td><td class="selectable">${cellBody}</td></tr>`);
+        const newRow = $(`<tr><th scope="row">${moveNo}</th><td>...</td><td class="selectable">${cellBody}</td></tr>`);
         cell = newRow.find('td:eq(1)');
 
         if(entry === entry.first) { // first move in subvariation
-          var subVar = $(`<tr class="subvariation"><td colspan="3"><table class="table-sm w-100"><tbody></tbody></table></td></tr>`);
+          const subVar = $(`<tr class="subvariation"><td colspan="3"><table class="table-sm w-100"><tbody></tbody></table></td></tr>`);
           subVar.find('tbody').append(newRow);
           prevCell.parent().after(subVar);
         }
@@ -973,9 +960,9 @@ export class History {
     if(!san || !settings.pieceGlyphsToggle)
       return san;
 
-    var piece = san.charAt(0);
-    var colorStr = color === 'w' ? 'white' : 'black';
-    var pieceStr = '';
+    const piece = san.charAt(0);
+    const colorStr = color === 'w' ? 'white' : 'black';
+    let pieceStr = '';
     switch(piece) {
       case 'K':
         pieceStr = 'king';
@@ -1002,7 +989,7 @@ export class History {
    * Returns the SAN from entry.move.san with the plain-text for the major pieces changed to chess-piece glyphs
    */
   public static glyphifyHEntry(entry: HEntry): string {
-    var color = entry.turnColor === 'w' ? 'b' : 'w';
+    const color = entry.turnColor === 'w' ? 'b' : 'w';
     return this.glyphify(entry.move?.san, color);
   }
 
@@ -1017,11 +1004,11 @@ export class History {
    * Takes a move element and changes the chess-piece glyphs to plain text
    */
   public static unglyphifyElement(element: JQuery<HTMLElement>) {
-    var glyphElement = element.find('.piece-glyph');
+    const glyphElement = element.find('.piece-glyph');
     if(!glyphElement.length)
       return;
 
-    var piece = '';
+    let piece = '';
     if(glyphElement.hasClass('king'))
       piece = 'K';
     else if(glyphElement.hasClass('queen'))
@@ -1096,8 +1083,8 @@ export class History {
     if(!entry)
       entry = this.currEntry;
 
-    var currFen = entry.fen;
-    var words = currFen.split(/\s+/);
+    let currFen = entry.fen;
+    let words = currFen.split(/\s+/);
     words.splice(4,2);
     currFen = words.join(' ');
 
@@ -1105,8 +1092,8 @@ export class History {
 
     entry = entry.prev;
     while(entry) {
-      var fen = entry.fen;
-      var words = fen.split(/\s+/);
+      let fen = entry.fen;
+      words = fen.split(/\s+/);
       words.splice(4,2);
       fen = words.join(' ');
       if(fen === currFen)
@@ -1133,7 +1120,7 @@ export class History {
     if(!entry.moveListCellElement)
       return null;
 
-    var prevElem = entry.moveListCellElement.prev();
+    const prevElem = entry.moveListCellElement.prev();
     if(prevElem && prevElem.hasClass('comment-before'))
       return prevElem;
     return null;
@@ -1146,7 +1133,7 @@ export class History {
     if(!entry.moveListCellElement)
       return null;
 
-    var nextElem = entry.moveListCellElement.next();
+    const nextElem = entry.moveListCellElement.next();
     if(nextElem && nextElem.hasClass('comment-after'))
       return nextElem;
     return null;
@@ -1156,7 +1143,7 @@ export class History {
    * Create an empty comment HTML element before a move in the movelist
    */
   public createCommentBeforeElement(entry: HEntry): JQuery<HTMLElement> {
-    var commentElement = $(`<span class="comment comment-before ps-1" contenteditable="true" placeholder="Add Comment..." spellcheck="false"></span>`);
+    const commentElement = $(`<span class="comment comment-before ps-1" contenteditable="true" placeholder="Add Comment..." spellcheck="false"></span>`);
     entry.moveListCellElement.before(commentElement);
     return commentElement;
   }
@@ -1165,7 +1152,7 @@ export class History {
    * Create an empty comment HTML element after a move in the movelist
    */
   public createCommentAfterElement(entry: HEntry): JQuery<HTMLElement> {
-    var commentElement = $(`<span class="comment comment-after ps-1" contenteditable="true" placeholder="Add Comment..." spellcheck="false"></span>`);
+    const commentElement = $(`<span class="comment comment-after ps-1" contenteditable="true" placeholder="Add Comment..." spellcheck="false"></span>`);
     entry.moveListCellElement.after(commentElement);
     return commentElement;
   }
@@ -1175,9 +1162,7 @@ export class History {
    * Creates an empty element if it doesn't already exist
    */
   public editCommentBefore(entry: HEntry) {
-    var element = this.getCommentBeforeElement(entry);
-    if(!element)
-      element = this.createCommentBeforeElement(entry);
+    const element = this.getCommentBeforeElement(entry) || this.createCommentBeforeElement(entry);
     element.trigger('focus');
     setCaretToEnd(element);
   }
@@ -1187,9 +1172,7 @@ export class History {
    * Creates an empty element if it doesn't already exist.
    */
   public editCommentAfter(entry: HEntry) {
-    var element = this.getCommentAfterElement(entry);
-    if(!element)
-      element = this.createCommentAfterElement(entry);
+    const element = this.getCommentAfterElement(entry) || this.createCommentAfterElement(entry);
     element.trigger('focus');
     setCaretToEnd(element);
   }
@@ -1202,7 +1185,7 @@ export class History {
   public setCommentBefore(entry: HEntry, comment: string) {
     entry.commentBefore = comment;
 
-    var element = this.getCommentBeforeElement(entry);
+    let element = this.getCommentBeforeElement(entry);
     if(comment) {
       if(!element)
         element = this.createCommentBeforeElement(entry);
@@ -1220,7 +1203,7 @@ export class History {
   public setCommentAfter(entry: HEntry, comment: string) {
     entry.commentAfter = comment;
 
-    var element = this.getCommentAfterElement(entry);
+    let element = this.getCommentAfterElement(entry);
     if(comment) {
       if(!element)
         element = this.createCommentAfterElement(entry);
@@ -1249,20 +1232,20 @@ export class History {
   * then only one of them will be added, based on whether it is white or black to move.
   */
   public setAnnotation(entry: HEntry, nag: string) {
-    var nagAdded = false;
+    let nagAdded = false;
     // Find nag in the nag lookup table
     for(let i = 0; i < History.annotations.length; i++) {
-      var a = History.annotations[i];
-      var annListNags = a.nags.match(/\$\d+/g);
+      const a = History.annotations[i];
+      const annListNags = a.nags.match(/\$\d+/g);
       if(a.nags === nag || annListNags.includes(nag)) {
-        var nagCount = nag.match(/\$/g).length;
+        const nagCount = nag.match(/\$/g).length;
         if(nagCount == 2) {
           // nags contains both white move and black move nags
           // Determine which one we should use based on which color played this move
           if(entry.turnColor === 'b') // use white nag
-            var nag = annListNags[0];
+            nag = annListNags[0];
           else // use black nag
-            var nag = annListNags[1];
+            nag = annListNags[1];
         }
 
         // check if nag already exists
@@ -1277,18 +1260,18 @@ export class History {
           else
             entry.nags.push(nag);
         }
-        var nagAdded = true;
+        nagAdded = true;
         break;
       }
     }
 
     // Lookup the corresponding annotation symbol for each nag
     if(nagAdded) {
-      var nagStr = '';
+      let nagStr = '';
       for(let i = 0; i < entry.nags.length && i < 6; i++) { // Only display maximum 6 annotation symbols per move
-        var n = entry.nags[i];
-        var a = History.annotations.find(item => {
-          var naglist = item.nags.match(/\$\d+/g);
+        const n = entry.nags[i];
+        const a = History.annotations.find(item => {
+          const naglist = item.nags.match(/\$\d+/g);
           return naglist.includes(n);
         });
         nagStr += (a ? a.symbol : '');
@@ -1325,32 +1308,29 @@ export class History {
    * Generate PGN metatags for a game from its Game object data
    */
   public initMetatags() {
-    var game = this.game;
+    const game = this.game;
 
+    let event: string;
     if(game.role === Role.PLAYING_COMPUTER)
-      var event = 'Playing Computer';
+      event = 'Playing Computer';
     else if(game.role === Role.NONE)
-      var event = 'Analysis';
+      event = 'Analysis';
     else
-      var event = 'Online Game';
+      event = 'Online Game';
 
-    let now = new Date();
-    let year = now.getUTCFullYear();
-    let month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    let day = String(now.getUTCDate()).padStart(2, '0');
-    var date = `${year}.${month}.${day}`;
-    let hours = String(now.getUTCHours()).padStart(2, '0');
-    let minutes = String(now.getUTCMinutes()).padStart(2, '0');
-    let seconds = String(now.getUTCSeconds()).padStart(2, '0');
-    var time = `${hours}:${minutes}:${seconds}`;
-
-    if(!game.time && !game.inc)
-      var timeControl = '-';
-    else
-      var timeControl = `${game.time * 60}+${game.inc}`;
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const date = `${year}.${month}.${day}`;
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    const time = `${hours}:${minutes}:${seconds}`;
+    const timeControl = !game.time && !game.inc ? '-' : `${game.time * 60}+${game.inc}`;
 
     // If we are at the start of the game and it's a non-standard position set the SetUp and FEN metatags
-    var isSetupPosition = game.move === 'none' && game.fen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    const isSetupPosition = game.move === 'none' && game.fen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
     this.setMetatags({
       Event: event,
@@ -1379,7 +1359,7 @@ export class History {
 
     // @mliebelt/pgn-parser parses some metatags like Date and Time into objects instead of strings
     // Convert them back into strings
-    for(let key in tags) {
+    for(const key in tags) {
       if(tags[key].value)
         tags[key] = tags[key].value;
     }
@@ -1408,8 +1388,8 @@ export class History {
       }
     }
 
-    var variants = ['losers', 'suicide', 'crazyhouse', 'bughouse', 'atomic'];
-    var nonVariants = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
+    const variants = ['losers', 'suicide', 'crazyhouse', 'bughouse', 'atomic'];
+    const nonVariants = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
     if(tags.Variant && (variants.includes(tags.Variant) || tags.Variant.startsWith('wild'))) {
       if(tags.Variant === 'wild/fr')
         tags.Variant = 'chess960';
@@ -1420,7 +1400,7 @@ export class History {
     if(overwrite)
       this.metatags = tags;
     else {
-      for(let key in tags)
+      for(const key in tags)
         this.metatags[key] = tags[key];
     }
   }
@@ -1429,14 +1409,14 @@ export class History {
    * Reset move-list related metatags when the history is reset()
    */
   public resetMetatags() {
-    var tags = this.metatags;
+    const tags = this.metatags;
     delete tags.Opening;
     delete tags.Variation;
     delete tags.SubVariation;
     delete tags.ECO;
     delete tags.NIC;
     tags.Result = '*';
-    var fen = this.first().fen;
+    const fen = this.first().fen;
     if(fen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
       tags.SetUp = '1';
       tags.FEN = fen;
@@ -1451,8 +1431,8 @@ export class History {
    * Converts the metatags from key/value pairs to string format
    */
   public metatagsToString(): string {
-    var tagsString = '';
-    var tags = this.metatags;
+    let tagsString = '';
+    const tags = this.metatags;
     for(let key in tags)
       tagsString += `[${key} "${tags[key]}"]\n`;
     tagsString = tagsString.slice(0, -1);
@@ -1464,7 +1444,7 @@ export class History {
    * Generate the 'Opening' and 'ECO' metatags for a game.
    */
   public updateOpeningMetatags() {
-    var hEntry = this.game.history.last();
+    let hEntry = this.game.history.last();
     // Go through the main-line from the end to the beginning until we find the final opening name of the game
     while(!hEntry.opening) {
       if(!hEntry.move) { // We reached the starting position and no opening was found
@@ -1490,25 +1470,16 @@ $(document).on('focus', '.comment', function(event) {
 
   // Set the move's comment string after the user presses enter or clicks away from the comment element.
   $(event.target).one('blur', function(event) {
-    var elem = $(event.target);
-    if(elem.hasClass('comment-before')) {
-      var hEntry = elem.next().data('hEntry');
-      var commentBefore = true;
-    }
-    else {
-      var hEntry = elem.prev().data('hEntry');
-      var commentBefore = false;
-    }
-    if(elem.attr('data-before-content')) {
-      // If the placeholder text is showing, i.e. the comment is empty then remove it.
-      var comment: string = undefined;
-      elem.remove();
-    }
-    else {
-      var comment = elem.text();
-      elem.off('input paste keydown');
-    }
+    const elem = $(event.target);
+    const hEntry = elem.hasClass('comment-before') ? elem.next().data('hEntry') : elem.prev().data('hEntry');
+    const commentBefore = elem.hasClass('comment-before') ? true : false;
+    const comment = elem.attr('data-before-content') ? undefined : elem.text();
 
+    if(elem.attr('data-before-content')) 
+      elem.remove(); // If the placeholder text is showing, i.e. the comment is empty then remove it.
+    else 
+      elem.off('input paste keydown');
+    
     if(commentBefore)
       hEntry.commentBefore = comment;
     else
@@ -1538,8 +1509,8 @@ $(document).on('focus', '.comment', function(event) {
     const text = clipboardEvent.clipboardData?.getData('text/plain') || '';
 
     var sel = window.getSelection();
-    if (sel.rangeCount > 0) {
-      var range = sel.getRangeAt(0);
+    if(sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
       range.deleteContents();
       range.insertNode(document.createTextNode(text));
       range.collapse(false); // Move the caret to the end of the pasted text
@@ -1554,7 +1525,7 @@ $(document).on('focus', '.comment', function(event) {
    * Adds it back when all text is deleted.
    */
   $(event.target).on('input', function(event) {
-    var elem = $(event.target);
+    const elem = $(event.target);
 
     if(!elem.text().length) {
       elem.text('\u200B'); // insert a zero-width space in order to make cursor appear when span is empty
