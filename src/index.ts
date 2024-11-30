@@ -2170,8 +2170,9 @@ export function movePiece(source: any, target: any, metadata: any) {
 
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
   const pieces = game.board.state.pieces;
-  const pieceRole = cgRoles[pieces.get(target).role];
-  const pieceColor = pieces.get(target).color;
+  const targetPiece = pieces.get(target);
+  const pieceRole = targetPiece ? cgRoles[targetPiece.role] : undefined;
+  const pieceColor = targetPiece ? targetPiece.color : undefined;
 
   let promotePiece = '';
   if(game.promotePiece)
@@ -2271,8 +2272,9 @@ function preMovePiece(source: any, target: any, metadata: any) {
   if(cgRoles.hasOwnProperty(source) || settings.autoPromoteToggle) // piece drop rather than move
     return;
   const pieces = game.board.state.pieces;
-  const pieceRole = cgRoles[pieces.get(source).role];
-  const pieceColor = pieces.get(source).color;
+  const targetPiece = pieces.get(target);
+  const pieceRole = targetPiece ? cgRoles[targetPiece.role] : undefined;
+  const pieceColor = targetPiece ? targetPiece.color : undefined;
   if(pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1')) {
     game.movePieceSource = source;
     game.movePieceTarget = target;
