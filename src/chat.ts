@@ -134,22 +134,22 @@ export class Chat {
         scrollToBoard();
       $('#collapse-chat').removeClass('collapse-init');
     });
-    
+
     $('#collapse-chat').on('shown.bs.collapse', () => {
       const activeTab = $('#tabs button').filter('.active');
       activeTab.trigger('shown.bs.tab');
       $(window).trigger('resize');
       this.scrollToChat();
     });
-    
+
     $('#collapse-chat').on('show.bs.collapse', () => {
       $('#chat-toggle-btn').addClass('toggle-btn-selected');
     });
-    
+
     $('#collapse-chat').on('hide.bs.collapse', () => {
       $('#chat-toggle-btn').removeClass('toggle-btn-selected');
     });
-    
+
     $('#collapse-chat-arrow').on('click', () => {
       $('#collapse-chat').collapse('hide');
     });
@@ -268,7 +268,7 @@ export class Chat {
       return games.findGame(+match[1]);
   }
 
-  private updateViewedState(tab: any, closingTab: boolean = false, incrementCounter: boolean = true) {
+  private updateViewedState(tab: any, closingTab = false, incrementCounter = true) {
     if(!tab.hasClass('tab-unviewed') && !closingTab && (!tab.hasClass('active') || !$('#collapse-chat').hasClass('show')) && tab.attr('id') !== 'tab-console') {
       // Add unviewed number to chat-toggle-icon
       if(tab.attr('id') !== undefined && !this.ignoreUnviewed(tab.attr('id').split(/-(.*)/)[1]) && incrementCounter) { // only add if a kibitz or private message
@@ -341,12 +341,13 @@ export class Chat {
 
     if(!this.tabs.hasOwnProperty(from)) {
       let chName = name;
-      if (channels[name] !== undefined) 
+      if(channels[name] !== undefined)
         chName = channels[name];
 
       if(!$('#tabs').find(`#tab-${from}`).length) {
         match = chName.match(/^Game (\d+)/);
-        let tooltip = '', infoBar: JQuery<HTMLElement>;
+        let tooltip = '';
+        let infoBar: JQuery<HTMLElement>;
         if(match && match.length > 1) {
           const game = games.findGame(+match[1]);
           if(game) {
@@ -368,7 +369,7 @@ export class Chat {
           }
         }
         const tabElement = $(`<li ${tooltip}class="nav-item position-relative">
-            <button class="text-sm-center nav-link" data-bs-toggle="tab" href="#content-${from}" ` 
+            <button class="text-sm-center nav-link" data-bs-toggle="tab" href="#content-${from}" `
               + `id="tab-${from}" role="tab" style="padding-right: 30px">${chName}</button>
             <container class="d-flex align-items-center h-100 position-absolute" style="top: 0; right: 12px; z-index: 10">
               <span class="closeTab btn btn-default btn-sm">×</span>
@@ -395,7 +396,7 @@ export class Chat {
               const description = watchers.join('<br>');
               const numWatchers = watchers.length;
               const title = `${numWatchers} Watchers`;
-              const tooltipText = !watchers.length 
+              const tooltipText = !watchers.length
                   ? `<b>${title}</b>`
                   : `<b>${title}</b><hr class="tooltip-separator"><div>${description}</div>`;
 
@@ -505,7 +506,7 @@ export class Chat {
     });
   }
 
-  public newMessage(from: string, data: any, html: boolean = false) {
+  public newMessage(from: string, data: any, html = false) {
     const tabName = settings.chattabsToggle ? from : 'console';
 
     if(!/^[\w- ]+$/.test(from))
@@ -528,9 +529,9 @@ export class Chat {
     let text = data.message;
     if(!html)
       text = this.escapeHTML(text);
-    if(this.emojisLoaded) 
+    if(this.emojisLoaded)
       text = parseEmojis(text);
-    
+
     text = text.replace(this.userRE, `<strong class="mention">${this.user}</strong>`);
 
     // Suffix for whispers
@@ -547,7 +548,7 @@ export class Chat {
       },
     })}${suffix}</br>`;
 
-    const timestamp = settings.timestampToggle 
+    const timestamp = settings.timestampToggle
         ? `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `
         : '';
 

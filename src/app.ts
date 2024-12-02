@@ -222,8 +222,8 @@ function findReopenMenuItem() {
   return reopenMenuItem;
 }
 
-/** 
- * Functions exposed to the renderer 
+/**
+ * Functions exposed to the renderer
  */
 
 // secure encryption and key storage
@@ -239,15 +239,15 @@ ipcMain.handle('decrypt', (event, value) => {
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
   mainWindow = new BrowserWindow({
-    width: width,
-    height: height,
+    width,
+    height,
     center: true,
     resizable: true,
     title: app.getName(),
     icon: path.join(__dirname, '../assets/img/tfcc-small.png'),
     webPreferences: {
-      contextIsolation: true,  
-      preload: path.join(__dirname, 'preload.js') 
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
@@ -263,7 +263,7 @@ function createWindow() {
     mainWindow = null;
   });
 
-  // Stop 'beforeunload' event (confirmation dialog in browser) from preventing the window closing 
+  // Stop 'beforeunload' event (confirmation dialog in browser) from preventing the window closing
   mainWindow.webContents.on('will-prevent-unload', (event) => {
     event.preventDefault();
   })
