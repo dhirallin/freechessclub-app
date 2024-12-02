@@ -82,7 +82,7 @@ const mainBoard: any = createBoard($('#main-board-area').children().first().find
   session.send(cmd);
 };
 
-/************************************************
+/** *********************************************
  * INITIALIZATION AND TOP LEVEL EVENT LISTENERS *
  ************************************************/
 
@@ -154,7 +154,7 @@ async function onDeviceReady() {
   Utils.initDropdownSubmenus();
 }
 
-$(window).on('load', function() {
+$(window).on('load', () => {
   $('#left-panel-header').css('visibility', 'visible');
   $('#right-panel-header').css('visibility', 'visible');
 });
@@ -167,7 +167,7 @@ $(window).on('beforeunload', () => {
 });
 
 // Prevent screen dimming, must be enabled in a user input event handler
-$(document).one('click', (event) => {
+$(document).one('click', () => {
   if(settings.wakelockToggle) {
     noSleep.enable();
   }
@@ -182,7 +182,7 @@ document.addEventListener('touchstart', (event) => {
 }, {passive: true});
 
 // Hide popover if user clicks anywhere outside
-$('body').on('click', function (e) {
+$('body').on('click', (e) => {
   if(!$('#rated-unrated-menu').is(e.target)
       && $('#rated-unrated-menu').has(e.target).length === 0
       && $('.popover').has(e.target).length === 0)
@@ -209,7 +209,7 @@ $(document).on('keydown', (e) => {
     forward();
 });
 
-/*******************************
+/** ****************************
  * RESIZE AND LAYOUT FUNCTIONS *
  *******************************/
 
@@ -418,7 +418,7 @@ function calculateFontSize(container: any, containerMaxWidth: number, minWidth?:
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
 
-  function getTextWidth(text, font) {
+  const getTextWidth = (text, font) => {
     context.font = font;
     const metrics = context.measureText(text);
     return metrics.width;
@@ -483,7 +483,7 @@ function swapLeftRightPanelHeaders() {
   }
 }
 
-/*********************************************
+/** ******************************************
  * MAIN MESSAGE PUMP                         *
  * Process messages received from the server *
  *********************************************/
@@ -1573,7 +1573,7 @@ function handleMiscMessage(data: any) {
       const who = match[2];
       const action = match[3];
       const score = match[4];
-      const [winner, loser, reason] = session.getParser().getGameResult(game.wname, game.bname, who, action);
+      const [, , reason] = session.getParser().getGameResult(game.wname, game.bname, who, action);
       game.history.setMetatags({Result: score, Termination: reason});
       return;
     }
@@ -1606,7 +1606,7 @@ function handleMiscMessage(data: any) {
       chat.newMessage('console', data);
 
     channelListRequested = false;
-    return chat.addChannels(match[1].split(/\s+/).sort(function(a, b) { return a - b; }));
+    return chat.addChannels(match[1].split(/\s+/).sort((a, b) => a - b));
   }
 
   match = msg.match(/(?:^|\n)-- computer list: \d+ names --([\w\s]*)/);
@@ -1784,7 +1784,7 @@ export function disableOnlineInputs(disable: boolean) {
   $('#input-form *').prop('disabled', disable);
 }
 
-/**********************************************************
+/** *******************************************************
  * GAME BOARD PANEL FUNCTIONS                             *
  * Including player/opponent status panels and game board *
  **********************************************************/
@@ -1878,24 +1878,24 @@ function showCapturedMaterial(game: Game) {
     panel.empty();
   }
 
-  for(const key in captured) {
+  Object.entries(captured).forEach(([key, value]) => {
     let num: number;
     let color: string;
     let piece: string;
     let draggedPiece: string;
     let panel: JQuery<HTMLElement>;
-    if(whiteChanged && key === key.toLowerCase() && captured[key] > 0) {
+    if(whiteChanged && key === key.toLowerCase() && value > 0) {
       color = 'b';
       piece = `${color}${key.toUpperCase()}`;
       draggedPiece = `w${key}`;
-      num = captured[key];
+      num = value;
       panel = (game.color === 'w' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     }
-    else if(blackChanged && key === key.toUpperCase() && captured[key] > 0) {
+    else if(blackChanged && key === key.toUpperCase() && value > 0) {
       color = 'w';
       piece = `${color}${key}`;
       draggedPiece = `b${key}`;
-      num = captured[key];
+      num = value;
       panel = (game.color === 'b' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     }
     if(panel) {
@@ -1909,7 +1909,7 @@ function showCapturedMaterial(game: Game) {
         pieceElement[0].addEventListener('mousedown', dragPiece);
       }
     }
-  }
+  });
 }
 
 function dragPiece(event: any) {
@@ -2358,7 +2358,7 @@ function createNewVariationMenu(game: Game) {
       <li><a class="dropdown-item noselect" data-action="new">New variation</a></li>
     </ul>`);
 
-  const closeMenuCallback = (event: any) => {
+  const closeMenuCallback = () => {
     updateBoard(game);
   }
 
@@ -2395,7 +2395,7 @@ function flipBoard(game: Game) {
   }
 }
 
-/**************************
+/** ***********************
  * MOVE PARSING FUNCTIONS *
  **************************/
 
@@ -2555,7 +2555,7 @@ function updateHistory(game: Game, move?: any, fen?: string) {
   }
 }
 
-/******************
+/** ***************
  * GAME FUNCTIONS *
  ******************/
 
@@ -2596,7 +2596,7 @@ function createGame(): Game {
     $('#game-tools-close').parent().show();
   }
 
-  function gameTouchHandler(event) {
+  const gameTouchHandler = () => {
     $('#input-text').trigger('blur');
     setGameWithFocus(game);
   }
@@ -2611,12 +2611,12 @@ function createGame(): Game {
     event.stopPropagation();
   });
 
-  game.element.on('click', '[title="Maximize"]', (event) => {
+  game.element.on('click', '[title="Maximize"]', () => {
     setGameWithFocus(game);
     maximizeGame(game);
   });
 
-  game.element.on('dblclick', (event) => {
+  game.element.on('dblclick', () => {
     if(games.getMainGame() === game)
       return;
 
@@ -2756,7 +2756,7 @@ export function maximizeGame(game: Game) {
 }
 
 function closeGameDialog(game: Game) {
-  (window as any).closeGameClickHandler = (event) => {
+  (window as any).closeGameClickHandler = () => {
     if(game)
       closeGame(game);
   };
@@ -2880,24 +2880,24 @@ async function getOpening(game: Game) {
     const inputFilePath = 'assets/data/openings.tsv';
     openings = new Map();
     await fetch(inputFilePath)
-    .then(response => response.text())
-    .then(data => {
-      const rows = data.split('\n');
-      for(const row of rows) {
-        const cols = row.split('\t');
-        if(cols.length === 4 && cols[2].startsWith('1.')) {
-          const eco = cols[0];
-          const name = cols[1];
-          const moves = cols[2];
-          const fen = cols[3];
-          const fenNoPlyCounts = fen.split(' ').slice(0, -2).join(' ');
-          openings.set(fenNoPlyCounts, {eco, name, moves});
+      .then(response => response.text())
+      .then(data => {
+        const rows = data.split('\n');
+        for(const row of rows) {
+          const cols = row.split('\t');
+          if(cols.length === 4 && cols[2].startsWith('1.')) {
+            const eco = cols[0];
+            const name = cols[1];
+            const moves = cols[2];
+            const fen = cols[3];
+            const fenNoPlyCounts = fen.split(' ').slice(0, -2).join(' ');
+            openings.set(fenNoPlyCounts, {eco, name, moves});
+          }
         }
-      }
-    })
-    .catch(error => {
-      console.error('Couldn\'t fetch opening:', error);
-    });
+      })
+      .catch(error => {
+        Utils.logError('Couldn\'t fetch opening:', error);
+      });
   };
 
   if(!openings && !fetchOpeningsPromise) {
@@ -2907,12 +2907,12 @@ async function getOpening(game: Game) {
 
   const shortFen = historyItem.fen.split(' ').slice(0, -2).join(' '); // Remove ply counts
   const opening = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category)
-      ? openings.get(shortFen) : null;
+    ? openings.get(shortFen) : null;
   historyItem.opening = opening;
   game.history.updateOpeningMetatags();
 }
 
-/************************
+/** *********************
  * NAVIGATION FUNCTIONS *
  ************************/
 
@@ -3067,11 +3067,11 @@ function currentGameMove(game: Game): HEntry {
   return (game.isPlaying() || game.isObserving() ? game.history?.last() : game.history?.current());
 }
 
-/************************
+/** *********************
  * LEFT MENUS FUNCTIONS *
  ************************/
 
-$('#collapse-menus').on('hidden.bs.collapse', (event) => {
+$('#collapse-menus').on('hidden.bs.collapse', () => {
   $('#menus-toggle-icon').removeClass('fa-toggle-up').addClass('fa-toggle-down');
 
   activeTab = $('#pills-tab button').filter('.active');
@@ -3080,17 +3080,17 @@ $('#collapse-menus').on('hidden.bs.collapse', (event) => {
   $('#collapse-menus').removeClass('collapse-init');
 });
 
-$('#collapse-menus').on('show.bs.collapse', (event) => {
+$('#collapse-menus').on('show.bs.collapse', () => {
   $('#menus-toggle-icon').removeClass('fa-toggle-down').addClass('fa-toggle-up');
   Utils.scrollToTop();
   activeTab.tab('show');
 });
 
-$('#collapse-menus').on('shown.bs.collapse', (event) => {
+$('#collapse-menus').on('shown.bs.collapse', () => {
   setLeftColumnSizes();
 });
 
-$('#pills-tab button').on('shown.bs.tab', function(event) {
+$('#pills-tab button').on('shown.bs.tab', function() {
   if($(this).attr('id') !== 'pills-placeholder-tab')
     activeTab = $(this);
 
@@ -3098,7 +3098,7 @@ $('#pills-tab button').on('shown.bs.tab', function(event) {
   setTimeout(() => { newTabShown = false; }, 0);
 });
 
-$('#pills-tab button').on('click', function(event) {
+$('#pills-tab button').on('click', function() {
   if(!newTabShown)
     $('#collapse-menus').collapse('hide');
   else {
@@ -3139,38 +3139,38 @@ function hidePanel(id: string) {
     setPanelSizes();
 }
 
-$('#stop-observing').on('click', (event) => {
+$('#stop-observing').on('click', () => {
   session.send(`unobs ${games.focused.id}`);
 });
 
-$('#stop-examining').on('click', (event) => {
+$('#stop-examining').on('click', () => {
   session.send('unex');
 });
 
-/***********************
+/** ********************
  * PLAY PANEL FUCTIONS *
  ***********************/
 
-$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-play"]', (e) => {
+$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-play"]', () => {
   if($('#pills-lobby').hasClass('active'))
     initLobbyPane();
   else if($('#pills-pairing').hasClass('active'))
     initPairingPane();
 });
 
-$(document).on('hidden.bs.tab', 'button[data-bs-target="#pills-play"]', (e) => {
+$(document).on('hidden.bs.tab', 'button[data-bs-target="#pills-play"]', () => {
   $('#play-computer-modal').modal('hide');
   leaveLobbyPane();
 });
 
-$('#quick-game').on('click', (event) => {
+$('#quick-game').on('click', () => {
   if(!games.getPlayingExaminingGame())
     session.send('getga');
 });
 
 /** PLAY COMPUTER FUNCTIONS **/
 
-$('#play-computer-modal').on('show.bs.modal', (event) => {
+$('#play-computer-modal').on('show.bs.modal', () => {
   $('#play-computer-start-from-pos').removeClass('is-invalid');
 });
 
@@ -3291,7 +3291,7 @@ function playComputer(params: any) {
     wname = computerName;
 
   const time = params.playerTime === 0 && params.playerInc === 0
-      ? '' : ` ${params.playerTime} ${params.playerInc}`;
+    ? '' : ` ${params.playerTime} ${params.playerInc}`;
   const gameType = params.gameType !== 'Standard' ? ` ${params.gameType}` : '';
 
   const statusMsg = `${wname} vs. ${bname}${gameType}${time}`;
@@ -3303,13 +3303,11 @@ function playComputer(params: any) {
 function getPlayComputerEngineOptions(game: Game): object {
   const skillLevels = [0, 1, 2, 3, 5, 7, 9, 11, 13, 15]; // Skill Level for each difficulty level
 
-  const engineOptions = {}
-  if(game.category === 'wild/fr')
-    engineOptions['UCI_Chess960'] = true;
-  else if(game.category === 'crazyhouse')
-    engineOptions['UCI_Variant'] = game.category;
-
-  engineOptions['Skill Level'] = skillLevels[game.difficulty - 1];
+  const engineOptions = {
+    ...(game.category === 'wild/fr' && { UCI_Chess960: true }),
+    ...(game.category === 'crazyhouse' && { UCI_Variant: game.category }),
+    'Skill Level': skillLevels[game.difficulty - 1],
+  }
 
   return engineOptions;
 }
@@ -3327,10 +3325,10 @@ function playComputerBestMove(game: Game, bestMove: string, score = '=0.00') {
   const move = bestMove[1] === '@' // Crazyhouse/bughouse
     ? bestMove
     : {
-        from: bestMove.slice(0,2),
-        to: bestMove.slice(2,4),
-        promotion: (bestMove.length === 5 ? bestMove[4] : undefined)
-      };
+      from: bestMove.slice(0,2),
+      to: bestMove.slice(2,4),
+      promotion: (bestMove.length === 5 ? bestMove[4] : undefined)
+    };
 
   game.lastComputerMoveEval = score;
 
@@ -3499,7 +3497,7 @@ function checkGameEnd(game: Game) {
 
 /** PAIRING PANE FUNCTIONS **/
 
-$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-pairing"]', (e) => {
+$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-pairing"]', () => {
   initPairingPane();
 });
 
@@ -3580,14 +3578,14 @@ function getGame(min: number, sec: number) {
     $('#opponent-player-name').attr('placeholder', 'Anyone');
 };
 
-$('#puzzlebot').on('click', (event) => {
+$('#puzzlebot').on('click', () => {
   session.send('t puzzlebot getmate');
   showTab($('#pills-game-tab'));
 });
 
 /** LOBBY PANE FUNCTIONS **/
 
-$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-lobby"]', (e) => {
+$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-lobby"]', () => {
   initLobbyPane();
 });
 
@@ -3640,7 +3638,7 @@ function initLobbyPane() {
   }
 }
 
-$(document).on('hidden.bs.tab', 'button[data-bs-target="#pills-lobby"]', (e) => {
+$(document).on('hidden.bs.tab', 'button[data-bs-target="#pills-lobby"]', () => {
   leaveLobbyPane();
 });
 
@@ -3656,19 +3654,19 @@ function leaveLobbyPane() {
   }
 }
 
-$('#lobby-show-computers').on('change', function (e) {
+$('#lobby-show-computers').on('change', function () {
   settings.lobbyShowComputersToggle = $(this).is(':checked');
   storage.set('lobbyshowcomputers', String(settings.lobbyShowComputersToggle));
   initLobbyPane();
 });
 
-$('#lobby-show-unrated').on('change', function (e) {
+$('#lobby-show-unrated').on('change', function () {
   settings.lobbyShowUnratedToggle = $(this).is(':checked');
   storage.set('lobbyshowunrated', String(settings.lobbyShowUnratedToggle));
   initLobbyPane();
 });
 
-$('#lobby-table-container').on('scroll', (e) => {
+$('#lobby-table-container').on('scroll', () => {
   const container = $('#lobby-table-container')[0];
   lobbyScrolledToBottom = container.scrollHeight - container.clientHeight < container.scrollTop + 1.5;
 });
@@ -3686,11 +3684,11 @@ function formatLobbyEntry(seek: any): string {
   session.send(`play ${id}`);
 };
 
-/***************************
+/** ************************
  * OBSERVE PANEL FUNCTIONS *
  ***************************/
 
-$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-observe"]', (e) => {
+$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-observe"]', () => {
   initObservePane();
 });
 
@@ -3755,11 +3753,11 @@ function showGames(gamesStr: string) {
   }
 }
 
-/***************************
+/** ************************
  * HISTORY PANEL FUNCTIONS *
  ***************************/
 
-$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-history"]', (e) => {
+$(document).on('shown.bs.tab', 'button[data-bs-target="#pills-history"]', () => {
   initHistoryPane();
 });
 
@@ -3827,16 +3825,16 @@ function showHistory(user: string, history: string) {
   session.send(`ex ${user} ${id}`);
 };
 
-/************************
+/** *********************
  * GAME PANEL FUNCTIONS *
  ************************/
 
-$(document).on('show.bs.tab', 'button[data-bs-target="#pills-game"]', (e) => {
+$(document).on('show.bs.tab', 'button[data-bs-target="#pills-game"]', () => {
   if($('#game-list-view').is(':checked'))
     $('#left-panel').addClass('list-view-showing');
 });
 
-$(document).on('hide.bs.tab', 'button[data-bs-target="#pills-game"]', (e) => {
+$(document).on('hide.bs.tab', 'button[data-bs-target="#pills-game"]', () => {
   $('#left-panel').removeClass('list-view-showing');
 });
 
@@ -3863,7 +3861,7 @@ $('#movelists').on('click', '.comment', function() {
  * Create right-click and long press trigger events for displaying the context menu when right clicking a move
  * in the move list.
  */
-Utils.createContextMenuTrigger(function(event) {
+Utils.createContextMenuTrigger((event) => {
   const target = $(event.target);
   return !!(target.closest('.selectable').length || target.closest('.move').length
       || (target.closest('.comment').length && event.type === 'contextmenu'));
@@ -3874,17 +3872,17 @@ Utils.createContextMenuTrigger(function(event) {
  * comments / annotations, deleting the move (and all following moves in that variation), promoting the
  * variation etc.
  */
-function createMoveContextMenu(event: any) {
+function createMoveContextMenu(cmEvent: any) {
   const contextMenu = $('<ul class="context-menu dropdown-menu"></ul>');
   let moveElement: JQuery<HTMLElement>;
-  if($(event.target).closest('.comment-before').length)
-    moveElement = $(event.target).next();
-  else if($(event.target).closest('.comment-after').length)
-    moveElement = $(event.target).prev();
-  else if($(event.target).closest('.outer-move').length)
-    moveElement = $(event.target).closest('.outer-move');
+  if($(cmEvent.target).closest('.comment-before').length)
+    moveElement = $(cmEvent.target).next();
+  else if($(cmEvent.target).closest('.comment-after').length)
+    moveElement = $(cmEvent.target).prev();
+  else if($(cmEvent.target).closest('.outer-move').length)
+    moveElement = $(cmEvent.target).closest('.outer-move');
   else
-    moveElement = $(event.target).closest('.selectable');
+    moveElement = $(cmEvent.target).closest('.selectable');
 
   moveElement.find('.move').addClass('hovered'); // Show the :hovered style while menu is displayed
 
@@ -3981,11 +3979,11 @@ function createMoveContextMenu(event: any) {
     }
   };
 
-  const moveContextMenuClose = (event: any) => {
+  const moveContextMenuClose = () => {
     moveElement.find('.move').removeClass('hovered');
   }
 
-  const coords = Utils.getTouchClickCoordinates(event);
+  const coords = Utils.getTouchClickCoordinates(cmEvent);
   Utils.createContextMenu(contextMenu, coords.x, coords.y, moveContextMenuItemSelected, moveContextMenuClose);
 }
 
@@ -4011,7 +4009,7 @@ function deleteMove(game: Game, entry: HEntry) {
  * Removes all sub-variations, comments and annotations from the move-list / move-table
  */
 function clearAnalysisDialog(game: Game) {
-  (window as any).clearAnalysisClickHandler = (event) => {
+  (window as any).clearAnalysisClickHandler = () => {
     if(game) {
       // Delete all subvariations from the main line
       let hEntry = game.history.first();
@@ -4058,13 +4056,13 @@ function initGameTools(game: Game) {
 }
 
 /** Triggered when Table View button is toggled on/off */
-$('#game-table-view').on('change', function() {
+$('#game-table-view').on('change', () => {
   if($('#game-table-view').is(':checked'))
     setViewModeTable();
 });
 
 /** Triggered when List View button is toggled on/off */
-$('#game-list-view').on('change', function() {
+$('#game-list-view').on('change', () => {
   if($('#game-list-view').is(':checked'))
     setViewModeList();
 });
@@ -4073,7 +4071,7 @@ $('#game-list-view').on('change', function() {
  * Stops the Table View / List View radio buttons from stealing left-arrow key / right-arrow key
  * input from the move-list
  */
-$('#game-table-view, #game-list-view').on('keydown', function(event) {
+$('#game-table-view, #game-list-view').on('keydown', (event) => {
   if(event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
     event.preventDefault();
     $(document).trigger($.Event('keydown', {
@@ -4120,7 +4118,7 @@ function setMovelistViewMode() {
 }
 
 /** Triggered when Edit Mode toggle button is toggled on/off */
-$('#game-edit-mode').on('change', function (e) {
+$('#game-edit-mode').on('change', function() {
   updateEditMode(games.focused, $(this).is(':checked'));
 });
 
@@ -4137,7 +4135,7 @@ function updateEditMode(game: Game, editMode?: boolean) {
 }
 
 /** Triggered when Game Preserved toggle button is toggled on/off */
-$('#game-preserved').on('change', function (e) {
+$('#game-preserved').on('change', function() {
   updateGamePreserved(games.focused, $(this).is(':checked'));
 });
 
@@ -4166,7 +4164,7 @@ function updateGamePreserved(game: Game, preserved?: boolean) {
 }
 
 /** New Game menu item selected */
-$('#game-tools-new').on('click', (event) => {
+$('#game-tools-new').on('click', () => {
   newGameDialog(games.focused);
 });
 
@@ -4192,19 +4190,19 @@ function newGameDialog(game: Game, category = 'untimed') {
         <input type="number" min="0" max="959" placeholder="0-959" class="form-control text-center chess960idn"><br>`;
   }
 
-  const overwriteHandler = function(event) {
+  const overwriteHandler = function() {
     const chess960idn = category === 'wild/fr'
-        ? this.closest('.toast').querySelector('.chess960idn').value
-        : undefined;
+      ? this.closest('.toast').querySelector('.chess960idn').value
+      : undefined;
 
     if(games.includes(game))
       newGame(false, game, category, null, chess960idn);
   };
 
-  const newBoardHandler = function(event) {
+  const newBoardHandler = function() {
     const chess960idn = category === 'wild/fr'
-        ? this.closest('.toast').querySelector('.chess960idn').value
-        : undefined;
+      ? this.closest('.toast').querySelector('.chess960idn').value
+      : undefined;
     newGame(true, game, category, null, chess960idn);
   };
 
@@ -4286,7 +4284,7 @@ function newGame(createNewBoard: boolean, game?: Game, category = 'untimed', fen
 }
 
 /** Triggered when the 'Open Games' modal is shown */
-$('#open-games-modal').on('show.bs.modal', function() {
+$('#open-games-modal').on('show.bs.modal', () => {
   $('#add-games-input').val('');
 });
 
@@ -4295,13 +4293,13 @@ $('#open-games-modal').on('show.bs.modal', function() {
  * Displays an Open File(s) dialog. Then after user selects PGN file(s) to open, displays
  * a dialog asking if they want to overwrite current gmae or open new board.
  */
-$('#open-files').on('click', (event) => {
+$('#open-files').on('click', () => {
   // Create file selector dialog
   const fileInput = $('<input type="file" style="display: none" multiple/>');
   fileInput.appendTo('body');
   fileInput.trigger('click');
 
-  fileInput.one('change', async function(event) {
+  fileInput.one('change', async (event) => {
     $('#open-games-modal').modal('hide');
     fileInput.remove();
     const target = event.target as HTMLInputElement;
@@ -4310,7 +4308,7 @@ $('#open-files').on('click', (event) => {
   });
 });
 
-$('#add-games-button').on('click', (event) => {
+$('#add-games-button').on('click', () => {
   let inputStr = $('#add-games-input').val() as string;
   inputStr = inputStr.trim();
   if(inputStr) {
@@ -4326,12 +4324,12 @@ $('#add-games-button').on('click', (event) => {
  * @param fileStrings an array of strings representing each opened PGN file (or the Add Games textarea)
  */
 function openGamesOverwriteDialog(game: Game, fileStrings: string[]) {
-  const overwriteHandler = function(event) {
+  const overwriteHandler = () => {
     if(games.includes(game))
       parseGameFiles(game, fileStrings, false);
   };
 
-  const newBoardHandler = function(event) {
+  const newBoardHandler = () => {
     parseGameFiles(game, fileStrings, true);
   };
 
@@ -4373,14 +4371,14 @@ async function openGameFiles(files: any): Promise<string[]> {
 
   // Wait for all selected files to be read before displaying the first game
   for(const file of Array.from<File>(files)) {
-    const readFile = async function(): Promise<string> {
+    const readFile = async (): Promise<string> => {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = async function(e) {
+        reader.onload = async (e) => {
           const fileContent = e.target?.result as string;
           resolve(fileContent);
         };
-        reader.onerror = function(e) {
+        reader.onerror = (e) => {
           const error = e.target?.error;
           const errorMessage = error ? `${error.name} - ${error.message}` : 'An unknown error occurred';
           Dialogs.showFixedDialog({type: 'Failed to open game file', msg: errorMessage, btnSuccess: ['', 'OK']});
@@ -4631,7 +4629,7 @@ function updateGameFromMetatags(game: Game) {
  * Display the game list when game list dropdown button clicked. The game list button is displayed when
  * multiple games are opened from PGN(s) at once.
  */
-$('#game-list-button').on('show.bs.dropdown', function(event) {
+$('#game-list-button').on('show.bs.dropdown', () => {
   const game = games.focused;
   if(game.historyList.length > 1) {
     $('#game-list-filter').val(game.gameListFilter);
@@ -4723,7 +4721,7 @@ function getGameListDescription(history: History, longDescription = false) {
  * Clear the game list after it's closed, since it can take up a lot of memory, e.g. if it contains
  * 10000s of games. In future this should probably be displayed using a virtual scrolling library
  */
-$('#game-list-button').on('hidden.bs.dropdown', function(event) {
+$('#game-list-button').on('hidden.bs.dropdown', () => {
   $('#game-list-menu').html('');
 });
 
@@ -4733,7 +4731,7 @@ $('#game-list-dropdown').on('click', '.dropdown-item', (event) => {
   setCurrentHistory(games.focused, index);
 });
 
-$('#save-game-modal').on('show.bs.modal', function() {
+$('#save-game-modal').on('show.bs.modal', () => {
   const fenOutput = $('#save-fen-output');
   fenOutput.val('');
   fenOutput.val(games.focused.history.current().fen);
@@ -4776,7 +4774,7 @@ function gameToPGN(game: Game): string {
 }
 
 /** Triggered when 'Save PGN' menu option is selected */
-$('#save-pgn-button').on('click', (event) => {
+$('#save-pgn-button').on('click', () => {
   savePGN(games.focused, $('#save-pgn-output').val() as string);
 });
 
@@ -4823,7 +4821,7 @@ function savePGN(game: Game, pgn: string) {
 }
 
 /** Triggered when the 'Duplicate Game' menu option is selected */
-$('#game-tools-clone').on('click', (event) => {
+$('#game-tools-clone').on('click', () => {
   cloneGame(games.focused);
 });
 
@@ -4853,7 +4851,7 @@ function cloneGame(game: Game): Game {
 }
 
 /** Triggered when the 'Examine Mode (Shared)' menu option is selected */
-$('#game-tools-examine').on('click', (event) => {
+$('#game-tools-examine').on('click', () => {
   examineModeRequested = games.focused;
   const mainGame = games.getPlayingExaminingGame();
   if(mainGame && mainGame.isExamining())
@@ -4967,12 +4965,12 @@ function sendBlackCastlingRights(castlingRights: string) {
   session.send(`bsetup bcastle ${bcastling}`);
 }
 
-/******************************
+/** ***************************
  * SETUP BOARD MODE FUNCTIONS *
  ******************************/
 
 /** Triggered when 'Setup Board' menu option is selected */
-$('#game-tools-setup-board').on('click', (event) => {
+$('#game-tools-setup-board').on('click', () => {
   setupBoard(games.focused);
   scrollToBoard();
 });
@@ -5040,7 +5038,7 @@ function updateSetupBoard(game: Game, fen?: string, serverIssued = false) {
  * Triggered when the user clicks the 'Reset Board' button when in Setup Board mode.
  * Resets the board to the first move in the move list
  */
-$(document).on('click', '.reset-board', (event) => {
+$(document).on('click', '.reset-board', () => {
   const game = games.focused;
   let fen = game.history.first().fen;
   if(fen === '8/8/8/8/8/8/8/8 w - - 0 1') // No initial position because user sent 'bsetup' without first examining a game
@@ -5049,7 +5047,7 @@ $(document).on('click', '.reset-board', (event) => {
 });
 
 /** Triggered when the user clicks the 'Clear Board' button when in Setup Board mode. */
-$(document).on('click', '.clear-board', (event) => {
+$(document).on('click', '.clear-board', () => {
   updateSetupBoard(games.focused, '8/8/8/8/8/8/8/8 w - - 0 1');
 });
 
@@ -5114,7 +5112,7 @@ function dragSetupBoardPiece(event: any) {
 }
 
 /** Triggered when user clicks the 'Setup Done' button */
-$('#setup-done').on('click', (event) => {
+$('#setup-done').on('click', () => {
   setupDone(games.focused);
 });
 
@@ -5136,7 +5134,7 @@ function setupDone(game: Game) {
 }
 
 /** Triggered when user clicks the 'Cancel Setup' button */
-$('#cancel-setup').on('click', (event) => {
+$('#cancel-setup').on('click', () => {
   cancelSetup(games.focused);
 });
 
@@ -5194,8 +5192,8 @@ function getSetupBoardFEN(game: Game): string {
  * Displays the PGN metatags associated with the game which can then be modified.
  * The game state is updated to reflect the modified metatags.
  */
-$('#game-tools-properties').on('click', (event) => {
-  const okHandler = function(event) {
+$('#game-tools-properties').on('click', () => {
+  const okHandler = function() {
     const metatagsStr = this.closest('.toast').querySelector('.game-properties-input').value;
     try {
       const pgn = PgnParser.parse(metatagsStr, {startRule: 'tags'}) as PgnParser.ParseTree;
@@ -5221,7 +5219,7 @@ $('#game-tools-properties').on('click', (event) => {
  * Triggered when the 'Close Game' menu item is selected.
  * Closes the game.
  */
-$('#game-tools-close').on('click', (event) => {
+$('#game-tools-close').on('click', () => {
   const game = games.focused;
   if(game.preserved || game.history.editMode)
     closeGameDialog(game);
@@ -5229,7 +5227,7 @@ $('#game-tools-close').on('click', (event) => {
     closeGame(game);
 });
 
-/*************************************
+/** **********************************
  * STATUS / ANALYSIS PANEL FUNCTIONS *
  *************************************/
 
@@ -5389,7 +5387,7 @@ function initAnalysis(game: Game) {
   }
 }
 
-$('#start-engine').on('click', (event) => {
+$('#start-engine').on('click', () => {
   if(!engine)
     startEngine();
   else
@@ -5406,15 +5404,11 @@ function startEngine() {
     for(let i = 0; i < numPVs; i++)
       $('#engine-pvs').append('<li>&nbsp;</li>');
 
-    const options = {};
-    if(numPVs > 1)
-      options['MultiPV'] = numPVs;
-
-    // Configure for variants
-    if(game.category === 'wild/fr')
-      options['UCI_Chess960'] = true;
-    else if(game.category === 'crazyhouse')
-      options['UCI_Variant'] = game.category;
+    const options = {
+      ...(numPVs > 1 && { MultiPV: numPVs }),
+      ...(game.category === 'wild/fr' && { UCI_Chess960: true }),
+      ...(game.category === 'crazyhouse' && { UCI_Variant: game.category }),
+    };
 
     engine = new Engine(game, null, displayEnginePV, options);
     if(game.setupBoard)
@@ -5443,7 +5437,7 @@ function updateEngine() {
     evalEngine.evaluate();
 }
 
-$('#add-pv').on('click', (event) => {
+$('#add-pv').on('click', () => {
   numPVs++;
   $('#engine-pvs').css('white-space', (numPVs === 1 ? 'normal' : 'nowrap'));
   $('#engine-pvs').append('<li>&nbsp;</li>');
@@ -5453,7 +5447,7 @@ $('#add-pv').on('click', (event) => {
   }
 });
 
-$('#remove-pv').on('click', (event) => {
+$('#remove-pv').on('click', () => {
   if(numPVs === 1)
     return;
 
@@ -5482,26 +5476,24 @@ function displayEnginePV(game: Game, pvNum: number, pvEval: string, pvMoves: str
 function createEvalEngine(game: Game) {
   if(game.category && Engine.categorySupported(game.category)) {
     // Configure for variants
-    const options = {};
-    if(game.category === 'wild/fr')
-      options['UCI_Chess960'] = true;
-    else if(game.category === 'crazyhouse')
-      options['UCI_Variant'] = game.category;
-
+    const options = {
+      ...(game.category === 'wild/fr' && { UCI_Chess960: true }),
+      ...(game.category === 'crazyhouse' && { UCI_Variant: game.category }),
+    };
     evalEngine = new EvalEngine(game, options);
   }
 }
 
 /** STATUS PANEL SHOW/HIDE BUTTON **/
 
-$('#show-status-panel').on('click', (event) => {
+$('#show-status-panel').on('click', () => {
   if($('#show-status-panel').text() === 'Analyze')
     showAnalysis();
   showStatusPanel();
   scrollToLeftPanelBottom();
 });
 
-$('#close-status').on('click', (event) => {
+$('#close-status').on('click', () => {
   hideStatusPanel();
 });
 
@@ -5517,11 +5509,11 @@ function showAnalyzeButton() {
     $('#show-status-panel').hide();
 }
 
-/*******************************
+/** ****************************
  * PLAYING-GAME ACTION BUTTONS *
  *******************************/
 
-$('#resign').on('click', (event) => {
+$('#resign').on('click', () => {
   const game = games.focused;
   if(!game.isPlaying()) {
     showStatusMsg(game, 'You are not playing a game.');
@@ -5548,11 +5540,11 @@ $('#resign').on('click', (event) => {
     session.send('resign');
 });
 
-$('#adjourn').on('click', (event) => {
+$('#adjourn').on('click', () => {
   session.send('adjourn');
 });
 
-$('#abort').on('click', (event) => {
+$('#abort').on('click', () => {
   const game = games.focused;
   if(!game.isPlaying()) {
     showStatusMsg(game, 'You are not playing a game.');
@@ -5576,7 +5568,7 @@ $('#abort').on('click', (event) => {
     session.send('abort');
 });
 
-$('#takeback').on('click', (event) => {
+$('#takeback').on('click', () => {
   const game = games.focused;
   if(game.isPlaying()) {
     if(game.history.last().turnColor === game.color)
@@ -5588,7 +5580,7 @@ $('#takeback').on('click', (event) => {
   }
 });
 
-$('#draw').on('click', (event) => {
+$('#draw').on('click', () => {
   const game = games.focused;
   if(game.isPlaying()) {
     if(game.role === Role.PLAYING_COMPUTER) {
@@ -5621,7 +5613,7 @@ $('#draw').on('click', (event) => {
   }
 });
 
-/*************************
+/** **********************
  * RIGHT PANEL FUNCTIONS *
  *************************/
 
@@ -5650,15 +5642,15 @@ $('#login-form').on('submit', (event) => {
   return false;
 });
 
-$('#sign-in').on('click', (event) => {
+$('#sign-in').on('click', () => {
   $('#login-screen').modal('show');
 });
 
-$('#connect-user').on('click', (event) => {
+$('#connect-user').on('click', () => {
   $('#login-screen').modal('show');
 });
 
-$('#login-screen').on('show.bs.modal', async (e) => {
+$('#login-screen').on('show.bs.modal', async () => {
   if(credential.username)
     $('#login-user').val(credential.username);
   if(credential.password)
@@ -5668,7 +5660,7 @@ $('#login-screen').on('show.bs.modal', async (e) => {
   $('#login-user').removeClass('is-invalid');
 });
 
-$('#login-screen').on('hidden.bs.modal', async (e) => {
+$('#login-screen').on('hidden.bs.modal', async () => {
   $('#login-pass').val(''); // clear the password field when form not visible
 });
 
@@ -5694,13 +5686,13 @@ $('#login-pass').on('change', () => {
   }
 });
 
-$('#connect-guest').on('click', (event) => {
+$('#connect-guest').on('click', () => {
   if(session)
     session.disconnect();
   session = new Session(messageHandler);
 });
 
-$('#login-as-guest').on('click', (event) => {
+$('#login-as-guest').on('click', () => {
   if ($('#login-as-guest').is(':checked')) {
     $('#login-user').val('guest');
     $('#login-user').prop('disabled', true);
@@ -5714,12 +5706,12 @@ $('#login-as-guest').on('click', (event) => {
   }
 });
 
-$('#disconnect').on('click', (event) => {
+$('#disconnect').on('click', () => {
   if (session)
     session.disconnect();
 });
 
-/**********************
+/** *******************
  * SETTINGS FUNCTIONS *
  **********************/
 
@@ -5755,11 +5747,11 @@ function initSettings() {
   History.initSettings();
 }
 
-$('#flip-toggle').on('click', (event) => {
+$('#flip-toggle').on('click', () => {
   flipBoard(games.focused);
 });
 
-$('#sound-toggle').on('click', (event) => {
+$('#sound-toggle').on('click', () => {
   settings.soundToggle = !settings.soundToggle;
   updateDropdownSound();
   storage.set('sound', String(settings.soundToggle));
@@ -5770,23 +5762,23 @@ function updateDropdownSound() {
       + `Sounds ${settings.soundToggle ? 'ON' : 'OFF'}`);
 }
 
-$('#notifications-toggle').on('click', (event) => {
+$('#notifications-toggle').on('click', () => {
   settings.notificationsToggle = !settings.notificationsToggle;
   storage.set('notifications', String(settings.notificationsToggle));
 });
 
-$('#autopromote-toggle').on('click', (event) => {
+$('#autopromote-toggle').on('click', () => {
   settings.autoPromoteToggle = !settings.autoPromoteToggle;
   storage.set('autopromote', String(settings.autoPromoteToggle));
 });
 
-$('#highlights-toggle').on('click', (event) => {
+$('#highlights-toggle').on('click', () => {
   settings.highlightsToggle = !settings.highlightsToggle;
   updateBoard(games.focused, false, false);
   storage.set('highlights', String(settings.highlightsToggle));
 });
 
-$('#wakelock-toggle').on('click', (event) => {
+$('#wakelock-toggle').on('click', () => {
   settings.wakelockToggle = !settings.wakelockToggle;
   if(settings.wakelockToggle)
     noSleep.enable();
@@ -5795,7 +5787,7 @@ $('#wakelock-toggle').on('click', (event) => {
   storage.set('wakelock', String(settings.wakelockToggle));
 });
 
-$('#multiboard-toggle').on('click', (event) => {
+$('#multiboard-toggle').on('click', () => {
   settings.multiboardToggle = !settings.multiboardToggle;
   if(!settings.multiboardToggle) {
     // close all games except one
@@ -5813,7 +5805,7 @@ $('#multiboard-toggle').on('click', (event) => {
   storage.set('multiboard', String(settings.multiboardToggle));
 });
 
-/********************************
+/** *****************************
  * CONSOLE/CHAT INPUT FUNCTIONS *
  ********************************/
 
@@ -5894,18 +5886,18 @@ $('#input-form').on('submit', (event) => {
   updateInputText();
 });
 
-$('#input-text').on('input', function() {
+$('#input-text').on('input', () => {
   updateInputText();
 });
 
-$('#input-text').on('keydown', function(event) {
+$('#input-text').on('keydown', (event) => {
   if(event.key === 'Enter') {
     event.preventDefault();
     $('#input-form').trigger('submit');
   }
 });
 
-$(document).on('shown.bs.tab', '#tabs button[data-bs-toggle="tab"]', (e) => {
+$(document).on('shown.bs.tab', '#tabs button[data-bs-toggle="tab"]', () => {
   updateInputText();
 });
 

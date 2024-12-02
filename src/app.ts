@@ -147,7 +147,7 @@ function addUpdateMenuItems(items, position) {
     },
   }];
 
-  items.splice.apply(items, [position, 0].concat(updateItems));
+  items.splice(position, 0, ...updateItems);
 }
 
 if (process.platform === 'darwin') {

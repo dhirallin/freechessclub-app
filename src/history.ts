@@ -75,6 +75,7 @@ export class HEntry {
   }
 
   public get first(): HEntry {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let e: HEntry | null = this;
     while(e._prev)
       e = e._prev;
@@ -83,6 +84,7 @@ export class HEntry {
   }
 
   public get last(): HEntry {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let e: HEntry | null = this;
     while(e._next)
       e = e._next;
@@ -153,6 +155,7 @@ export class HEntry {
   }
 
   public depth(): number {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let p: HEntry | null = this;
     let depth = 0;
     while(p.parent) {
@@ -172,6 +175,7 @@ export class HEntry {
   }
 
   public isPredecessor(entry: HEntry): boolean {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let c: HEntry = this;
     while(c) {
       if(entry === c)
@@ -447,8 +451,8 @@ export class History {
 
       clonedHistory.addMoveElements(cloned);
 
-      for(let i = 0; i < orig.subvariations.length; i++) {
-        const subVar = this.cloneVariation(orig.subvariations[i], clonedHistory, cloned);
+      for(const oSub of orig.subvariations) {
+        const subVar = this.cloneVariation(oSub, clonedHistory, cloned);
         cloned.addSubvariation(subVar);
       }
 
@@ -1068,7 +1072,7 @@ export class History {
     settings.pieceGlyphsToggle = (storage.get('pieceglyphs') !== 'false');
     $('#piece-glyphs-toggle').prop('checked', settings.pieceGlyphsToggle);
 
-    $('#piece-glyphs-toggle').on('click', (event) => {
+    $('#piece-glyphs-toggle').on('click', () => {
       settings.pieceGlyphsToggle = !settings.pieceGlyphsToggle;
       storage.set('pieceglyphs', String(settings.pieceGlyphsToggle));
 
@@ -1110,7 +1114,7 @@ export class History {
     return false;
   }
 
-  /************************
+  /** *********************
    * Annotation Functions *
    ************************/
 
@@ -1302,7 +1306,7 @@ export class History {
     this.traverse(null, (entry) => this.removeAnnotation(entry));
   }
 
-  /*************************
+  /** **********************
    * PGN Metatag Functions *
    *************************/
 
@@ -1401,10 +1405,8 @@ export class History {
 
     if(overwrite)
       this.metatags = tags;
-    else {
-      for(const key in tags)
-        this.metatags[key] = tags[key];
-    }
+    else
+      Object.entries(tags).forEach(([key, value]) => this.metatags[key] = value);
   }
 
   /**
@@ -1435,8 +1437,7 @@ export class History {
   public metatagsToString(): string {
     let tagsString = '';
     const tags = this.metatags;
-    for(const key in tags)
-      tagsString += `[${key} "${tags[key]}"]\n`;
+    Object.entries(tags).forEach(([key, value]) => tagsString += `[${key} "${value}"]\n`);
     tagsString = tagsString.slice(0, -1);
 
     return tagsString;
@@ -1461,17 +1462,17 @@ export class History {
 }
 
 /** Triggered when the user clicks on a comment in the move-list to edit it in-place. */
-$(document).on('focus', '.comment', function(event) {
-  if(!$(event.target).text().length) {
+$(document).on('focus', '.comment', (focEvent) => {
+  if(!$(focEvent.target).text().length) {
     // Adds an invisible character to an empty comment in order to make the cursor appear even
     // when the comment is empty.
-    $(event.target).text('\u200B');
+    $(focEvent.target).text('\u200B');
     // Display the placeholder text.
-    $(event.target).attr('data-before-content', $(event.target).attr('placeholder'));
+    $(focEvent.target).attr('data-before-content', $(focEvent.target).attr('placeholder'));
   }
 
   // Set the move's comment string after the user presses enter or clicks away from the comment element.
-  $(event.target).one('blur', function(event) {
+  $(focEvent.target).one('blur', (event) => {
     const elem = $(event.target);
     const hEntry = elem.hasClass('comment-before') ? elem.next().data('hEntry') : elem.prev().data('hEntry');
     const commentBefore = elem.hasClass('comment-before') ? true : false;
@@ -1492,7 +1493,7 @@ $(document).on('focus', '.comment', function(event) {
       window.getSelection().removeAllRanges();
   });
 
-  $(event.target).on('keydown', function(event) {
+  $(focEvent.target).on('keydown', (event) => {
     if(event.key === 'Enter') {
       event.preventDefault();
       $(event.target).trigger('blur');
@@ -1503,7 +1504,7 @@ $(document).on('focus', '.comment', function(event) {
    * Remove html tags and formatting from text pasted into the comment element. Remove
    * the zero-wdith space (placeholder) character if text was pasted into an empty element.
    */
-  $(event.target).on('paste', function(event) {
+  $(focEvent.target).on('paste', (event) => {
     event.preventDefault();
 
     // Insert the clipboard text into the element as plain text
@@ -1526,7 +1527,7 @@ $(document).on('focus', '.comment', function(event) {
    * Remove the zero-width space (placeholder) character when text is entered.
    * Adds it back when all text is deleted.
    */
-  $(event.target).on('input', function(event) {
+  $(focEvent.target).on('input', (event) => {
     const elem = $(event.target);
 
     if(!elem.text().length) {

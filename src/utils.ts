@@ -13,13 +13,13 @@ export const enum SizeCategory {
 // Used by createContextMenu()
 let touchStarted = false; // Keeps track of whether a touch is in progress
 // Keeps track of whether a touch is currently in progress. Used by createContextMenu.
-document.addEventListener('touchstart', (event) => {
+document.addEventListener('touchstart', () => {
   touchStarted = true;
 }, {capture: true, passive: true});
-document.addEventListener('touchend', (event) => {
+document.addEventListener('touchend', () => {
   touchStarted = false;
 }, {capture: true});
-document.addEventListener('touchcancel', (event) => {
+document.addEventListener('touchcancel', () => {
   touchStarted = false;
 }, {capture: true});
 
@@ -27,7 +27,7 @@ document.addEventListener('touchcancel', (event) => {
 
 export function createTooltips() {
   setTimeout(() => { // Split this off since it's quite slow.
-    $('[data-bs-toggle="tooltip"]').each(function(index, element) {
+    $('[data-bs-toggle="tooltip"]').each((index, element) => {
       createTooltip($(element));
     });
   }, 0);
@@ -81,7 +81,7 @@ export function removeWithTooltips(element: JQuery<HTMLElement>) {
  * Initialize the event listeners used to create and destroy dropdown submenus
  */
 export function initDropdownSubmenus() {
-  const toggleSubmenu = function(e) {
+  const toggleSubmenu = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -110,7 +110,7 @@ export function initDropdownSubmenus() {
         }
       });
 
-      container.on('mouseleave.closeSubmenu', function(e) {
+      container.on('mouseleave.closeSubmenu', function() {
         setTimeout(() => {
           if(!container.is(':hover')) {
             dropdown.hide();
@@ -178,8 +178,8 @@ export function getValue(elt: string): string {
  * Selects all text in an input element when it gains focus
  */
 export function selectOnFocus(input: any) {
-  $(input).on('focus', function (e) {
-    $(this).one('mouseup', function (e) {
+  $(input).on('focus', function() {
+    $(this).one('mouseup', function() {
       setTimeout(() => { $(this).trigger('select'); }, 0);
     }).trigger('select');
   });
@@ -244,7 +244,7 @@ export function lockOverflow() {
   if($('body')[0].scrollHeight <= $('body')[0].clientHeight) {
     $('body').css('overflow-y', 'hidden');
     $('html').css('overflow-y', 'hidden');
-    $(document).one('mouseup touchend touchcancel', (e) => {
+    $(document).one('mouseup touchend touchcancel', () => {
       $('body').css('overflow-y', '');
       $('html').css('overflow-y', '');
     });
@@ -264,7 +264,7 @@ export function createContextMenuTrigger(isTriggered: (event: any) => boolean, t
    * events the user has to touch exactly on the element, but for 'touchstart' the browsers are more tolerant
    * and allow the user to press _near_ the element. The browser guesses which element you are trying to press.
    */
-  $(document).on('contextmenu', function(event) {
+  $(document).on('contextmenu', (event) => {
     if(!isTriggered(event))
       return;
 
@@ -281,26 +281,26 @@ export function createContextMenuTrigger(isTriggered: (event: any) => boolean, t
    * We use 'touchstart' instead of 'contextmenu' because it still triggers even if the user
    * slightly misses the element with their finger.
    */
-  document.addEventListener('touchstart', function(event) {
-    if(!isTriggered(event))
+  document.addEventListener('touchstart', (tsEvent) => {
+    if(!isTriggered(tsEvent))
       return;
 
     const longPressTimeout = setTimeout(() => {
       $(document).off('touchend.longPress touchcancel.longPress touchmove.longPress wheel.longPress');
-      triggerHandler(event);
+      triggerHandler(tsEvent);
     }, 500);
 
     // Don't show the context menu if the user starts scrolling during the long press.
     // iOS is very sensitive to inadvertant finger movements, so we don't acknowledge a touchmove unless
     // the movement is greater than 15px.
-    const startCoords = getTouchClickCoordinates(event);
-    $(document).on('touchmove.longPress', function(event) {
+    const startCoords = getTouchClickCoordinates(tsEvent);
+    $(document).on('touchmove.longPress', (event) => {
       const coords = getTouchClickCoordinates(event);
       if(Math.abs(coords.x - startCoords.x) > 15 || Math.abs(coords.y - startCoords.y) > 15)
         clearTimeout(longPressTimeout);
     });
 
-    $(document).one('touchend.longPress touchcancel.longPress wheel.longPress', function(event) {
+    $(document).one('touchend.longPress touchcancel.longPress wheel.longPress', () => {
       clearTimeout(longPressTimeout);
       $(document).off('touchmove.longPress');
     });
@@ -358,7 +358,7 @@ export function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: numbe
   });
 
   /** Triggered when menu item is selected */
-  menu.find('.dropdown-item').on('click contextmenu', function(event) {
+  menu.find('.dropdown-item').on('click contextmenu', (event) => {
     // Allow native context menu to be displayed when right clicking with modifier key
     if(event.type === 'contextmenu' && ((event.button === 2 && event.ctrlKey)
         || event.shiftKey || event.altKey || event.metaKey))
@@ -375,7 +375,7 @@ export function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: numbe
 
   // Handle event listeners for the user to close the context menu, either by pressing escape,
   // or clicking outside it, or scrolling the mouse wheel.
-  const closeMenuEventHandler = function(event) {
+  const closeMenuEventHandler = (event) => {
     if(event.type === 'touchstart') // Allow simulated mousedown events again (these were blocked by the touchend handler)
       $(document).off('touchend.closeMenu');
     if(event.type === 'mousedown' && touchStarted) // If a touch is in progress then ignore simulated mousedown events
@@ -392,7 +392,7 @@ export function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: numbe
     }
   }
 
-  $(document).on('touchmove.closeMenu', function(event) {
+  $(document).on('touchmove.closeMenu', (event) => {
     // We close the context menu when the user scrolls. However browsers on iOS have very sensitive
     // touchmove events. So we define a movement threshold of 15px before acknowledging a touchmove.
     const coords = getTouchClickCoordinates(event);
@@ -404,7 +404,7 @@ export function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: numbe
   // However we also use 'mousedown' to detect when the user closes the context menu by clicking outside it.
   // Therefore we need to prevent simulated mousedown events directly after menu creation so that it doesn't
   // close the menu right after opening it.
-  $(document).one('touchend.closeMenu', function(event) {
+  $(document).one('touchend.closeMenu', (event) => {
     $(document).off('touchmove.closeMenu'); // No longer need to check for scrolling
     event.preventDefault(); // Stops 'mousedown' event being triggered
   });
@@ -441,6 +441,14 @@ export function getTouchClickCoordinates(event: any, relativeToPage = false) {
     y = relativeToPage ? event.pageY : event.clientY;
   }
   return {x, y};
+}
+
+/**
+ * Logs an error to console without lint complaining
+ */
+export function logError(...args) {
+  // eslint-disable-next-line no-console
+  console.error(...args);
 }
 
 /**
@@ -496,7 +504,7 @@ export function splitText(text: string, maxLength: number): string[] {
  * Returns a string with non-ASCII unicode characters converted to HTML entities
  */
 export function unicodeToHTMLEncoding(text) {
-  return text.replace(/[\u0080-\uffff]/g, function(match) {
+  return text.replace(/[\u0080-\uffff]/g, (match) => {
     return `&#${match.charCodeAt(0)};`;
   });
 }

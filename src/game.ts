@@ -140,7 +140,7 @@ export class GameList {
     const items = this.gamelist;
 
     return {
-      next(): IteratorResult<Game> {
+      next: (): IteratorResult<Game> => {
         if (index < items.length)
           return { value: items[index++], done: false };
         else

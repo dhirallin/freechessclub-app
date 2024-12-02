@@ -8,7 +8,7 @@ import { games } from './game';
 
 let dialogCounter = 0;
 
-/**************************************
+/** ***********************************
  * DIALOGS AND NOTIFICATONS FUNCTIONS *
  **************************************/
 
@@ -136,7 +136,7 @@ export function createNotification(params: DialogParams): any {
   const dialog = createDialog(params);
   dialog.insertBefore($('#notifications-footer'));
   dialog.find('[data-bs-dismiss="toast"]').removeAttr('data-bs-dismiss');
-  dialog.on('click', 'button', (event) => {
+  dialog.on('click', 'button', () => {
     removeNotification(dialog);
   });
   dialog.addClass('notification');
@@ -258,19 +258,19 @@ export function clearNotifications() {
   });
 }
 
-$('#notifications-header .btn-close').on('click', (event) => {
+$('#notifications-header .btn-close').on('click', () => {
   hideAllNotifications();
 });
 
-$('#notifications-show-all').on('click', (event) => {
+$('#notifications-show-all').on('click', () => {
   showAllNotifications();
 });
 
-$('#notifications-clear-all').on('click', (event) => {
+$('#notifications-clear-all').on('click', () => {
   clearNotifications();
 });
 
-$('#notifications-btn').on('click', function(event) {
+$('#notifications-btn').on('click', function() {
   if($(this).hasClass('active'))
     showAllNotifications();
   else
@@ -295,9 +295,9 @@ function slideNotification(element: any, direction: 'down' | 'up' | 'left' | 'ri
       $(event.target).css('margin-top', '');
       $(event.target).css('z-index', '');
       $(event.target).css('opacity', '');
-      $(event.target).one('transitionend', (event) => {
-        $(event.target).removeClass('slide-down');
-        $(event.target).height($(event.target).height()); // Fixes a layout glitch from the transition
+      $(event.target).one('transitionend', (teEvent) => {
+        $(teEvent.target).removeClass('slide-down');
+        $(teEvent.target).height($(teEvent.target).height()); // Fixes a layout glitch from the transition
       });
     });
   }
@@ -363,12 +363,12 @@ function resetSlide(element: any) {
 
 $('#notifications')[0].addEventListener('mousedown', notificationMouseDown);
 $('#notifications')[0].addEventListener('touchstart', notificationMouseDown, {passive: false});
-function notificationMouseDown(e) {
-  if(!$(e.target).is('div'))
+function notificationMouseDown(mdEvent) {
+  if(!$(mdEvent.target).is('div'))
     return;
 
   if($(':focus').length > 0)
-      $(':focus').trigger('blur');
+    $(':focus').trigger('blur');
 
   if(window.getSelection)
     window.getSelection().removeAllRanges();
@@ -378,7 +378,7 @@ function notificationMouseDown(e) {
   $('#notifications').css('--opacityY', 1);
   $('#notifications').css('--opacityX', 1);
 
-  const dialog = $(e.target).closest('.toast');
+  const dialog = $(mdEvent.target).closest('.toast');
   dialog.css('transition', 'none');
 
   // Prevent mouse pointer events on webpage while dragging panel
@@ -393,10 +393,10 @@ function notificationMouseDown(e) {
     }
   }).appendTo('body');
 
-  let swipeStart = getTouchClickCoordinates(e);
+  let swipeStart = getTouchClickCoordinates(mdEvent);
   let swipeLocked = '';
-  const mouseMoveHandler = (e) => {
-    var mouse = getTouchClickCoordinates(e);
+  const mouseMoveHandler = (event) => {
+    const mouse = getTouchClickCoordinates(event);
     if(swipeLocked) {
       const xMax = $('#notifications').outerWidth(true);
       const yMax = $('#notifications').outerHeight(true);
@@ -426,12 +426,12 @@ function notificationMouseDown(e) {
   };
   $(document).on('mousemove touchmove', mouseMoveHandler);
 
-  $(document).one('mouseup touchend touchcancel', (e) => {
-    const mouse = getTouchClickCoordinates(e);
+  $(document).one('mouseup touchend touchcancel', (event) => {
+    const mouse = getTouchClickCoordinates(event);
     $('#mouse-capture-layer').remove();
     $(document).off('mousemove touchmove', mouseMoveHandler);
     if(swipeLocked === 'vertical') {
-      if(swipeStart.y - mouse.y > 30 && e.type !== 'touchcancel')
+      if(swipeStart.y - mouse.y > 30 && event.type !== 'touchcancel')
         hideAllNotifications();
       else {
         $('#notifications').css('transform', '');
@@ -439,7 +439,7 @@ function notificationMouseDown(e) {
       }
     }
     else if(swipeLocked === 'horizontal') {
-      if(Math.abs(mouse.x - swipeStart.x) > 50 && e.type !== 'touchcancel')
+      if(Math.abs(mouse.x - swipeStart.x) > 50 && event.type !== 'touchcancel')
         removeNotification(dialog);
       else {
         dialog.css('transform', '');
@@ -451,5 +451,5 @@ function notificationMouseDown(e) {
     dialog.css('transition', '');
   });
 
-  e.preventDefault();
+  mdEvent.preventDefault();
 }

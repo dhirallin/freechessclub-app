@@ -139,10 +139,9 @@ module.exports = {
         "indent": "off",
         "jsdoc/check-alignment": "error",
         "jsdoc/check-indentation": "error",
-        "jsdoc/newline-after-description": "error",
         "max-classes-per-file": [
             "error",
-            1
+            Infinity
         ],
         "new-parens": "error",
         "no-bitwise": "off",
@@ -171,7 +170,10 @@ module.exports = {
             "error",
             "never"
         ],
-        "prefer-arrow/prefer-arrow-functions": "error",
+        "prefer-arrow/prefer-arrow-functions": [ 
+            "error",
+            { "allowStandaloneDeclarations": true }
+        ],
         "prefer-const": "error",
         "quotes": "off",
         "radix": "error",

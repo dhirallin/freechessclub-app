@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 import Cookies from 'js-cookie';
+import { logError } from './utils';
 
 /**
  * Cross-platform secure, persistent credential (password) storage.
@@ -53,7 +54,7 @@ export class CredentialStorage {
           try {
             password = await (window as any).electron.decrypt(encryptedPassword);
           } catch (error) {
-            console.error('Error decrypting password:', error.name, error.message);
+            logError('Error decrypting password:', error.name, error.message);
           }
         }
       }
@@ -66,23 +67,22 @@ export class CredentialStorage {
             secureStorageMethod = true;
           }
           catch(error) {
-            console.error('Error retrieving stored password:', error.name, error.message);
+            logError('Error retrieving stored password:', error.name, error.message);
           }
         }
       }
       else if('PasswordCredential' in window && storage.get('password-credential-api') === 'true') {
         try {
-          // Note mediation: 'silent' stops the browser from prompting the user to enter their
           // login/password when they aren't stored already
-          const credential = await navigator.credentials.get({ password: true } as CredentialRequestOptions);
+          const credential = await navigator.credentials.get({ password: true } as CredentialRequestOptions) as any;
           if(credential instanceof (window as any).PasswordCredential) {
-            username = credential['id'];
-            password = credential['password'];
+            username = credential.id;
+            password = credential.password;
           }
           secureStorageMethod = true;
         }
         catch (error) {
-          console.error('Error retrieving stored password:', error.name, error.message);
+          logError('Error retrieving stored password:', error.name, error.message);
         }
       }
       else if(isFirefox())
@@ -135,7 +135,7 @@ export class CredentialStorage {
         return;
       }
       catch (error) {
-        console.error('Error encrypting password:', error.name, error.message);
+        logError('Error encrypting password:', error.name, error.message);
       }
     }
     else if(isCapacitor()) {
@@ -144,7 +144,7 @@ export class CredentialStorage {
         return;
       }
       catch (error) {
-        console.error('Error storing password:', error.name, error.message);
+        logError('Error storing password:', error.name, error.message);
       }
     }
     else if('PasswordCredential' in window) {
@@ -156,7 +156,7 @@ export class CredentialStorage {
           return;
         }
         catch (error) {
-          console.error('Error storing password:', error.name, error.message);
+          logError('Error storing password:', error.name, error.message);
         }
       }
     }
@@ -184,7 +184,7 @@ export class CredentialStorage {
     if(isCapacitor()) {
       try { await (window as any).Capacitor.Plugins.SecureStoragePlugin.remove({ key: 'password' }); }
       catch (error) {
-        console.error('Error clearing password:', error.name, error.message);
+        logError('Error clearing password:', error.name, error.message);
       }
     }
   }
@@ -212,7 +212,7 @@ export class Storage {
           this.cache[key] = value;
         }
         catch(error) {
-          console.error('Error getting Capacitor Preference:', error.name, error.message);
+          logError('Error getting Capacitor Preference:', error.name, error.message);
           break;
         }
       }
@@ -239,7 +239,7 @@ export class Storage {
         return;
       }
       catch(error) {
-        console.error('Error setting Capacitor Preference:', error.name, error.message);
+        logError('Error setting Capacitor Preference:', error.name, error.message);
       }
     }
     localStorage.setItem(name, value);
@@ -271,7 +271,7 @@ export class Storage {
         await (window as any).Capacitor.Plugins.Preferences.remove({ key: name });
       }
       catch(error) {
-        console.error('Error removing Capacitor Preference:', error.name, error.message);
+        logError('Error removing Capacitor Preference:', error.name, error.message);
       }
     }
     Cookies.remove(name);

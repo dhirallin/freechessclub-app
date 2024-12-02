@@ -113,18 +113,18 @@ export function fiftyMoves(fen: string): boolean {
  * @returns true if insufficient material to mate, otherwise false
  */
 export function insufficientMaterial(fen: string, variantData?: VariantData, color?: string): boolean {
-  let whiteValue = 0;
-  let blackValue = 0;
+  let whiteWeight = 0;
+  let blackWeight = 0;
 
   if(variantData && variantData.holdings) {
     const holdings = variantData.holdings;
-    for(const key in holdings) {
-      const value = (key.toLowerCase() === 'n' || key.toLowerCase() === 'b') ? 0.5 * holdings[key] : holdings[key];
+    Object.entries(holdings).forEach(([key, value]) => {
+      const weight = (key.toLowerCase() === 'n' || key.toLowerCase() === 'b') ? 0.5 * value : value;
       if(key === key.toUpperCase())
-        whiteValue += value;
+        whiteWeight += weight;
       else
-        blackValue += value;
-    }
+        blackWeight += weight;
+    });
   }
 
   const material = {
@@ -147,16 +147,16 @@ export function insufficientMaterial(fen: string, variantData?: VariantData, col
     }
   }
 
-  for(const key in material) {
+  Object.entries(material).forEach(([key, value]) => {
     const lowKey = key.toLowerCase();
-    const value = (lowKey === 'n' || lowKey === 'bw' || lowKey === 'bb') ? 0.5 * material[key] : material[key];
+    const weight = (lowKey === 'n' || lowKey === 'bw' || lowKey === 'bb') ? 0.5 * value : value;
     if(key[0] === key[0].toUpperCase())
-      whiteValue += value;
+      whiteWeight += weight;
     else
-      blackValue += value;
-  }
+      blackWeight += weight;
+  });
 
-  return (color === 'w' && whiteValue < 3) || (color === 'b' && blackValue < 3) || (!color && whiteValue < 3 && blackValue < 3);
+  return (color === 'w' && whiteWeight < 3) || (color === 'b' && blackWeight < 3) || (!color && whiteWeight < 3 && blackWeight < 3);
 }
 
 export function parseMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>) {
@@ -250,7 +250,6 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     const board = afterPre.board;
     const color = afterPre.color;
     const castlingRights = afterPre.castlingRights;
-    const enPassant = afterPre.enPassant;
     const plyClock = afterPre.plyClock;
     const moveNo = afterPre.moveNo;
 
@@ -902,7 +901,7 @@ export function isAttacked(fen: string, square: string, color: string) : boolean
   const chess = new Chess(fen);
 
   // Find king and replace it with a placeholder pawn
-  for(const s in Chess.SQUARES) {
+  for(const s of Object.keys(Chess.SQUARES)) {
     const piece = chess.get(s);
     if(piece && piece.type === 'k' && piece.color === color) {
       chess.remove(s);

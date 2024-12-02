@@ -104,10 +104,10 @@ export class Engine {
             const moveParam = move[1] === '@'
               ? move
               : {
-                  from: move.slice(0, 2),
-                  to: move.slice(2, 4),
-                  promotion: (move.length === 5 ? move.charAt(4) : undefined)
-                };
+                from: move.slice(0, 2),
+                to: move.slice(2, 4),
+                promotion: (move.length === 5 ? move.charAt(4) : undefined)
+              };
 
             const parsedMove = parseMove(currFen, moveParam, game.history.first().fen, game.category, game.history.holdings);
             if(!parsedMove) {
@@ -149,12 +149,12 @@ export class Engine {
     this.uci('uci');
 
     // Parse options
-    for(const opt in options) {
-      if(opt === 'MultiPV')
-        this.numPVs = options[opt];
+    Object.entries(options).forEach(([key, value]) => {
+      if(key === 'MultiPV')
+        this.numPVs = value;
 
-      this.uci(`setoption name ${opt} value ${options[opt]}`);
-    }
+      this.uci(`setoption name ${key} value ${value}`);
+    });
 
     this.uci('ucinewgame');
     this.uci('isready');
@@ -285,7 +285,6 @@ export class EvalEngine extends Engine {
     const dataset = [];
     let currIndex: number;
     let moveEval: number;
-    const that = this;
 
     let hEntry = this.game.history.first();
 
@@ -332,15 +331,15 @@ export class EvalEngine extends Engine {
     if(this._redraw) {
       // Fill area generator
       const area = d3.area()
-        .x(function(d, i) { return xScale(i); })
+        .x((d, i) => xScale(i))
         .y0(yScale(0))
-        .y1(function(d) { return yScale(d.y); })
+        .y1((d) => yScale(d.y))
         .curve(d3.curveMonotoneX);
 
       // Line generator
       const line = d3.line()
-        .x(function(d, i) { return xScale(i); })
-        .y(function(d) { return yScale(d.y); })
+        .x((d, i) => xScale(i))
+        .y((d) => yScale(d.y))
         .curve(d3.curveMonotoneX);
 
       // Add SVG to panel
@@ -348,7 +347,7 @@ export class EvalEngine extends Engine {
         .attr('width', '100%')
         .attr('height', '100%')
         .style('cursor', 'pointer')
-        .on('mousemove', function() {
+        .on('mousemove', (event) => {
           const mousePosition = d3.pointer(event);
           const xPos = mousePosition[0] - margin.left;
           const getDistanceFromPos = (d) => Math.abs(d - xScale.invert(xPos));
@@ -382,13 +381,13 @@ export class EvalEngine extends Engine {
             $('.tooltip').css('pointer-events', 'none');
           }
         })
-        .on('mouseleave', function() {
+        .on('mouseleave', () => {
           hoverLine.style('opacity', 0);
           hoverCircle.style('opacity', 0)
             .attr('cx', -1);
           $('#hover-circle').tooltip('dispose');
         })
-        .on('click', function(event) {
+        .on('click', (event) => {
           const mousePosition = d3.pointer(event);
           const xPos = mousePosition[0] - margin.left;
           const getDistanceFromPos = (d) => Math.abs(d - xScale.invert(xPos));
@@ -397,7 +396,7 @@ export class EvalEngine extends Engine {
             (a, b) => getDistanceFromPos(a) - getDistanceFromPos(b)
           );
 
-          gotoMove(that.game.history.getByIndex(closestIndex));
+          gotoMove(this.game.history.getByIndex(closestIndex));
 
           if(closestIndex) {
             selectCircle

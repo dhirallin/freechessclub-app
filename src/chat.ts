@@ -159,13 +159,13 @@ export class Chat {
     });
 
     $('#timestamp-toggle').prop('checked', settings.timestampToggle);
-    $('#timestamp-toggle').on('click', (event) => {
+    $('#timestamp-toggle').on('click', () => {
       settings.timestampToggle = !settings.timestampToggle;
       storage.set('timestamp', String(settings.timestampToggle));
     });
 
     $('#chattabs-toggle').prop('checked', settings.chattabsToggle);
-    $('#chattabs-toggle').on('click', (event) => {
+    $('#chattabs-toggle').on('click', () => {
       settings.chattabsToggle = !settings.chattabsToggle;
       storage.set('chattabs', String(settings.chattabsToggle));
     });
@@ -307,9 +307,8 @@ export class Chat {
 
   public setUser(user: string): void {
     if(this.user !== user) {
-      const that = this;
-      $('#tabs .closeTab').each(function () {
-        that.closeTab($(this).parent().siblings('.nav-link'));
+      $('#tabs .closeTab').each((index, element) => {
+        this.closeTab($(element).parent().siblings('.nav-link'));
       });
     }
 
@@ -397,8 +396,8 @@ export class Chat {
               const numWatchers = watchers.length;
               const title = `${numWatchers} Watchers`;
               const tooltipText = !watchers.length
-                  ? `<b>${title}</b>`
-                  : `<b>${title}</b><hr class="tooltip-separator"><div>${description}</div>`;
+                ? `<b>${title}</b>`
+                : `<b>${title}</b><hr class="tooltip-separator"><div>${description}</div>`;
 
               curr.tooltip('dispose').tooltip({
                 title: tooltipText,
@@ -413,7 +412,7 @@ export class Chat {
             }
           });
 
-          $('.chat-game-description').on('click', (e) => {
+          $('.chat-game-description').on('click', () => {
             const game = this.getGameFromTab($('#tabs button.active'));
             if(game) {
               setGameWithFocus(game);
@@ -449,7 +448,7 @@ export class Chat {
     }
 
     if(showTab) {
-      const tabs = $('#tabs button').filter(function (index) {
+      const tabs = $('#tabs button').filter(function() {
         return $(this).attr('id') === `tab-${from}`;
       });
       tabs.first().tab('show');
@@ -498,9 +497,9 @@ export class Chat {
   private escapeHTML(text: string) {
     return text.replace(/[<>"]/g, (tag) => {
       const charsToReplace = {
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&#34;'
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&#34;'
       };
       return charsToReplace[tag] || tag;
     });
@@ -549,8 +548,8 @@ export class Chat {
     })}${suffix}</br>`;
 
     const timestamp = settings.timestampToggle
-        ? `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `
-        : '';
+      ? `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `
+      : '';
 
     const chatText = tab.find('.chat-text');
     chatText.append(`${timestamp}${who}${text}`);

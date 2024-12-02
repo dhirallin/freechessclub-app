@@ -214,7 +214,7 @@ export class Parser {
       return null;
     }
 
-    msg = msg.replace(/\[G\]\0/g, (m, offset, str) => {
+    msg = msg.replace(/\[G\]\0/g, () => {
       this.session.send(String.fromCharCode(...[0x02, 0x39]));
       return '';
     });

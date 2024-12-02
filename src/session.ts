@@ -63,9 +63,10 @@ export class Session {
     this.bodyClickHandler = (e) => {
       if(!$('#session-status').is(e.target)
           && $('#session-status').has(e.target).length === 0
-          && $('.popover').has(e.target).length === 0)
+          && $('.popover').has(e.target).length === 0) {
         $('#session-status').popover('dispose');
         clearTimeout(this.sessionStatusPopoverTimer);
+      }
     };
     $('body').on('click', this.bodyClickHandler);
   }
@@ -135,7 +136,7 @@ export class Session {
           if(document.visibilityState === 'visible')
             reconnect = true;
           else {
-            $(document).one('visibilitychange', (event) => {
+            $(document).one('visibilitychange', () => {
               this.connect(this.user, this.pass);
             });
           }
