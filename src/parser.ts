@@ -186,7 +186,7 @@ export class Parser {
 
   private splitMessage(msg: string, pattern: any = /\n/) {
     const msgs = msg.split(new RegExp(pattern, 'g')).filter(Boolean);
-    if (msgs.length > 1) {
+    if(msgs.length > 1) {
       const parsedMsgs = [];
       for (const m of msgs) {
         if (m.length > 0) {
@@ -247,9 +247,9 @@ export class Parser {
     // game move
     match = msg.match(/(?:^|\n)<12>\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([BW\-])\s(\-?[0-7])\s([01])\s([01])\s([01])\s([01])\s([0-9]+)\s([0-9]+)\s(\S+)\s(\S+)\s(\-?[0-3])\s([0-9]+)\s([0-9]+)\s([0-9]+)\s([0-9]+)\s(\-?[0-9]+)\s(\-?[0-9]+)\s([0-9]+)\s(\S+)\s\(([0-9]+)\:([0-9]+)\.([0-9]+)\)\s(\S+)\s([01])\s([0-9]+)\s([0-9]+)\s*/);
     if(match != null && match.length >= 34) {
-      const msgs = this.splitMessage(msg);
-      if(msgs)
-        return msgs;
+      const gMsgs = this.splitMessage(msg);
+      if(gMsgs)
+        return gMsgs;
 
       let fen = '';
       for (let i = 1; i < 8; i++) {
