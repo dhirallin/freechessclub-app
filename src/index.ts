@@ -107,7 +107,7 @@ async function onDeviceReady() {
   }
 
   chat = new Chat();
-  
+
   const game = createGame();
   game.role = Role.NONE;
   game.category = 'untimed';
@@ -138,12 +138,12 @@ async function onDeviceReady() {
   setTimeout(() => { $(window).trigger('resize'); }, 0);
 
   credential = new CredentialStorage();
-  if(settings.rememberMeToggle) 
+  if(settings.rememberMeToggle)
     await credential.retrieve(); // Get the username/password from secure storage (if the user has previously ticked Remember Me)
   else {
     $('#login-user').val('');
     $('#login-pass').val('');
-  }  
+  }
 
   if(credential.username != null && credential.password != null) {
     session = new Session(messageHandler, credential.username, credential.password);
@@ -328,7 +328,7 @@ function setGameCardSize(game: Game, cardMaxWidth?: number, cardMaxHeight?: numb
   if(cardMaxWidth !== undefined || cardMaxHeight !== undefined) {
     const cardBorderWidth = card.outerWidth() - card.width();
     let boardMaxWidth = cardMaxWidth - cardBorderWidth;
-    
+
     const remHeight = card.outerHeight() - card.find('.card-body').height();
     let boardMaxHeight = cardMaxHeight - remHeight;
 
@@ -365,7 +365,7 @@ function setRightColumnSizes() {
     $('#secondary-board-area').css('overflow-y', 'scroll');
   else
     $('#secondary-board-area').css('overflow-y', 'hidden');
- 
+
   for(const game of games) {
     if(game.element.parent().is($('#secondary-board-area'))) {
       const cardsPerRow = Utils.isLargeWindow() ? Math.min(2, numCards) : 2;
@@ -488,7 +488,7 @@ function swapLeftRightPanelHeaders() {
  * Process messages received from the server *
  *********************************************/
 function messageHandler(data: any) {
-  if(data == null) 
+  if(data == null)
     return;
 
   const type = GetMessageType(data);
@@ -522,7 +522,7 @@ function messageHandler(data: any) {
           else if($('#pills-pairing').hasClass('active'))
             initPairingPane();
         }
-      } 
+      }
       else if(data.command === 2) { // Login error
         session.disconnect();
         $('#session-status').popover({
@@ -531,7 +531,7 @@ function messageHandler(data: any) {
           placement: 'top',
         });
         $('#session-status').popover('show');
-      } 
+      }
       else if(data.command === 3) { // Disconnected
         disableOnlineInputs(true);
         cleanup();
@@ -568,7 +568,7 @@ function messageHandler(data: any) {
   }
 }
 
-function gameMove(data: any) { 
+function gameMove(data: any) {
   if(gameExitPending.includes(data.id))
     return;
 
@@ -849,7 +849,7 @@ function gameStart(game: Game) {
           const moves = [];
           let curr = game.history.current();
           while(curr.move) {
-            moves.push(ChessHelper.moveToCoordinateString(curr.move));            
+            moves.push(ChessHelper.moveToCoordinateString(curr.move));
             curr = curr.prev;
           }
           game.mexamineMovelist = moves.reverse();
@@ -916,13 +916,14 @@ function gameEnd(data: any) {
   showStatusMsg(game, status);
 
   if(game.isPlaying()) {
-    let rematch = [], analyze = [];
+    let rematch = [];
+    let analyze = [];
     if(data.reason !== Reason.Disconnect && data.reason !== Reason.Adjourn && data.reason !== Reason.Abort) {
       if(game.role === Role.PLAYING_COMPUTER) {
         rematch = ['rematchComputer();', 'Rematch'];
       }
       else if(game.element.find('.player-status .name').text() === session.getUser())
-        rematch = [`sessionSend('rematch')`, 'Rematch']
+        rematch = ['sessionSend(\'rematch\')', 'Rematch']
     }
     if(data.reason !== Reason.Adjourn && data.reason !== Reason.Abort && game.history.length()) {
       analyze = ['analyze();', 'Analyze'];
@@ -934,7 +935,7 @@ function gameEnd(data: any) {
   cleanupGame(game);
 }
 
-function handleOffers(offers: any[]) { 
+function handleOffers(offers: any[]) {
   // Clear the lobby
   if(offers[0].type === 'sc')
     $('#lobby-table').html('');
@@ -950,7 +951,7 @@ function handleOffers(offers: any[]) {
 
       const lobbyEntryText = formatLobbyEntry(item);
       $('#lobby-table').append(
-        `<button type="button" data-offer-id="${item.id}" class="btn btn-outline-secondary lobby-entry"` 
+        `<button type="button" data-offer-id="${item.id}" class="btn btn-outline-secondary lobby-entry"`
           + ` onclick="acceptSeek(${item.id});">${lobbyEntryText}</button>`);
     });
 
@@ -986,7 +987,10 @@ function handleOffers(offers: any[]) {
   // Offers received from another player
   const otherOffers = offers.filter((item) => item.type === 'pf');
   otherOffers.forEach((item) => {
-    let headerTitle = '', bodyTitle = '', bodyText = '', displayType = '';
+    let headerTitle = '';
+    let bodyTitle = '';
+    let bodyText = '';
+    let displayType = '';
     switch(item.subtype) {
       case 'match':
         displayType = 'notification';
@@ -1096,7 +1100,7 @@ function showSentOffers(offers: any) {
 
         const adjourned = (offer.adjourned ? ' (adjourned)' : '');
 
-        requestsHtml += `Challenging ${offer.opponent} to ${time === '' ? 'an ' : 'a '}` 
+        requestsHtml += `Challenging ${offer.opponent} to ${time === '' ? 'an ' : 'a '}`
           + `${time}${unrated}${offer.category}${color} game${adjourned}.`;
         removeCmd = `withdraw ${offer.id}`;
       }
@@ -1115,7 +1119,7 @@ function showSentOffers(offers: any) {
     const lastIndex = requestsHtml.lastIndexOf(' ') + 1;
     const lastWord = requestsHtml.slice(lastIndex);
     requestsHtml = requestsHtml.substring(0, lastIndex);
-    requestsHtml += `<span style="white-space: nowrap">${lastWord}<span class="fa fa-times-circle btn btn-default `  
+    requestsHtml += `<span style="white-space: nowrap">${lastWord}<span class="fa fa-times-circle btn btn-default `
       + `btn-sm" onclick="sessionSend('${removeCmd}')" aria-hidden="false"></span></span></div>`;
   });
 
@@ -1315,7 +1319,7 @@ function handleMiscMessage(data: any) {
   match = msg.match(/(?:^|\n)(\d+ players?, who (?:has|have) an adjourned game with you, (?:is|are) online:)\n(.*)/);
   if(match && match.length > 2) {
     const n = Dialogs.createNotification({type: 'Resume Game', title: `${match[1]}<br>${match[2]}`, btnSuccess: ['resume', 'Resume Game'], useSessionSend: true});
-    n.attr('data-adjourned-list', "true");
+    n.attr('data-adjourned-list', 'true');
     chat.newMessage('console', data);
     return;
   }
@@ -1550,7 +1554,7 @@ function handleMiscMessage(data: any) {
       if(match[3] === session.getUser() || match[1].startsWith('Game')) {
         game.element.find('.player-status .rating').text(game.wrating);
         game.element.find('.opponent-status .rating').text(game.brating);
-      } 
+      }
       else if(match[5] === session.getUser()) {
         game.element.find('.opponent-status .rating').text(game.wrating);
         game.element.find('.player-status .rating').text(game.brating);
@@ -1815,7 +1819,8 @@ function setFontSizes() {
 }
 
 function showCapturedMaterial(game: Game) {
-  let whiteChanged = false, blackChanged = false;
+  let whiteChanged = false;
+  let blackChanged = false;
 
   let captured = {
     P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0
@@ -1824,7 +1829,7 @@ function showCapturedMaterial(game: Game) {
   if(!game.captured)
     game.captured = { ...captured };
 
-  if(game.category === 'crazyhouse' || game.category === 'bughouse') 
+  if(game.category === 'crazyhouse' || game.category === 'bughouse')
     captured = game.history.current().variantData.holdings; // for crazyhouse/bughouse we display the actual pieces captured
   else {
     const material = {
@@ -1832,9 +1837,9 @@ function showCapturedMaterial(game: Game) {
     };
 
     const pos = game.history.current().fen.split(/\s+/)[0];
-    for(let i = 0; i < pos.length; i++) {
-      if(material.hasOwnProperty(pos[i]))
-        material[pos[i]]++;
+    for(const ch of pos) {
+      if(material.hasOwnProperty(ch))
+        material[ch]++;
     }
 
     // Get material difference between white and black, represented as "captured pieces"
@@ -1855,7 +1860,7 @@ function showCapturedMaterial(game: Game) {
 
   for(const key in captured) {
     if(game.captured[key] !== captured[key]) {
-      if(key === key.toUpperCase()) 
+      if(key === key.toUpperCase())
         blackChanged = true;
       else
         whiteChanged = true;
@@ -1874,7 +1879,11 @@ function showCapturedMaterial(game: Game) {
   }
 
   for(const key in captured) {
-    let num: number, color: string, piece: string, draggedPiece: string, panel: JQuery<HTMLElement>;
+    let num: number;
+    let color: string;
+    let piece: string;
+    let draggedPiece: string;
+    let panel: JQuery<HTMLElement>;
     if(whiteChanged && key === key.toLowerCase() && captured[key] > 0) {
       color = 'b';
       piece = `${color}${key.toUpperCase()}`;
@@ -1890,7 +1899,7 @@ function showCapturedMaterial(game: Game) {
       panel = (game.color === 'b' ? game.element.find('.player-status .captured') : game.element.find('.opponent-status .captured'));
     }
     if(panel) {
-      const pieceElement = $(`<span class="captured-piece" data-drag-piece="${draggedPiece}"><img src="assets/css/images/pieces/merida/` 
+      const pieceElement = $(`<span class="captured-piece" data-drag-piece="${draggedPiece}"><img src="assets/css/images/pieces/merida/`
         + `${piece}.svg"/><small>${num}</small></span>`);
 
       panel.append(pieceElement);
@@ -1954,7 +1963,7 @@ function setClocks(game: Game) {
 }
 
 // Start clock after a move, switch from white to black's clock etc
-function hitClock(game: Game, bSetClocks: boolean = false) {
+function hitClock(game: Game, bSetClocks = false) {
   if(game.isPlaying() || game.role === Role.OBSERVING) {
     const ply = game.history.last().ply;
     const turnColor = game.history.last().turnColor;
@@ -2007,7 +2016,7 @@ function createBoard(element: any): any {
   });
 }
 
-export function updateBoard(game: Game, playSound: boolean = false, setBoard: boolean = true) {
+export function updateBoard(game: Game, playSound = false, setBoard = true) {
   if(!game.history)
     return;
 
@@ -2136,9 +2145,9 @@ function boardChanged() {
   }
 }
 
-/** 
- * Scroll to the game board which currently has focus 
- */ 
+/**
+ * Scroll to the game board which currently has focus
+ */
 export function scrollToBoard(game?: Game) {
   if(Utils.isSmallWindow()) {
     if(!game || game.element.parent().attr('id') === 'main-board-area') {
@@ -2210,8 +2219,8 @@ export function movePiece(source: any, target: any, metadata: any) {
   if(parsedMove) {
     if(game.history.editMode && game.newVariationMode === NewVariationMode.ASK && nextMove) {
       let subFound = false;
-      for(let i = 0; i < nextMove.subvariations.length; i++) {
-        if(nextMove.subvariations[i].fen === fen)
+      for(const sub of nextMove.subvariations) {
+        if(sub.fen === fen)
           subFound = true;
       }
       if(nextMove.fen !== fen && !subFound) {
@@ -2278,12 +2287,12 @@ function preMovePiece(source: any, target: any, metadata: any) {
   if(pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1')) {
     game.movePieceSource = source;
     game.movePieceTarget = target;
-    game.movePieceMetadata = metadata;    
+    game.movePieceMetadata = metadata;
     showPromotionPanel(game, true);
   }
 }
 
-function showPromotionPanel(game: Game, premove: boolean = false) {
+function showPromotionPanel(game: Game, premove = false) {
   const source = game.movePieceSource;
   const target = game.movePieceTarget;
   const metadata = game.movePieceMetadata;
@@ -2295,10 +2304,10 @@ function showPromotionPanel(game: Game, premove: boolean = false) {
   const fileNum = target.toLowerCase().charCodeAt(0) - 97;
 
   hidePromotionPanel(game);
-  const promotionPanel = $(`<div class="cg-wrap promotion-panel"></div>`);
+  const promotionPanel = $('<div class="cg-wrap promotion-panel"></div>');
   promotionPanel.appendTo(game.element.find('.board-container'));
   promotionPanel.css({
-    left: `calc(12.5% * ${orientation === "white" ? fileNum : 7 - fileNum})`,
+    left: `calc(12.5% * ${orientation === 'white' ? fileNum : 7 - fileNum})`,
     height: showKing ? '62.5%' : '50%',
     top: orientation === color ? '0' : '50%',
     display: 'flex'
@@ -2309,12 +2318,12 @@ function showPromotionPanel(game: Game, premove: boolean = false) {
       <piece data-piece="n" class="promotion-piece knight ${color}"></piece>
       <piece data-piece="r" class="promotion-piece rook ${color}"></piece>
       <piece data-piece="b" class="promotion-piece bishop ${color}"></piece>
-      ${showKing ? `<piece data-piece="k" class="promotion-piece king ${color}"></piece>` : ``}
+      ${showKing ? `<piece data-piece="k" class="promotion-piece king ${color}"></piece>` : ''}
     `);
   }
   else {
     promotionPanel.html(`
-      ${showKing ? `<piece data-piece="k" class="promotion-piece king ${color}"></piece>` : ``}
+      ${showKing ? `<piece data-piece="k" class="promotion-piece king ${color}"></piece>` : ''}
       <piece data-piece="b" class="promotion-piece bishop ${color}"></piece>
       <piece data-piece="r" class="promotion-piece rook ${color}"></piece>
       <piece data-piece="n" class="promotion-piece knight ${color}"></piece>
@@ -2897,7 +2906,7 @@ async function getOpening(game: Game) {
   await fetchOpeningsPromise;
 
   const shortFen = historyItem.fen.split(' ').slice(0, -2).join(' '); // Remove ply counts
-  const opening = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category) 
+  const opening = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(game.category)
       ? openings.get(shortFen) : null;
   historyItem.opening = opening;
   game.history.updateOpeningMetatags();
@@ -3082,16 +3091,16 @@ $('#collapse-menus').on('shown.bs.collapse', (event) => {
 });
 
 $('#pills-tab button').on('shown.bs.tab', function(event) {
-  if($(this).attr('id') !== 'pills-placeholder-tab') 
+  if($(this).attr('id') !== 'pills-placeholder-tab')
     activeTab = $(this);
-  
+
   newTabShown = true;
   setTimeout(() => { newTabShown = false; }, 0);
 });
 
 $('#pills-tab button').on('click', function(event) {
   if(!newTabShown)
-    $('#collapse-menus').collapse('hide');  
+    $('#collapse-menus').collapse('hide');
   else {
     activeTab = $(this);
     $('#collapse-menus').collapse('show');
@@ -3100,7 +3109,7 @@ $('#pills-tab button').on('click', function(event) {
 });
 
 function showTab(tab: any) {
-  if($('#collapse-menus').hasClass('show')) 
+  if($('#collapse-menus').hasClass('show'))
     tab.tab('show');
   else
     activeTab = tab;
@@ -3181,7 +3190,7 @@ $('#play-computer-form').on('submit', (event) => {
 
   if($('#play-computer-start-from-pos').prop('checked')) {
     const game = games.focused;
-    if(game.setupBoard) 
+    if(game.setupBoard)
       params.fen = getSetupBoardFEN(game);
     else {
       const fen = game.history.current().fen;
@@ -3200,7 +3209,7 @@ $('#play-computer-form').on('submit', (event) => {
       return;
     }
 
-    if(game.setupBoard && !game.isExamining()) 
+    if(game.setupBoard && !game.isExamining())
       leaveSetupBoard(game);
   }
   else if(params.gameType === 'Chess960')
@@ -3256,8 +3265,8 @@ function playComputer(params: any) {
     fen: params.fen,                        // game state
     turn: turnColor,                        // color whose turn it is to move ("B" or "W")
     id: -1,                                 // The game number
-    wname: wname,                           // White's name
-    bname: bname,                           // Black's name
+    wname,                                  // White's name
+    bname,                                  // Black's name
     wrating: '',                            // White's rating
     brating: '',                            // Black's rating
     role: Role.PLAYING_COMPUTER,            // my relation to this game
@@ -3268,7 +3277,7 @@ function playComputer(params: any) {
     moveNo: 1,                              // the number of the move about to be made
     move: 'none',                           // pretty notation for the previous move ("none" if there is none)
     flip: (params.playerColor === 'White' ? false : true), // whether game starts with board flipped
-    category: category,                     // game variant or type
+    category,                               // game variant or type
     color: params.playerColor === 'White' ? 'w' : 'b',
     difficulty: params.difficulty,          // Computer difficulty level
     variantData: params.variantData         // Inject variant data into the first move
@@ -3281,7 +3290,7 @@ function playComputer(params: any) {
   else
     wname = computerName;
 
-  const time = params.playerTime === 0 && params.playerInc === 0 
+  const time = params.playerTime === 0 && params.playerInc === 0
       ? '' : ` ${params.playerTime} ${params.playerInc}`;
   const gameType = params.gameType !== 'Standard' ? ` ${params.gameType}` : '';
 
@@ -3314,7 +3323,7 @@ function getPlayComputerMoveParams(game: Game): string {
   return moveParams;
 }
 
-function playComputerBestMove(game: Game, bestMove: string, score: string = '=0.00') {
+function playComputerBestMove(game: Game, bestMove: string, score = '=0.00') {
   const move = bestMove[1] === '@' // Crazyhouse/bughouse
     ? bestMove
     : {
@@ -3406,8 +3415,13 @@ function checkGameEnd(game: Game) {
     return;
 
   const lastMove = game.history.last();
-  let gameEnded = false, isDraw = false;
-  let winner = '', loser = '', reason: Reason, reasonStr: string, scoreStr: string;
+  let gameEnded = false;
+  let isDraw = false;
+  let winner = '';
+  let loser = ''
+  let reason: Reason
+  let reasonStr: string;
+  let scoreStr: string;
   const fen = lastMove.fen;
   const variantData = lastMove.variantData;
   const turnColor = lastMove.turnColor;
@@ -3672,7 +3686,7 @@ function formatLobbyEntry(seek: any): string {
   session.send(`play ${id}`);
 };
 
-/*************************** 
+/***************************
  * OBSERVE PANEL FUNCTIONS *
  ***************************/
 
@@ -3713,7 +3727,7 @@ function observe(id?: string) {
 }
 
 function showGames(gamesStr: string) {
-  if (!$('#pills-observe').hasClass('active')) 
+  if(!$('#pills-observe').hasClass('active'))
     return;
 
   $('#observe-pane-status').hide();
@@ -3814,7 +3828,7 @@ function showHistory(user: string, history: string) {
 };
 
 /************************
- * GAME PANEL FUNCTIONS *  
+ * GAME PANEL FUNCTIONS *
  ************************/
 
 $(document).on('show.bs.tab', 'button[data-bs-target="#pills-game"]', (e) => {
@@ -3861,7 +3875,7 @@ Utils.createContextMenuTrigger(function(event) {
  * variation etc.
  */
 function createMoveContextMenu(event: any) {
-  var contextMenu = $('<ul class="context-menu dropdown-menu"></ul>');
+  const contextMenu = $('<ul class="context-menu dropdown-menu"></ul>');
   let moveElement: JQuery<HTMLElement>;
   if($(event.target).closest('.comment-before').length)
     moveElement = $(event.target).next();
@@ -3874,8 +3888,8 @@ function createMoveContextMenu(event: any) {
 
   moveElement.find('.move').addClass('hovered'); // Show the :hovered style while menu is displayed
 
-  var hEntry = moveElement.data('hEntry');
-  var game = games.focused;
+  const hEntry = moveElement.data('hEntry');
+  const game = games.focused;
 
   if(hEntry === hEntry.first || (!hEntry.parent && hEntry.prev === hEntry.first)) {
     // If this is the first move in a subvariation, allow user to add a comment both before and after the move.
@@ -3898,7 +3912,7 @@ function createMoveContextMenu(event: any) {
   contextMenu.append('<li><hr class="dropdown-divider"></li>');
   let annotationsHtml = '<div class="annotations-menu annotation">';
   for(const a of History.annotations)
-    annotationsHtml += '<li><a class="dropdown-item noselect" data-bs-toggle="tooltip" data-nags="${a.nags}" title="${a.description}">${a.symbol}</a></li>';
+    annotationsHtml += `<li><a class="dropdown-item noselect" data-bs-toggle="tooltip" data-nags="${a.nags}" title="${a.description}">${a.symbol}</a></li>`;
   annotationsHtml += '</div>';
   contextMenu.append(annotationsHtml);
   contextMenu.find('[data-bs-toggle="tooltip"]').each((index, element) => {
@@ -3932,7 +3946,7 @@ function createMoveContextMenu(event: any) {
           deleteMove(game, hEntry);
           break;
         case 'promote-variation':
-          let pCurrent: HEntry;  
+          let pCurrent: HEntry;
           if(game.isExamining() && !game.history.scratch() && hEntry.depth() === 1) {
             // If we are promoting a subvariation to the mainline, we need to 'commit' the new mainline
             pCurrent = game.history.current();
@@ -4170,7 +4184,7 @@ $('#new-variant-game-submenu a').on('click', (event) => {
  * When creating a new (empty game), shows a dialog asking if the user wants to Overwrite the
  * current game or open a New Board. For Chess960, also lets select Chess960 starting position
  */
-function newGameDialog(game: Game, category: string = 'untimed') {
+function newGameDialog(game: Game, category = 'untimed') {
   let bodyText = '';
 
   if(category === 'wild/fr') {
@@ -4198,7 +4212,8 @@ function newGameDialog(game: Game, category: string = 'untimed') {
     const headerTitle = 'Create new game';
     const bodyTitle = '';
     let showIcons = false;
-    let button1: any, button2: any;
+    let button1: any;
+    let button2: any;
     if(game.role === Role.NONE && settings.multiboardToggle) {
       bodyText = `${bodyText}Overwrite existing game or open new board?`;
       button1 = [overwriteHandler, 'Overwrite'];
@@ -4231,7 +4246,7 @@ function newGameDialog(game: Game, category: string = 'untimed') {
  * @param fen The starting position for the new game (used for Chess960)
  * @param chess960idn Alternatively the starting IDN for Chess960
  */
-function newGame(createNewBoard: boolean, game?: Game, category: string = 'untimed', fen?: string, chess960idn?: string): Game {
+function newGame(createNewBoard: boolean, game?: Game, category = 'untimed', fen?: string, chess960idn?: string): Game {
   if(createNewBoard)
     game = createGame()
   else if(!game || !games.includes(game))
@@ -4246,7 +4261,7 @@ function newGame(createNewBoard: boolean, game?: Game, category: string = 'untim
     fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
   const data = {
-    fen: fen,                               // game state
+    fen,                                    // game state
     turn: 'w',                              // color whose turn it is to move ("B" or "W")
     id: null,                               // The game number
     wname: '',                              // White's name
@@ -4261,7 +4276,7 @@ function newGame(createNewBoard: boolean, game?: Game, category: string = 'untim
     moveNo: 1,                              // the number of the move about to be made
     move: 'none',                           // pretty notation for the previous move ("none" if there is none)
     flip: false,                            // whether game starts with board flipped
-    category: category,                     // game variant or type
+    category,                               // game variant or type
   }
   Object.assign(game, data);
   game.statusElement.find('.game-status').html('');
@@ -4323,7 +4338,8 @@ function openGamesOverwriteDialog(game: Game, fileStrings: string[]) {
   if(game.role === Role.NONE) {
     if(game.history.length()) {
       let bodyText = '';
-      let button1: any, button2: any;
+      let button1: any;
+      let button2: any;
       let showIcons = false;
       const headerTitle = 'Open Games';
       const bodyTitle = '';
@@ -4392,7 +4408,7 @@ async function openGameFiles(files: any): Promise<string[]> {
  *
  * @param createNewBoard If false, overwrites existing game, otherwise opens new board when in multiboard mode
  */
-async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBoard: boolean = false) {
+async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBoard = false) {
   game = newGame(createNewBoard, game);
 
   for(const gameStr of gameFileStrings) {
@@ -4655,7 +4671,7 @@ function addGameListItems(game: Game) {
  * @param longDescription the long description is used in the list itself, the short version is used
  * in the dropdown button text
  */
-function getGameListDescription(history: History, longDescription: boolean = false) {
+function getGameListDescription(history: History, longDescription = false) {
   const tags = history.metatags;
   let description = '';
 
@@ -4728,8 +4744,8 @@ $('#save-game-modal').on('show.bs.modal', function() {
   pgnOutput.val(pgn);
 
   let numRows = 1;
-  for(let i = 0; i < pgn.length; i++) {
-    if(pgn[i] === '\n')
+  for(const ch of pgn) {
+    if(ch === '\n')
       numRows++;
   }
   pgnOutput.css('padding-right', '');
@@ -4885,7 +4901,7 @@ function setupGameInExamineMode(game: Game) {
 
   if(!game.setupBoard) {
     session.send('bsetup done');
-    
+
     // Send and commit move list
     const currMove = game.history.current() !== game.history.last() ? game.history.current() : null;
     game.history.goto(game.history.first());
@@ -4966,7 +4982,7 @@ $('#game-tools-setup-board').on('click', (event) => {
  * @param serverIssued True if someone (us or another examiner) sent the 'bsetup' command, false if we are entering
  * setup mode via the Game Tools menu.
  */
-function setupBoard(game: Game, serverIssued: boolean = false) {
+function setupBoard(game: Game, serverIssued = false) {
   game.setupBoard = true;
   game.element.find('.status').hide(); // Hide the regular player status panels
   if(game.isExamining() && !serverIssued)
@@ -4980,7 +4996,7 @@ function setupBoard(game: Game, serverIssued: boolean = false) {
   updateBoard(game, false, false);
 }
 
-function leaveSetupBoard(game: Game, serverIssued: boolean = false) {
+function leaveSetupBoard(game: Game, serverIssued = false) {
   game.setupBoard = false;
   game.element.find('.setup-board-top').hide();
   game.element.find('.setup-board-bottom').hide();
@@ -4998,7 +5014,7 @@ function leaveSetupBoard(game: Game, serverIssued: boolean = false) {
  * @param serverIssued True if the new FEN was received from the server (for example from another examiner).
  * False if the new FEN is a result of the user moving a piece on the board etc.
  */
-function updateSetupBoard(game: Game, fen?: string, serverIssued: boolean = false) {
+function updateSetupBoard(game: Game, fen?: string, serverIssued = false) {
   const oldFen = getSetupBoardFEN(game);
 
   if(!fen)
@@ -5058,7 +5074,7 @@ $(document).on('change', '.can-kingside-castle-white, .can-queenside-castle-whit
   game.fen = getSetupBoardFEN(game);
   updateEngine();
 };
-function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean = false) {
+function setupBoardColorToMove(game: Game, color: string, serverIssued = false) {
   const oldColor = ChessHelper.splitFEN(getSetupBoardFEN(game)).color;
   const colorName = (color === 'w' ? 'White' : 'Black');
   const label = Utils.isSmallWindow() ? `${colorName}'s move` : `${colorName} to move`;
@@ -5071,7 +5087,7 @@ function setupBoardColorToMove(game: Game, color: string, serverIssued: boolean 
     session.send(`bsetup tomove ${colorName}`);
 }
 
-function setupBoardCastlingRights(game: Game, castlingRights: string, serverIssued: boolean = false) {
+function setupBoardCastlingRights(game: Game, castlingRights: string, serverIssued = false) {
   const oldCastlingRights = ChessHelper.splitFEN(getSetupBoardFEN(game)).castlingRights;
 
   game.element.find('.can-kingside-castle-white').prop('checked', castlingRights.includes('K'));
@@ -5643,9 +5659,9 @@ $('#connect-user').on('click', (event) => {
 });
 
 $('#login-screen').on('show.bs.modal', async (e) => {
-  if(credential.username) 
+  if(credential.username)
     $('#login-user').val(credential.username);
-  if(credential.password) 
+  if(credential.password)
     $('#login-pass').val(credential.password);
 
   $('#remember-me').prop('checked', settings.rememberMeToggle);
@@ -5662,10 +5678,10 @@ $('#login-user').on('change', () => {
 
 /**
  * This detects whether the browser's password manager has autofilled the login/password form when it's
- * invisible. For example, in Firefox after the user enters their Master Password. 
- */ 
+ * invisible. For example, in Firefox after the user enters their Master Password.
+ */
 $('#login-pass').on('change', () => {
-  if(!$('#login-form').is(':visible') && $('#login-pass').val() as string) { 
+  if(!$('#login-form').is(':visible') && $('#login-pass').val() as string) {
     if(settings.rememberMeToggle && credential && credential.password == null) {
       credential.set($('#login-user').val() as string, $('#login-pass').val() as string);
       if(session) {
@@ -5829,7 +5845,9 @@ $('#input-form').on('submit', (event) => {
     text = val;
 
   // Check if input is a chat command, and if so do processing on the message before sending
-  let chatCmd: string, recipient: string, message: string;
+  let chatCmd: string;
+  let recipient: string;
+  let message: string;
   let match = text.match(/^\s*(\S+)\s+(\S+)\s+(.+)$/);
   if(match && match.length === 4 &&
       ('tell'.startsWith(match[1]) ||
