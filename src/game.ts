@@ -141,9 +141,9 @@ export class GameList {
 
     return {
       next(): IteratorResult<Game> {
-        if (index < items.length) 
+        if (index < items.length)
           return { value: items[index++], done: false };
-        else 
+        else
           return { value: undefined, done: true };
       },
     };
@@ -152,27 +152,27 @@ export class GameList {
   public findGame(id: number): Game {
     return this.gamelist.find(item => item.id === id);
   }
-  
+
   public getMainGame(): Game {
     return this.gamelist.find(g => g.element.parent().is('#main-board-area'));
   }
-  
+
   public getPlayingExaminingGame(): Game {
     return this.gamelist.find(g => g.isPlayingOnline() || g.isExamining());
   }
-  
+
   public getFreeGame(): Game {
     const game = this.getMainGame();
     if(game.role === Role.NONE && !game.preserved && !game.history?.editMode && !game.setupBoard)
       return game;
-  
+
     return this.gamelist.find(g => g.role === Role.NONE && !g.preserved && !g.history?.editMode && !g.setupBoard);
   }
-  
+
   public getComputerGame(): Game {
     return this.gamelist.find(g => g.role === Role.PLAYING_COMPUTER);
   }
-  
+
   public getMostImportantGame(): Game {
     // find most important board
     // out of playing/examining game, then computer game, then observed game on main board, then other observed game
@@ -190,7 +190,7 @@ export class GameList {
       game = this.getMainGame();
     if(!game)
       game = this.gamelist[0];
-  
+
     return game;
   }
 }

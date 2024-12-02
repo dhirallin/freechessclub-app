@@ -137,10 +137,10 @@ export class Session {
           else {
             $(document).one('visibilitychange', (event) => {
               this.connect(this.user, this.pass);
-            }); 
+            });
           }
         }
-        if(reconnect) 
+        if(reconnect)
           this.connect(this.user, this.pass);
       }
     };
@@ -161,7 +161,7 @@ export class Session {
   public reset() {
     $('#session-status').html('<span class="text-danger"><span class="fa fa-circle" aria-hidden="false"></span>&nbsp;Offline</span>');
     this.connected = false;
-    this.onRecv({ 
+    this.onRecv({
       command: 3,
       control: 'Disconnected'
     }); // Send disconnected command to message handler
