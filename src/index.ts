@@ -5640,9 +5640,9 @@ $('#login-form').on('submit', (event) => {
   session = new Session(messageHandler, user, pass);
   settings.rememberMeToggle = $('#remember-me').prop('checked');
   storage.set('rememberme', String(settings.rememberMeToggle));
-  if(settings.rememberMeToggle) 
+  if(settings.rememberMeToggle)
     credential.set(user, pass);
-  else 
+  else
     credential.clear();
 
   $('#login-screen').modal('hide');
@@ -5790,7 +5790,7 @@ $('#wakelock-toggle').on('click', (event) => {
   settings.wakelockToggle = !settings.wakelockToggle;
   if(settings.wakelockToggle)
     noSleep.enable();
-  else 
+  else
     noSleep.disable();
   storage.set('wakelock', String(settings.wakelockToggle));
 });

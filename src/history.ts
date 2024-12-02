@@ -29,7 +29,7 @@ export class HEntry {
   private _parent: HEntry;
   private _subvariations: HEntry[];
 
-  constructor(move?: any, fen?: string, wtime: number = 0, btime: number = 0, score?: string) {
+  constructor(move?: any, fen?: string, wtime = 0, btime = 0, score?: string) {
     this.move = move;
     this.fen = fen;
     this.wtime = wtime;
@@ -221,7 +221,7 @@ export class History {
     {nags: '$146', symbol: 'N', description: 'Novelty'}
   ];
 
-  constructor(game: any, fen: string = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', wtime: number = 0, btime: number = 0) {
+  constructor(game: any, fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', wtime = 0, btime = 0) {
     this.game = game;
     this._scratch = false;
     this.editMode = false;
@@ -262,7 +262,7 @@ export class History {
     entry.btime = btime;
   }
 
-  public add(move: any, fen: string, newSubvariation: boolean = false, wtime: number = 0, btime: number = 0): HEntry {
+  public add(move: any, fen: string, newSubvariation = false, wtime = 0, btime = 0): HEntry {
     const newEntry = new HEntry(move, fen);
 
     if(newSubvariation) {
@@ -292,7 +292,7 @@ export class History {
     return this.currEntry;
   }
 
-  public addHEntry(entry: HEntry, prevEntry: HEntry, isSubvariation: boolean = false): void {
+  public addHEntry(entry: HEntry, prevEntry: HEntry, isSubvariation = false): void {
     if(isSubvariation) {
       if(prevEntry.next)
         prevEntry.next.addSubvariation(entry);
@@ -362,34 +362,33 @@ export class History {
       this.addHEntry(subvar, mainvarPrev);
 
       const mainvarSubs = [...mainvar.subvariations];
-      for(let i = 0; i < mainvarSubs.length; i++) {
-        if(mainvarSubs[i].isContinuation()) {
-          this.remove(mainvarSubs[i]);
-          this.addHEntry(mainvarSubs[i], mainvarPrev, true);
+      for(const sub of mainvarSubs) {
+        if(sub.isContinuation()) {
+          this.remove(sub);
+          this.addHEntry(sub, mainvarPrev, true);
         }
       }
     }
     else {
       const last = mainvar.last;
-      for(let i = 0; i < last.subvariations.length; i++) {
-        if(last.subvariations[i].isContinuation()) {
-          this.promoteSubvariation(last.subvariations[i]);
+      for(const sub of last.subvariations) {
+        if(sub.isContinuation()) {
+          this.promoteSubvariation(sub);
           break;
         }
       }
 
       this.remove(subvar);
       const mainvarSubs = [...mainvar.subvariations];
-
-      for(let i = 0; i < mainvarSubs.length; i++)
-        this.remove(mainvarSubs[i]);
+      for(const sub of mainvarSubs)
+        this.remove(sub);
       this.remove(mainvar);
 
       this.addHEntry(subvar, mainvarPrev);
       this.addHEntry(mainvar, mainvarPrev, true);
 
-      for(let i = 0; i < mainvarSubs.length; i++)
-        this.addHEntry(mainvarSubs[i], mainvarPrev, true);
+      for(const sub of mainvarSubs)
+        this.addHEntry(sub, mainvarPrev, true);
     }
 
     this.currEntry = current;
@@ -402,22 +401,22 @@ export class History {
     const prev = entry.prev;
 
     const last = entry.last;
-    for(let i = 0; i < last.subvariations.length; i++) {
-      if(last.subvariations[i].isContinuation()) {
-        this.promoteSubvariation(last.subvariations[i]);
+    for(const sub of last.subvariations) {
+      if(sub.isContinuation()) {
+        this.promoteSubvariation(sub);
         break;
       }
     }
 
     const subs = [...entry.subvariations];
-    for(let i = 0; i < subs.length; i++)
-      this.remove(subs[i]);
+    for(const sub of subs)
+      this.remove(sub);
 
     this.remove(entry);
     this.addHEntry(entry, prev, true);
 
-    for(let i = 0; i < subs.length; i++)
-      this.addHEntry(subs[i], prev, true);
+    for(const sub of subs)
+      this.addHEntry(sub, prev, true);
 
     this.currEntry = current;
     this.highlightMove();
@@ -695,7 +694,7 @@ export class History {
       cell.find('.move').addClass('selected');
       this.scrollParentToChild($('#movelist-container'), cell);
     }
-    
+
     if(!this.currEntry.move)
       $('#movelist-container').scrollTop(0);
   }
@@ -852,7 +851,6 @@ export class History {
 
   private addMoveTableElement(entry: HEntry): void {
     const moveTable = this.game.moveTableElement;
-    const textColor = $('#move-table').css('color');
     const san = entry.move?.san;
     const glyphedSan = History.glyphifyHEntry(entry);
     const color = entry.turnColor === 'w' ? 'b' : 'w';
@@ -931,7 +929,7 @@ export class History {
         cell = newRow.find('td:eq(1)');
 
         if(entry === entry.first) { // first move in subvariation
-          const subVar = $(`<tr class="subvariation"><td colspan="3"><table class="table-sm w-100"><tbody></tbody></table></td></tr>`);
+          const subVar = $('<tr class="subvariation"><td colspan="3"><table class="table-sm w-100"><tbody></tbody></table></td></tr>');
           subVar.find('tbody').append(newRow);
           prevCell.parent().after(subVar);
         }
@@ -1358,7 +1356,7 @@ export class History {
    * @param tags An object containing key / value pairs for each metatag
    * @param overwrite If true, the game's existing metatags are cleared first
    */
-  public setMetatags(tags: any, overwrite: boolean = false) {
+  public setMetatags(tags: any, overwrite = false) {
     delete tags.messages; // this tag is where @mliebelt/pgn-parser stores syntax errors/warnings when parsing
 
     // @mliebelt/pgn-parser parses some metatags like Date and Time into objects instead of strings
@@ -1479,11 +1477,11 @@ $(document).on('focus', '.comment', function(event) {
     const commentBefore = elem.hasClass('comment-before') ? true : false;
     const comment = elem.attr('data-before-content') ? undefined : elem.text();
 
-    if(elem.attr('data-before-content')) 
+    if(elem.attr('data-before-content'))
       elem.remove(); // If the placeholder text is showing, i.e. the comment is empty then remove it.
-    else 
+    else
       elem.off('input paste keydown');
-    
+
     if(commentBefore)
       hEntry.commentBefore = comment;
     else
