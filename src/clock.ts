@@ -14,9 +14,9 @@ export class Clock {
   private lowTimeThreshold: number // mark clock as low-time when it goes below this value
 
   constructor(game: any, flagFallCallback?: (game: any) => void) {
-    this.game = game;    
+    this.game = game;
     this.runningClock = '';
-    this.wtime = 0; 
+    this.wtime = 0;
     this.btime = 0;
     this.flagFallCallback = flagFallCallback;
     this.interval = 1000; // update clock once a second
@@ -41,12 +41,12 @@ export class Clock {
   }
 
   /* When starting a clock, get the millisecond part of the time, and wait that long before
-    decrementing the clock the first time. 
+    decrementing the clock the first time.
     e.g. Let's say wtime is 60533 (00:60.533), so wait 534 milliseconds until wtime is 59999 (00:59.999)
     then set the clock to 00:59 and decrement it every 1000ms after that */
   private msTilNextInterval(time: number): number {
     const millisecondPart = Math.abs(time) - (Math.floor(Math.abs(time) / this.interval) * this.interval);
-    if(time >= 0) 
+    if(time >= 0)
       return millisecondPart + 1;
     else
       return this.interval - millisecondPart + 1;
@@ -69,7 +69,7 @@ export class Clock {
 
     this.updateClockElement(color, time);
 
-    if(color === 'w') 
+    if(color === 'w')
       this.wtime = time;
     else
       this.btime = time;
@@ -78,20 +78,20 @@ export class Clock {
   private updateClockElement(color: string, time: number) {
     if(time === null)
       time = 0;
-    
+
     const element = this.game.element;
-    const clockElement = this.game.color === color ? element.find('.player-status .clock') : element.find('.opponent-status .clock');  
-    const clockTimeElement = clockElement.find('.clock-time'); 
-    const fractionalTimeElement = clockElement.find('.fractional-clock-time');    
+    const clockElement = this.game.color === color ? element.find('.player-status .clock') : element.find('.opponent-status .clock');
+    const clockTimeElement = clockElement.find('.clock-time');
+    const fractionalTimeElement = clockElement.find('.fractional-clock-time');
 
     clockTimeElement.text(Clock.MSToHHMMSS(time));
 
     if(time >= this.lowTimeThreshold)
       clockElement.removeClass('low-time');
-    else if(this.getRunningClock()) 
+    else if(this.getRunningClock())
       clockElement.addClass('low-time');
 
-    if(time >= this.lowTimeThreshold || time === 0) 
+    if(time >= this.lowTimeThreshold || time === 0)
       fractionalTimeElement.hide();
     else {
       const msPart = Math.abs(time) - (Math.floor(Math.abs(time) / 1000) * 1000); // Get fractional part of time remaining
@@ -110,7 +110,7 @@ export class Clock {
 
   public startClock(color: string) {
     this.stopClocks();
-        
+
     const initialTime = (color === 'w' ? this.wtime : this.btime);
     if(initialTime === null) // player is untimed
       return;
@@ -123,13 +123,13 @@ export class Clock {
     this.runningClock = color;
 
     // The timer waits a fractional amount until the next second ticks over
-    // e.g. if btime is 60.533 it waits until 59.999 
+    // e.g. if btime is 60.533 it waits until 59.999
     // After that the clock will be updated once a second.
     let waitTime = this.msTilNextInterval(initialTime);
     this.timestamp = performance.now();
     let expectedTimeDiff = 0;
 
-    const timerFunc = () => { 
+    const timerFunc = () => {
       this.timer = null;
 
       // Use timestamp to account for timing drift
@@ -139,8 +139,8 @@ export class Clock {
 
       const time = initialTime - timeDiff;
 
-      if(time < this.lowTimeThreshold) 
-        this.interval = 100;    
+      if(time < this.lowTimeThreshold)
+        this.interval = 100;
 
       this.updateClockElement(color, time);
 
@@ -159,21 +159,21 @@ export class Clock {
       this.wtime -= (performance.now() - this.timestamp);
     else if(this.getRunningClock() === 'b')
       this.btime -= (performance.now() - this.timestamp);
-    
+
     clearTimeout(this.timer);
-    this.runningClock = '';  
+    this.runningClock = '';
     this.interval = 1000;
   }
 
   public getWhiteTime(): number {
-    if(this.getRunningClock() === 'w') 
+    if(this.getRunningClock() === 'w')
       return this.wtime - (performance.now() - this.timestamp);
     else
       return this.wtime;
   }
 
   public getBlackTime(): number {
-    if(this.getRunningClock() === 'b') 
+    if(this.getRunningClock() === 'b')
       return this.btime - (performance.now() - this.timestamp);
     else
       return this.btime;

@@ -14,19 +14,19 @@ export const Role = {
 };
 
 export class GameData {
-  fen: string = '';                     // game position
-  turn: string = 'w';                   // color whose turn it is to move ("B" or "W")
+  fen = '';                     // game position
+  turn = 'w';                   // color whose turn it is to move ("B" or "W")
   id: number = null;                      // The game number
-  wname: string = '';                   // White's name
-  bname: string = '';                   // Black's name
-  role: number = Role.NONE;             // my relation to this game
-  time: number = 0;                     // initial time (in seconds) of the match
-  inc: number = 0;                      // increment In seconds) of the match
-  wstrength: number = 0;                // White material strength
-  bstrength: number = 0;                // Black material strength
-  wtime: number = 0;                    // White's remaining time in milliseconds
-  btime: number = 0;                    // Black's remaining time in milliseconds
-  moveNo: number =  1;                  // the number of the move about to be made
+  wname = '';                   // White's name
+  bname = '';                   // Black's name
+  role = Role.NONE;             // my relation to this game
+  time = 0;                     // initial time (in seconds) of the match
+  inc = 0;                      // increment In seconds) of the match
+  wstrength = 0;                // White material strength
+  bstrength = 0;                // Black material strength
+  wtime = 0;                    // White's remaining time in milliseconds
+  btime = 0;                    // Black's remaining time in milliseconds
+  moveNo =  1;                  // the number of the move about to be made
   moveVerbose: {                        // verbose coordinate notation for the previous move
     from: string,                       // from square
     to: string,                         // to square
@@ -38,13 +38,13 @@ export class GameData {
     seconds: number,
     milliseconds: number,
   } = null;
-  move: string = '';                    // pretty notation for the previous move ("none" if there is none)
-  flip: boolean = false;                // flip field for board orientation: 1 = Black at bottom, 0 = White at bottom.
-  wrating: string = '';                 // white's rating
-  brating: string = '';                 // black's rating
-  category: string = '';                // category or variant
-  color: string = 'w';
-  difficulty: number = 0;               // computer difficulty level
+  move = '';                    // pretty notation for the previous move ("none" if there is none)
+  flip = false;                // flip field for board orientation: 1 = Black at bottom, 0 = White at bottom.
+  wrating = '';                 // white's rating
+  brating = '';                 // black's rating
+  category = '';                // category or variant
+  color = 'w';
+  difficulty = 0;               // computer difficulty level
   variantData: any = {};              // variant data such as holdings used by crazyhouse/bughouse
 
   public isPlaying() { return this.role === Role.MY_MOVE || this.role === Role.OPPONENTS_MOVE || this.role === Role.PLAYING_COMPUTER; }
@@ -76,7 +76,7 @@ export class Game extends GameData {
   statusElement: any = null; // The status panel
 
   // Keep track of which analysis tab is showing
-  analyzing: boolean = false;
+  analyzing = false;
   currentStatusTab: any = null;
 
   // Store result of promotion dialog to pass to movePiece()
@@ -90,19 +90,19 @@ export class Game extends GameData {
 
   // Used to buffer navigation buttons when in examine mode
   bufferedHistoryEntry: any = null;
-  bufferedHistoryCount: number = 0;
+  bufferedHistoryCount = 0;
 
   removeMoveRequested: any = null;     // In examine mode, store a move to be deleted from the move-list until after we have navigated away from it
-  gameStatusRequested: boolean = false; // Sends the 'moves' command in order to retrieve the game info to display in teh status panel
+  gameStatusRequested = false;         // Sends the 'moves' command in order to retrieve the game info to display in teh status panel
   lastComputerMoveEval: string = null; // Keeps track of the current eval for a game against the Computer. Used for draw offers
   partnerGameId: number = null;        // bughouse partner's game id
-  newVariationMode: number = NewVariationMode.ASK;
-  preserved: boolean = false;          // if true, prevents a game/board from being overwritten
-  setupBoard: boolean = false;         // in setup-board mode or not
+  newVariationMode = NewVariationMode.ASK;
+  preserved = false;                   // if true, prevents a game/board from being overwritten
+  setupBoard = false;                  // in setup-board mode or not
   commitingMovelist = false;           // Used when entering examine mode and using 'commit' to submit a move list
-  movelistRequested: number = 0;       // Used to keep track of move list requests
+  movelistRequested = 0;               // Used to keep track of move list requests
   mexamineMovelist: string[] = null;   // Used to restore the current move after retrieving the move list when given mexamine privilages
-  gameListFilter: string = ''          // Stores the filter text for the game selector menu (when loading a PGN with multiple games)
+  gameListFilter = ''                  // Stores the filter text for the game selector menu (when loading a PGN with multiple games)
 }
 
 export class GameList {

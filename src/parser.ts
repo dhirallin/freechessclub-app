@@ -321,7 +321,7 @@ export class Parser {
     // held pieces (Crazyhouse/Bughouse)
     match = msg.match(/^<b1> game (\d+) white \[(\w*)\] black \[(\w*)\](?: <- (\w+))?/m);
     if (match != null && match.length > 3) {
-      var holdings = {P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0};
+      const holdings = {P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0};
 
       for(const piece of match[2])
         holdings[piece.toLowerCase()]++;
@@ -331,7 +331,7 @@ export class Parser {
 
       return {
         game_id: +match[1],
-        holdings: holdings,
+        holdings,
         new_holding: match[4],
       };
     }
@@ -396,7 +396,7 @@ export class Parser {
       return {
         channel: `Game ${match[2]}`,
         user: match[1],
-        type: type,
+        type,
         message: match[4].replace(/\n/g, ''),
         suffix: match[5]
       };
@@ -483,7 +483,7 @@ export class Parser {
         }
       }
       return {
-        offers: offers,
+        offers,
       }
     }
 

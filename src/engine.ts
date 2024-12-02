@@ -43,7 +43,7 @@ export class Engine {
       let depth0 = false;
 
       if (response.data.startsWith('info')) {
-        const fen = this.currFen;      
+        const fen = this.currFen;
         const info = response.data.substring(5, response.data.length);
         const infoArr: string[] = info.trim().split(/\s+/);
 
@@ -69,7 +69,7 @@ export class Engine {
             const turn = fen.split(/\s+/)[1];
 
             let prefix = '';
-            if(score > 0 && turn === 'w' || score < 0 && turn === 'b') 
+            if(score > 0 && turn === 'w' || score < 0 && turn === 'b')
               prefix = '+';
             else if(score === 0)
               prefix = '=';
@@ -91,9 +91,9 @@ export class Engine {
             else
               scoreStr = `${prefix}${(score / 100).toFixed(2)}`;
           }
-          else if(infoArr[i] === 'pv') 
+          else if(infoArr[i] === 'pv')
             bPV = true;
-          else if(bPV) 
+          else if(bPV)
             pvArr.push(infoArr[i]);
         }
 
@@ -101,21 +101,21 @@ export class Engine {
           let pv = '';
           let currFen = fen;
           for(const move of pvArr) {
-            const moveParam = move[1] === '@' 
+            const moveParam = move[1] === '@'
               ? move
-              : { 
-                  from: move.slice(0, 2), 
+              : {
+                  from: move.slice(0, 2),
                   to: move.slice(2, 4),
                   promotion: (move.length === 5 ? move.charAt(4) : undefined)
                 };
-                     
-            const parsedMove = parseMove(currFen, moveParam, game.history.first().fen, game.category, game.history.holdings);    
+
+            const parsedMove = parseMove(currFen, moveParam, game.history.first().fen, game.category, game.history.holdings);
             if(!parsedMove) {
               // Non-standard or unsupported moves were passed to Engine.
               this.terminate();
               return;
             }
-            
+
             const turnColor = getTurnColorFromFEN(currFen);
             const moveNumber = getMoveNoFromFEN(currFen);
             let moveNumStr = '';
@@ -137,7 +137,7 @@ export class Engine {
         }
         this.currEval = scoreStr;
 
-        if(depth0 && this.bestMoveCallback) 
+        if(depth0 && this.bestMoveCallback)
           this.bestMoveCallback(this.game, '', this.currEval);
       }
       else if(response.data.startsWith('bestmove') && this.bestMoveCallback) {
@@ -151,7 +151,7 @@ export class Engine {
     // Parse options
     for(const opt in options) {
       if(opt === 'MultiPV')
-        this.numPVs = options[opt];  
+        this.numPVs = options[opt];
 
       this.uci(`setoption name ${opt} value ${options[opt]}`);
     }
@@ -170,15 +170,15 @@ export class Engine {
 
   public move(hEntry: HEntry) {
     this.currFen = hEntry.fen;
-    
+
     const movesStr = this.movesToCoordinatesString(hEntry);
     this.uci(`position fen ${this.game.history.first().fen}${movesStr}`);
     this.uci(`go ${this.moveParams}`);
   }
-  
+
   /**
    * Returns the list of moves from the start of the game up to this move
-   * in coordinate notation as a string. Used to send the move list to Engine 
+   * in coordinate notation as a string. Used to send the move list to Engine
    */
   public movesToCoordinatesString(hEntry: HEntry): string {
     const movelist = [];
@@ -212,15 +212,15 @@ export class Engine {
 }
 
 export class EvalEngine extends Engine {
-  private _redraw: boolean = true;
-  private numGraphMoves: number = 0;
+  private _redraw = true;
+  private numGraphMoves = 0;
   private currMove: any;
 
   constructor(game: Game, options?: any, moveParams?: string) {
     if(!moveParams)
       moveParams = 'movetime 100';
-    
-    super(game, null, null, options, moveParams);   
+
+    super(game, null, null, options, moveParams);
     this.bestMoveCallback = this.bestMove;
   }
 
@@ -283,7 +283,8 @@ export class EvalEngine extends Engine {
 
   private drawGraph() {
     const dataset = [];
-    let currIndex: number, moveEval: number;
+    let currIndex: number;
+    let moveEval: number;
     const that = this;
 
     let hEntry = this.game.history.first();
@@ -312,7 +313,7 @@ export class EvalEngine extends Engine {
     const container = $('#eval-graph-container');
     container.show();
 
-    const margin = {top: 6, right: 6, bottom: 6, left: 18}; 
+    const margin = {top: 6, right: 6, bottom: 6, left: 18};
     const width = container.width() - margin.left - margin.right; // Use the window's width
     const height = container.height() - margin.top - margin.bottom; // Use the window's height
 

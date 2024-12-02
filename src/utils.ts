@@ -48,8 +48,8 @@ export function createTooltip(element: JQuery<HTMLElement>) {
 
   element.tooltip('dispose').tooltip({
     trigger: (isSmallWindow() ? 'hover focus' : 'hover'), // Tooltips stay visible after element is clicked on mobile, but only when hovering on desktop
-    title: title,
-    ...fallbackPlacements && {fallbackPlacements: fallbackPlacements},
+    title,
+    ...fallbackPlacements && { fallbackPlacements },
     html: !!description,
   });
 }
@@ -80,7 +80,7 @@ export function removeWithTooltips(element: JQuery<HTMLElement>) {
 /**
  * Initialize the event listeners used to create and destroy dropdown submenus
  */
-export function initDropdownSubmenus() { 
+export function initDropdownSubmenus() {
   const toggleSubmenu = function(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -107,7 +107,7 @@ export function initDropdownSubmenus() {
               },
             },
           ]
-        } 
+        }
       });
 
       container.on('mouseleave.closeSubmenu', function(e) {
@@ -167,7 +167,7 @@ export function getSizeCategory() {
     return SizeCategory.Medium;
 }
 
-/** 
+/**
  * Gets the value from an input element as a string
  */
 export function getValue(elt: string): string {
@@ -198,7 +198,7 @@ export function setCaretToEnd(element: JQuery<HTMLElement>) {
   sel.addRange(range);
 }
 
-/** 
+/**
  * Wrapper function for showing hidden button in btn-toolbar
  * Hidden buttons were causing visible buttons to not center properly in toolbar
  * Set the margin of the last visible button to 0
@@ -327,8 +327,8 @@ export function createContextMenu(menu: JQuery<HTMLElement>, x: number, y: numbe
 
   createPopper({
     getBoundingClientRect: () => ({ // Position the menu relative to a virtual element
-      x: x,
-      y: y,
+      x,
+      y,
       width: 0,
       height: 0,
       top: y,
@@ -426,9 +426,10 @@ export function debounce(func, wait) {
   };
 }
 
-export function getTouchClickCoordinates(event: any, relativeToPage: boolean = false) {
+export function getTouchClickCoordinates(event: any, relativeToPage = false) {
   event = (event.originalEvent || event);
-  let x: number, y: number;
+  let x: number;
+  let y: number;
 
   if(event.type === 'touchstart' || event.type === 'touchmove' || event.type === 'touchend' || event.type === 'touchcancel') {
     const touch = event.touches[0] || event.changedTouches[0];
@@ -464,7 +465,7 @@ export function removeLine(text: string, searchString: string): string {
 
 /**
  * Splits a string into an array of strings each with the given maxLength.
- * Ensures that splits never occur in the middle of HTML entities. 
+ * Ensures that splits never occur in the middle of HTML entities.
  */
 export function splitText(text: string, maxLength: number): string[] {
   const result = [];
@@ -491,7 +492,7 @@ export function splitText(text: string, maxLength: number): string[] {
   return result;
 }
 
-/** 
+/**
  * Returns a string with non-ASCII unicode characters converted to HTML entities
  */
 export function unicodeToHTMLEncoding(text) {
@@ -510,7 +511,7 @@ export function getScrollbarWidth(): number {
   return $('#scrollbar-measure')[0].offsetWidth - $('#scrollbar-measure')[0].clientWidth;
 }
 
-/** 
+/**
  * Calculates the height taken up by an ancestor element's contents after a specified descendant element's
  * height is subtracted.
  * Note 1: Contents includes the padding, margin and border of each element between the descendant and ancestor
@@ -519,7 +520,7 @@ export function getScrollbarWidth(): number {
  * @descendant Element whose outer height is subtracted
  * @ancestor Element to get remaining height for
  * @excludeSiblings A HTML selector string which specifies ancestors for which its siblings should be excluded
- * from the remaining height. 
+ * from the remaining height.
  */
 export function getRemainingHeight(descendant: JQuery<HTMLElement>, ancestor: JQuery<HTMLElement> = $('body'), excludeSiblings?: string): number {
   let remHeight = 0;
@@ -530,7 +531,7 @@ export function getRemainingHeight(descendant: JQuery<HTMLElement>, ancestor: JQ
     if((!excludeSiblings || !currElem.is(excludeSiblings)) && !currElem.is('[class*="col-"]')) {
       const siblings = currElem.siblings();
       siblings.each(function() {
-        if($(this).is(':visible') && $(this).css('position') !== 'absolute' && $(this).css('position') !== 'fixed') 
+        if($(this).is(':visible') && $(this).css('position') !== 'absolute' && $(this).css('position') !== 'fixed')
           remHeight += $(this).outerHeight(true);
       });
     }
@@ -570,11 +571,11 @@ export function copyToClipboard(textElem: JQuery<HTMLInputElement>, triggerElem?
 }
 
 /**
- * Animation where the bounding rectangle of the 'from' element appears to move and resize until it 
- * is positioned over the bounding rectangle of the 'to' element. Used to indicate to the user that a panel is 
- * 'opening'. 
+ * Animation where the bounding rectangle of the 'from' element appears to move and resize until it
+ * is positioned over the bounding rectangle of the 'to' element. Used to indicate to the user that a panel is
+ * 'opening'.
  */
-export function animateBoundingRects(fromElement: any, toElement: any, color: string = '#000000', width: string = '1px', numRects: number = 3) {
+export function animateBoundingRects(fromElement: any, toElement: any, color = '#000000', width = '1px', numRects = 3) {
   const fromTop = fromElement.offset().top;
   const fromLeft = fromElement.offset().left;
   const fromWidth = fromElement.outerWidth();

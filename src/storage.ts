@@ -39,7 +39,8 @@ export class CredentialStorage {
    * using username and password getters
    */
   public async retrieve() {
-    let username: string, password: string;
+    let username: string;
+    let password: string;
     const requirePassword = storage.get('require-password');
     let secureStorageMethod = false;
 
@@ -84,14 +85,14 @@ export class CredentialStorage {
           console.error('Error retrieving stored password:', error.name, error.message);
         }
       }
-      else if(isFirefox()) 
+      else if(isFirefox())
         secureStorageMethod = true; // We rely on Firefox's Password Manager to autofill the login/password form on page load
     }
-    
+
     if(password == null) {
       username = storage.get('user');
       const loginFormUser = $('#login-user').val() as string; // get password from login form autofill (Firefox)
-      if(loginFormUser && loginFormUser === username) 
+      if(loginFormUser && loginFormUser === username)
         password = $('#login-pass').val() as string;
       else if(!requirePassword)
         password = '';
@@ -99,11 +100,11 @@ export class CredentialStorage {
 
     const unsecurePass = storage.get('pass');
     if(unsecurePass) {
-      if(password == null) 
-        password = atob(unsecurePass);    
+      if(password == null)
+        password = atob(unsecurePass);
 
       if(secureStorageMethod)
-        await this.set(username, password); // Re-store the credential using a secure method 
+        await this.set(username, password); // Re-store the credential using a secure method
     }
 
     $('#login-user').val('');
@@ -149,7 +150,7 @@ export class CredentialStorage {
     else if('PasswordCredential' in window) {
       if(password) {
         try {
-          const passwordCredential = new (window as any).PasswordCredential({ id: username, password: password });
+          const passwordCredential = new (window as any).PasswordCredential({ id: username, password });
           await navigator.credentials.store(passwordCredential);
           storage.set('password-credential-api', 'true');
           return;
@@ -234,7 +235,7 @@ export class Storage {
     }
     if(isCapacitor()) {
       try {
-        await (window as any).Capacitor.Plugins.Preferences.set({key: name, value: value});
+        await (window as any).Capacitor.Plugins.Preferences.set({key: name, value});
         return;
       }
       catch(error) {
@@ -295,7 +296,7 @@ function isElectron() {
 }
 
 /**
- * Is this a Firefox app 
+ * Is this a Firefox app
  */
 function isFirefox() {
   return navigator.userAgent.toLowerCase().includes('firefox');
