@@ -89,7 +89,6 @@ const channels = {
 };
 
 let maximized = false;
-let windowResizing = false;
 
 export class Chat {
   private user: string;
@@ -124,7 +123,7 @@ export class Chat {
       chatText.trigger('scroll');
     });
 
-    $('#chat-scroll-button').on('click', (e) => {
+    $('#chat-scroll-button').on('click', () => {
       const chatText = $('.tab-pane.active .chat-text');
       $('#chat-scroll-button').hide();
       chatText.scrollTop(chatText[0].scrollHeight);
@@ -200,13 +199,13 @@ export class Chat {
     if(match) {
       const game1 = games.findGame(+match[1]);
       if(game1) {
-        var watchers = game1.watchers.map(str => str.replace('#', ''));
+        let watchers = game1.watchers.map(str => str.replace('#', ''));
         if(match[2]) {
           const game2 = games.findGame(+match[2]);
           if(game2) {
             // For bughouse chat rooms, add watchers from the other game
-            var watchers2 = game2.watchers.map(str => str.replace('#', ''));
-            var watchers = watchers.concat(watchers2).filter((item, index, self) => {
+            const watchers2 = game2.watchers.map(str => str.replace('#', ''));
+            watchers = watchers.concat(watchers2).filter((item, index, self) => {
               return self.indexOf(item) === index;
             });
           }
@@ -309,7 +308,7 @@ export class Chat {
   public setUser(user: string): void {
     if(this.user !== user) {
       const that = this;
-      $('#tabs .closeTab').each(function (index) {
+      $('#tabs .closeTab').each(function () {
         that.closeTab($(this).parent().siblings('.nav-link'));
       });
     }
@@ -321,7 +320,7 @@ export class Chat {
   public createTab(name: string, showTab = false) {
     let from: string;
     if(!settings.chattabsToggle)
-      from = "console";
+      from = 'console';
     else
       from = name.toLowerCase().replace(/\s/g, '-');
 

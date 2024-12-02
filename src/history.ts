@@ -262,7 +262,7 @@ export class History {
     entry.btime = btime;
   }
 
-  public add(move: any, fen: string, newSubvariation: boolean = false, wtime: number = 0, btime: number = 0, score?: string): HEntry {
+  public add(move: any, fen: string, newSubvariation: boolean = false, wtime: number = 0, btime: number = 0): HEntry {
     const newEntry = new HEntry(move, fen);
 
     if(newSubvariation) {
@@ -379,7 +379,7 @@ export class History {
       }
 
       this.remove(subvar);
-      var mainvarSubs = [...mainvar.subvariations];
+      const mainvarSubs = [...mainvar.subvariations];
 
       for(let i = 0; i < mainvarSubs.length; i++)
         this.remove(mainvarSubs[i]);
@@ -436,10 +436,11 @@ export class History {
 
   private cloneVariation(orig: HEntry, clonedHistory: History, clonedParent: HEntry) {
     let prevCloned = null;
+    let first: HEntry;
     while(orig) {
-      var cloned = orig.clone();
+      const cloned = orig.clone();
       if(!prevCloned) {
-        var first = cloned;
+        first = cloned;
         cloned.parent = clonedParent;
       }
       else
@@ -628,7 +629,7 @@ export class History {
       if(!entry.move)
         return;
 
-      var isContinuation = entry === entry.first && entry.isContinuation();
+      const isContinuation = entry === entry.first && entry.isContinuation();
       if(isContinuation) {
         const parentMoveNo = getMoveNoFromFEN(entry.parent.fen);
         const parentTurnColor = getTurnColorFromFEN(entry.parent.fen);
@@ -784,7 +785,7 @@ export class History {
     }
     else {
       if(entry === entry.first) { // move is start of new subvariation
-        const subVar = $(`<span class="subvariation ms-2 ps-2"></span>`);
+        const subVar = $('<span class="subvariation ms-2 ps-2"></span>');
         subVar.append(cell);
         prevElement.after(subVar);
       }
@@ -1091,7 +1092,7 @@ export class History {
     words.splice(4,2);
     currFen = words.join(' ');
 
-    var repeats = 1;
+    let repeats = 1;
 
     entry = entry.prev;
     while(entry) {
@@ -1146,7 +1147,7 @@ export class History {
    * Create an empty comment HTML element before a move in the movelist
    */
   public createCommentBeforeElement(entry: HEntry): JQuery<HTMLElement> {
-    const commentElement = $(`<span class="comment comment-before ps-1" contenteditable="true" placeholder="Add Comment..." spellcheck="false"></span>`);
+    const commentElement = $('<span class="comment comment-before ps-1" contenteditable="true" placeholder="Add Comment..." spellcheck="false"></span>');
     entry.moveListCellElement.before(commentElement);
     return commentElement;
   }
@@ -1155,7 +1156,7 @@ export class History {
    * Create an empty comment HTML element after a move in the movelist
    */
   public createCommentAfterElement(entry: HEntry): JQuery<HTMLElement> {
-    const commentElement = $(`<span class="comment comment-after ps-1" contenteditable="true" placeholder="Add Comment..." spellcheck="false"></span>`);
+    const commentElement = $('<span class="comment comment-after ps-1" contenteditable="true" placeholder="Add Comment..." spellcheck="false"></span>');
     entry.moveListCellElement.after(commentElement);
     return commentElement;
   }
@@ -1227,13 +1228,13 @@ export class History {
   }
 
   /**
-  * Add a NAG to a move's NAG list and appends the corresponding annotation symbol to the move's HTML element
-  * in the move list and move table.
-  * @param nag The NAG to be added in PGN NAG format, e.g. '$1'. Evaluation NAGs (!, !!, ?, ?? etc) are
-  * stored as the first element in the nags array. The previous evaluation NAG is replaced. Wheraeas positional
-  * NAGs are simply appended to the end of the nags array. If a pair of NAGs is specified, i.e. '$22$23'
-  * then only one of them will be added, based on whether it is white or black to move.
-  */
+   * Add a NAG to a move's NAG list and appends the corresponding annotation symbol to the move's HTML element
+   * in the move list and move table.
+   * @param nag The NAG to be added in PGN NAG format, e.g. '$1'. Evaluation NAGs (!, !!, ?, ?? etc) are
+   * stored as the first element in the nags array. The previous evaluation NAG is replaced. Wheraeas positional
+   * NAGs are simply appended to the end of the nags array. If a pair of NAGs is specified, i.e. '$22$23'
+   * then only one of them will be added, based on whether it is white or black to move.
+   */
   public setAnnotation(entry: HEntry, nag: string) {
     let nagAdded = false;
     // Find nag in the nag lookup table
@@ -1242,7 +1243,7 @@ export class History {
       const annListNags = a.nags.match(/\$\d+/g);
       if(a.nags === nag || annListNags.includes(nag)) {
         const nagCount = nag.match(/\$/g).length;
-        if(nagCount == 2) {
+        if(nagCount === 2) {
           // nags contains both white move and black move nags
           // Determine which one we should use based on which color played this move
           if(entry.turnColor === 'b') // use white nag
@@ -1436,7 +1437,7 @@ export class History {
   public metatagsToString(): string {
     let tagsString = '';
     const tags = this.metatags;
-    for(let key in tags)
+    for(const key in tags)
       tagsString += `[${key} "${tags[key]}"]\n`;
     tagsString = tagsString.slice(0, -1);
 
@@ -1511,7 +1512,7 @@ $(document).on('focus', '.comment', function(event) {
     const clipboardEvent = event.originalEvent as ClipboardEvent;
     const text = clipboardEvent.clipboardData?.getData('text/plain') || '';
 
-    var sel = window.getSelection();
+    const sel = window.getSelection();
     if(sel.rangeCount > 0) {
       const range = sel.getRangeAt(0);
       range.deleteContents();

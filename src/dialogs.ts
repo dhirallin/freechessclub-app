@@ -69,31 +69,31 @@ export function createDialog({type = '', title = '', msg = '', btnFailure, btnSu
     req += `<div class="d-flex align-items-center">
           <strong class="body-text text-primary my-auto">${title} ${msg}</strong>`;
     if (progress) {
-      req += `<div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>`;
+      req += '<div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>';
     }
-    req += `</div>`;
+    req += '</div>';
   }
 
   let btnSuccessHandler = null, btnFailureHandler = null;
 
   if((btnSuccess && btnSuccess.length === 2) || (btnFailure && btnFailure.length === 2)) {
-    req += `<div class="mt-2 pt-2 border-top center">`;
+    req += '<div class="mt-2 pt-2 border-top center">';
     if(btnSuccess && btnSuccess.length === 2) {
       let successCmd = '';
       if(typeof btnSuccess[0] === 'function')
         btnSuccessHandler = btnSuccess[0];
       if(typeof btnSuccess[0] === 'string') {
-        successCmd = `onclick="`;
+        successCmd = 'onclick="';
         if(useSessionSend)
           successCmd += `sessionSend('${btnSuccess[0]}');`;
         else
           successCmd += btnSuccess[0];
-        successCmd += `" `;
+        successCmd += '" ';
       }
 
       req += `<button type="button" ${successCmd}class="button-success btn btn-sm btn-outline-success`
-          + `${btnFailure && btnFailure.length === 2 ? ` me-4` : ``}" data-bs-dismiss="toast">`
-          + `${icons ? `<span class="fa fa-check-circle-o" aria-hidden="false"></span> ` : ``}`
+          + `${btnFailure && btnFailure.length === 2 ? ' me-4' : ''}" data-bs-dismiss="toast">`
+          + `${icons ? `<span class="fa fa-check-circle-o" aria-hidden="false"></span> ` : ''}`
           + `${btnSuccess[1]}</button>`;
     }
     if (btnFailure && btnFailure.length === 2) {
@@ -101,25 +101,25 @@ export function createDialog({type = '', title = '', msg = '', btnFailure, btnSu
       if(typeof btnFailure[0] === 'function')
         btnFailureHandler = btnFailure[0];
       if(typeof btnFailure[0] === 'string') {
-        failureCmd = `onclick="`;
+        failureCmd = 'onclick="';
         if(useSessionSend)
           failureCmd += `sessionSend('${btnFailure[0]}');`;
         else
           failureCmd += btnFailure[0];
-        failureCmd += `" `;
+        failureCmd += '" ';
       }
 
       req += `<button type="button" ${failureCmd}" class="button-failure `
           + `btn btn-sm btn-outline-danger" data-bs-dismiss="toast">`
-          + `${icons ? `<span class="fa fa-times-circle-o" aria-hidden="false"></span> ` : ``}`
+          + `${icons ? `<span class="fa fa-times-circle-o" aria-hidden="false"></span> ` : ''}`
           + `${btnFailure[1]}</button>`;
     }
-    req += `</div>`;
+    req += '</div>';
   }
 
-  req += `</div></div>`;
+  req += '</div></div>';
 
-  var dialog = $(req);
+  const dialog = $(req);
 
   if(btnSuccessHandler)
     dialog.find('.button-success').on('click', btnSuccessHandler);

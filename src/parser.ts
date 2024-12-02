@@ -246,7 +246,7 @@ export class Parser {
 
     // game move
     match = msg.match(/(?:^|\n)<12>\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([rnbqkpRNBQKP\-]{8})\s([BW\-])\s(\-?[0-7])\s([01])\s([01])\s([01])\s([01])\s([0-9]+)\s([0-9]+)\s(\S+)\s(\S+)\s(\-?[0-3])\s([0-9]+)\s([0-9]+)\s([0-9]+)\s([0-9]+)\s(\-?[0-9]+)\s(\-?[0-9]+)\s([0-9]+)\s(\S+)\s\(([0-9]+)\:([0-9]+)\.([0-9]+)\)\s(\S+)\s([01])\s([0-9]+)\s([0-9]+)\s*/);
-    if (match != null && match.length >= 34) {
+    if(match != null && match.length >= 34) {
       const msgs = this.splitMessage(msg);
       if(msgs)
         return msgs;
@@ -349,9 +349,9 @@ export class Parser {
     // game end
     match = msg.match(/(?:^|\n)[^\(\):]*(?:Game\s[0-9]+:.*)?\{Game\s([0-9]+)\s\(([a-zA-Z]+)\svs\.\s([a-zA-Z]+)\)\s([a-zA-Z]+)(?:' game|'s)?\s([^\}]+)\}\s(\*|[012/]+-[012/]+).*/s);
     if (match != null && match.length > 5) {
-      const msgs = this.splitMessage(msg);
-      if(msgs)
-        return msgs;
+      const gMsgs = this.splitMessage(msg);
+      if(gMsgs)
+        return gMsgs;
 
       const p1 = match[2];
       const p2 = match[3];

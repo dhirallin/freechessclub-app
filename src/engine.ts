@@ -2,14 +2,13 @@
 // Use of this source code is governed by a GPL-style
 // license that can be found in the LICENSE file.
 
-import { Chessground } from 'chessground';
 import { HEntry } from './history';
 import { getTurnColorFromFEN, getMoveNoFromFEN, parseMove } from './chess-helper';
 import { gotoMove } from './index';
 import { Game } from './game';
 import * as d3 from 'd3';
 
-var SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'wild/fr', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
+const SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'wild/fr', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
 
 export class Engine {
   protected stockfish: any;
@@ -69,13 +68,13 @@ export class Engine {
             let score = +infoArr[i + 2];
             const turn = fen.split(/\s+/)[1];
 
-            if(score > 0 && turn === 'w' || score < 0 && turn === 'b') {
-              var prefix = '+';
-            }
-            else if(score == 0)
-              var prefix = '=';
+            let prefix = '';
+            if(score > 0 && turn === 'w' || score < 0 && turn === 'b') 
+              prefix = '+';
+            else if(score === 0)
+              prefix = '=';
             else
-              var prefix = '-';
+              prefix = '-';
             score = (score < 0 ? -score : score);
 
             if(infoArr[i+1] === 'mate') {
@@ -177,10 +176,10 @@ export class Engine {
     this.uci(`go ${this.moveParams}`);
   }
   
- /**
-  * Returns the list of moves from the start of the game up to this move
-  * in coordinate notation as a string. Used to send the move list to Engine 
-  */
+  /**
+   * Returns the list of moves from the start of the game up to this move
+   * in coordinate notation as a string. Used to send the move list to Engine 
+   */
   public movesToCoordinatesString(hEntry: HEntry): string {
     const movelist = [];
     while(hEntry.move) {
@@ -351,7 +350,6 @@ export class EvalEngine extends Engine {
         .on('mousemove', function() {
           const mousePosition = d3.pointer(event);
           const xPos = mousePosition[0] - margin.left;
-          const yPos = mousePosition[1] - margin.top;
           const getDistanceFromPos = (d) => Math.abs(d - xScale.invert(xPos));
           const closestIndex = d3.scan(
             d3.range(n),

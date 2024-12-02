@@ -43,7 +43,7 @@ export class Position {
       const boardRow = [];
       for(const char of row) {
         if(/\d/.test(char)) 
-          boardRow.push(...Array(parseInt(char)).fill(null));
+          boardRow.push(...Array(parseInt(char), 10).fill(null));
         else {
           const color = char === char.toLowerCase() ? 'b' : 'w';
           const type = char.toLowerCase() as 'k' | 'q' | 'r' | 'b' | 'n' | 'p';
@@ -58,7 +58,7 @@ export class Position {
     const file = square[0]; 
     const rank = square[1]; 
     const colIndex = file.charCodeAt(0) - 'a'.charCodeAt(0); 
-    const rowIndex = 8 - parseInt(rank); 
+    const rowIndex = 8 - parseInt(rank, 10); 
     return this.board[rowIndex][colIndex];
   }
 
@@ -66,7 +66,7 @@ export class Position {
     const file = square[0]; 
     const rank = square[1]; 
     const colIndex = file.charCodeAt(0) - 'a'.charCodeAt(0); 
-    const rowIndex = 8 - parseInt(rank); 
+    const rowIndex = 8 - parseInt(rank, 10); 
     this.board[rowIndex][colIndex] = piece;
   }
 
@@ -216,9 +216,10 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
   const beforePre = splitFEN(fen); // Stores FEN components from before pre-processing of FEN starts
   const afterPre = Object.assign({}, beforePre); // Stores FEN components for after pre-procesisng is finished
 
-  let opponentRights: string, castlingRights: string;
+  let opponentRights: string;
   if(category.startsWith('wild')) {
     // Remove opponent's castling rights since it confuses chess.js
+    let castlingRights: string;
     if(beforePre.color === 'w') {
       opponentRights = beforePre.castlingRights.replace(/[KQ-]/g,'');
       castlingRights = beforePre.castlingRights.replace(/[kq]/g,'');
@@ -236,8 +237,8 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
   }
 
   /*** Try to make standard move ***/
-  var outMove = chess.move(move);
-  var outFen = chess.fen();
+  let outMove = chess.move(move);
+  let outFen = chess.fen();
 
   /*** Manually update FEN for non-standard moves ***/
   if(!outMove
@@ -455,7 +456,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
           }
           chess.remove(adj);
         }
-      };
+      }
       if(blockingSquare) {
         let canBlock = false;
         if(category === 'crazyhouse') {
@@ -491,7 +492,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     }
     if(opponentRights) {
       // Restore opponent's castling rights (which were removed at the start so as not to confuse chess.js)
-      castlingRights = afterPost.castlingRights;
+      let castlingRights = afterPost.castlingRights;
       if(castlingRights === '-')
         castlingRights = '';
       if(afterPost.color === 'w')
@@ -515,7 +516,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
 export function toDests(fen: string, startFen: string, category: string, variantData?: Partial<VariantData>): Map<string, string[]> {
   const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse'];
   if(!standardCategories.includes(category))
-    return variantToDests(fen, startFen, category);
+    return variantToDests(fen, startFen, category, variantData);
 
   const dests = new Map();
   const chess = new Chess(fen);
@@ -624,7 +625,7 @@ export function updateVariantMoveData(fen: string, move: any, prevVariantData: P
       }
       else if(move.flags && move.flags.includes('e')) {
         const color = getTurnColorFromFEN(fen);
-        let pieceType = (color === 'w' ? 'p' : 'P');
+        const pieceType = (color === 'w' ? 'p' : 'P');
         holdings[pieceType]++;
       }
 
@@ -687,9 +688,9 @@ export function joinFEN(obj: any): string {
 }
 
 export function getPlyFromFEN(fen: string): number {
-  const turn_color = fen.split(/\s+/)[1];
-  const move_no = +fen.split(/\s+/).pop();
-  const ply = move_no * 2 - (turn_color === 'w' ? 1 : 0);
+  const turnColor = fen.split(/\s+/)[1];
+  const moveNo = +fen.split(/\s+/).pop();
+  const ply = moveNo * 2 - (turnColor === 'w' ? 1 : 0);
 
   return ply;
 }
@@ -890,7 +891,7 @@ export function isAttacked(fen: string, square: string, color: string) : boolean
   if(getTurnColorFromFEN(fen) !== color)
     fen = fen.replace(` ${oppositeColor} `, ` ${color} `);
 
-  var chess = new Chess(fen);
+  const chess = new Chess(fen);
 
   // Find king and replace it with a placeholder pawn
   for(const s in Chess.SQUARES) {
@@ -918,7 +919,7 @@ export function getAdjacentSquares(square: string) : string[] {
   if(rank !== '8')
     adjacent.push(`${file}${+rank + 1}`);
   if(file !== 'a') {
-    var prevFile = String.fromCharCode(file.charCodeAt(0) - 1);
+    const prevFile = String.fromCharCode(file.charCodeAt(0) - 1);
     adjacent.push(`${prevFile}${rank}`);
     if(rank !== '1')
       adjacent.push(`${prevFile}${+rank - 1}`);

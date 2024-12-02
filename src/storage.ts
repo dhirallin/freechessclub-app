@@ -39,7 +39,7 @@ export class CredentialStorage {
    * using username and password getters
    */
   public async retrieve() {
-    let username = undefined, password = undefined;
+    let username: string, password: string;
     const requirePassword = storage.get('require-password');
     let secureStorageMethod = false;
 
@@ -139,8 +139,6 @@ export class CredentialStorage {
     }
     else if(isCapacitor()) {
       try {
-        const plugins = (window as any).Capacitor.Plugins;
-        const pluginNames = Object.keys(plugins).map(plugin => plugin);
         await (window as any).Capacitor.Plugins.SecureStoragePlugin.set({ key: 'password', value: password });
         return;
       }
@@ -280,7 +278,7 @@ export class Storage {
   }
 }
 
-export var storage = new Storage(); // The main Storage instance, declared here so it can be imported the other modules
+export const storage = new Storage(); // The main Storage instance, declared here so it can be imported the other modules
 
 /**
  * Is this a Capacitor app?

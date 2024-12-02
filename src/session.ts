@@ -130,7 +130,7 @@ export class Session {
       // Reconnect automatically if the connection was dropped unexpectedly, i.e. by mobile power management
       if(this.isConnected()) {
         let reconnect = false;
-        this.reset(e);
+        this.reset();
         if(!e.wasClean) {
           if(document.visibilityState === 'visible')
             reconnect = true;
@@ -155,10 +155,10 @@ export class Session {
     $('#session-status').html('<span class="text-danger"><span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>&nbsp;Disconnecting...</span>');
     this.connected = false;
     this.websocket.close();
-    this.reset(undefined);
+    this.reset();
   }
 
-  public reset(_e: any) {
+  public reset() {
     $('#session-status').html('<span class="text-danger"><span class="fa fa-circle" aria-hidden="false"></span>&nbsp;Offline</span>');
     this.connected = false;
     this.onRecv({ 

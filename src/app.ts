@@ -2,8 +2,7 @@
 // Use of this source code is governed by a GPL-style
 // license that can be found in the LICENSE file.
 
-import { app, BrowserWindow, safeStorage, ipcMain, dialog, Menu, session, screen, shell } from 'electron'
-import * as Electron from 'electron'
+import { app, BrowserWindow, safeStorage, ipcMain, Menu, screen, shell } from 'electron'
 import * as path from 'path'
 import * as url from 'url'
 import { autoUpdater } from 'electron-updater'
@@ -229,11 +228,11 @@ function findReopenMenuItem() {
 
 // secure encryption and key storage
 ipcMain.handle('encrypt', (event, value) => {
-  var buff = safeStorage.encryptString(value);
+  const buff = safeStorage.encryptString(value);
   return buff.toString('base64');
 });
 ipcMain.handle('decrypt', (event, value) => {
-  var buff = Buffer.from(value, 'base64');
+  const buff = Buffer.from(value, 'base64');
   return safeStorage.decryptString(buff);
 });
 

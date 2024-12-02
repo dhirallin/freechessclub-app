@@ -137,7 +137,7 @@ export function initDropdownSubmenus() {
  * Return true if window size is 'sm'.
  */
 export function isSmallWindow() {
-  return !window.matchMedia("(min-width: 768px)").matches;
+  return !window.matchMedia('(min-width: 768px)').matches;
 }
 
 /**
@@ -151,7 +151,7 @@ export function isMediumWindow() {
  * Return true if window size is 'lg' or 'xl'.
  */
 export function isLargeWindow() {
-  return window.matchMedia("(min-width: 992px)").matches;
+  return window.matchMedia('(min-width: 992px)').matches;
 }
 
 /**
@@ -430,12 +430,12 @@ export function getTouchClickCoordinates(event: any, relativeToPage: boolean = f
   event = (event.originalEvent || event);
   let x: number, y: number;
 
-  if(event.type == 'touchstart' || event.type == 'touchmove' || event.type == 'touchend' || event.type == 'touchcancel') {
+  if(event.type === 'touchstart' || event.type === 'touchmove' || event.type === 'touchend' || event.type === 'touchcancel') {
     const touch = event.touches[0] || event.changedTouches[0];
     x = relativeToPage ? touch.pageX : touch.clientX;
     y = relativeToPage ? touch.pageY : touch.clientY;
   }
-  else if(event.type == 'mousedown' || event.type == 'mouseup' || event.type == 'mousemove' || event.type == 'mouseover' || event.type=='mouseout' || event.type=='mouseenter' || event.type=='mouseleave' || event.type == 'contextmenu') {
+  else if(event.type === 'mousedown' || event.type === 'mouseup' || event.type === 'mousemove' || event.type === 'mouseover' || event.type === 'mouseout' || event.type === 'mouseenter' || event.type === 'mouseleave' || event.type === 'contextmenu') {
     x = relativeToPage ? event.pageX : event.clientX;
     y = relativeToPage ? event.pageY : event.clientY;
   }
@@ -506,7 +506,7 @@ export function unicodeToHTMLEncoding(text) {
  */
 export function getScrollbarWidth(): number {
   if(!$('#scrollbar-measure').length) // For performance reasons only create once
-    $('body').append(`<div id="scrollbar-measure" style="position: absolute; top: -9999px; overflow: scroll"></div>`);
+    $('body').append('<div id="scrollbar-measure" style="position: absolute; top: -9999px; overflow: scroll"></div>');
   return $('#scrollbar-measure')[0].offsetWidth - $('#scrollbar-measure')[0].clientWidth;
 }
 
@@ -522,13 +522,13 @@ export function getScrollbarWidth(): number {
  * from the remaining height. 
  */
 export function getRemainingHeight(descendant: JQuery<HTMLElement>, ancestor: JQuery<HTMLElement> = $('body'), excludeSiblings?: string): number {
-  var remHeight = 0;
-  var currElem = descendant;
+  let remHeight = 0;
+  let currElem = descendant;
   while(!currElem.is(ancestor)) {
     if(descendant !== currElem)
       remHeight += currElem.outerHeight(true) - currElem.height();
     if((!excludeSiblings || !currElem.is(excludeSiblings)) && !currElem.is('[class*="col-"]')) {
-      let siblings = currElem.siblings();
+      const siblings = currElem.siblings();
       siblings.each(function() {
         if($(this).is(':visible') && $(this).css('position') !== 'absolute' && $(this).css('position') !== 'fixed') 
           remHeight += $(this).outerHeight(true);
@@ -552,13 +552,13 @@ export function copyToClipboard(textElem: JQuery<HTMLInputElement>, triggerElem?
     navigator.clipboard.writeText(textElem.val() as string);
   else {
     textElem[0].select();
-    document.execCommand("copy"); // Obsolete fallback method
+    document.execCommand('copy'); // Obsolete fallback method
   }
   textElem[0].setSelectionRange(0, 0);
 
   // Change trigger element's tooltip to 'Copied!' for a couple of seconds
   if(triggerElem) {
-    var origTitle = triggerElem.attr('data-bs-original-title');
+    const origTitle = triggerElem.attr('data-bs-original-title');
     triggerElem.attr('title', 'Copied!');
     createTooltip(triggerElem);
     triggerElem.tooltip('show');
@@ -575,21 +575,21 @@ export function copyToClipboard(textElem: JQuery<HTMLInputElement>, triggerElem?
  * 'opening'. 
  */
 export function animateBoundingRects(fromElement: any, toElement: any, color: string = '#000000', width: string = '1px', numRects: number = 3) {
-  var fromTop = fromElement.offset().top;
-  var fromLeft = fromElement.offset().left;
-  var fromWidth = fromElement.outerWidth();
-  var fromHeight = fromElement.outerHeight();
+  const fromTop = fromElement.offset().top;
+  const fromLeft = fromElement.offset().left;
+  const fromWidth = fromElement.outerWidth();
+  const fromHeight = fromElement.outerHeight();
 
-  var toTop = toElement.offset().top;
-  var toLeft = toElement.offset().left;
-  var toWidth = toElement.outerWidth();
-  var toHeight = toElement.outerHeight();
+  const toTop = toElement.offset().top;
+  const toLeft = toElement.offset().left;
+  const toWidth = toElement.outerWidth();
+  const toHeight = toElement.outerHeight();
 
-  var distance = Math.sqrt((toTop - fromTop) ** 2 + (toLeft - fromLeft) ** 2);
-  var speed = 0.015 * Math.sqrt(distance);
+  const distance = Math.sqrt((toTop - fromTop) ** 2 + (toLeft - fromLeft) ** 2);
+  const speed = 0.015 * Math.sqrt(distance);
 
   // Create bounding div
-  var boundingDiv = $('<div></div>');
+  const boundingDiv = $('<div></div>');
   boundingDiv.css({
     position: 'absolute',
     top: fromTop,
@@ -604,16 +604,16 @@ export function animateBoundingRects(fromElement: any, toElement: any, color: st
   boundingDiv.appendTo($('body'));
 
   // Create animated rects
-  var rect = boundingDiv;
+  let rect = boundingDiv;
   for(let i = 0; i < numRects; i++) {
-    var childRect = $('<div></div>');
+    const childRect = $('<div></div>');
     childRect.css({
       width: '100%',
       height: '100%',
       padding: `calc(50% / ${numRects - i})`,
       border: `${width} solid ${color}`
     });
-    var rect = childRect.appendTo(rect);
+    rect = childRect.appendTo(rect);
   }
 
   boundingDiv.one('transitionend', () => {
