@@ -231,6 +231,9 @@ export class History {
   }
 
   public reset(fen: string, wtime: number, btime: number) {
+    if(!fen)
+      fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
     this.firstEntry = this.currEntry = new HEntry(undefined, fen);
     this.updateClockTimes(this.firstEntry, wtime, btime);
     this.game.moveTableElement.empty();

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a GPL-style
 // license that can be found in the LICENSE file.
 
-import Chess from 'chess.js';
 import { Chessground } from 'chessground';
 import { Color, Key } from 'chessground/types';
 import { Polyglot } from 'cm-polyglot/src/Polyglot.js';
@@ -113,7 +112,7 @@ async function onDeviceReady() {
   const game = createGame();
   game.role = Role.NONE;
   game.category = 'untimed';
-  game.history = new History(game, new Chess().fen());
+  game.history = new History(game);
   setGameWithFocus(game);
 
   disableOnlineInputs(true);
@@ -2411,6 +2410,7 @@ export function parseMovelist(game: Game, movelist: string) {
   let n = 1;
   let wtime = game.time * 60000;
   let btime = game.time * 60000;
+  let fen: string;
 
   // We've set 'iset startpos 1' so that the 'moves' command also returns the start position in style12 in cases
   // where the start position is non-standard, e.g. fischer random.
@@ -2421,34 +2421,34 @@ export function parseMovelist(game: Game, movelist: string) {
     // Change the role to -3 so it won't get ignored by the parser this time.
     let s = match[0].replace(/(<12> (\S+\s){18})([-\d]+)/, '$1-3');
     let startpos = session.getParser().parse(s);
-    var chess = Chess(startpos.fen);
-    game.history.setMetatags({SetUp: '1', FEN: startpos.fen});
+    fen = startpos.fen;
+    game.history.setMetatags({SetUp: '1', FEN: fen});
   }
   else
-    var chess = Chess();
+    fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
-  game.history.reset(chess.fen(), wtime, btime);
+  game.history.reset(fen, wtime, btime);
   while(found !== null) {
     found = movelist.match(new RegExp(n + '\\.\\s*(\\S*)\\s*\\((\\d+):(\\d+)\.(\\d+)\\)\\s*(?:(\\S*)\\s*\\((\\d+):(\\d+)\.(\\d+)\\))?.*', 'm'));
     if (found !== null && found.length > 4) {
       const m1 = found[1].trim();
       if(m1 !== '...') {
         wtime += (n === 1 ? 0 : game.inc * 1000) - (+found[2] * 60000 + +found[3] * 1000 + +found[4]);
-        const parsedMove = parseGameMove(game, chess.fen(), m1);
+        const parsedMove = parseGameMove(game, fen, m1);
         if(!parsedMove)
           break;
-        chess.load(parsedMove.fen);
+        fen = parsedMove.fen;
         game.history.add(parsedMove.move, parsedMove.fen, false, wtime, btime);
         getOpening(game);
         updateGameVariantMoveData(game);
       }
-      if (found.length > 5 && found[5]) {
+      if(found.length > 5 && found[5]) {
         const m2 = found[5].trim();
         btime += (n === 1 ? 0 : game.inc * 1000) - (+found[6] * 60000 + +found[7] * 1000 + +found[8]);
-        const parsedMove = parseGameMove(game, chess.fen(), m2);
+        const parsedMove = parseGameMove(game, fen, m2);
         if(!parsedMove)
           break;
-        chess.load(parsedMove.fen);
+        fen = parsedMove.fen;
         game.history.add(parsedMove.move, parsedMove.fen, false, wtime, btime);
         getOpening(game);
         updateGameVariantMoveData(game);
@@ -3403,13 +3403,12 @@ function checkGameEnd(game: Game) {
     return;
 
   const lastMove = game.history.last();
-  let gameEnd = false;
+  let gameEnd = false, isDraw = false;
   let winner = '', loser = '', reason: Reason, reasonStr: string, scoreStr: string;
   let fen = lastMove.fen;
-  const isThreefold = game.history.isThreefoldRepetition();
+  let variantData = lastMove.variantData;
   const turnColor = lastMove.turnColor;
   const gameStr = `(${game.wname} vs. ${game.bname})`;
-  const chess = new Chess(fen);
 
   // Check white or black is out of time
   if(game.clock.getWhiteTime() < 0 || game.clock.getBlackTime() < 0) {
@@ -3419,17 +3418,13 @@ function checkGameEnd(game: Game) {
     // Check if the side that is not out of time has sufficient material to mate, otherwise its a draw
     let insufficientMaterial = false;
     if(wtime < 0)
-      fen = chess.fen().replace(' w ', ' b '); // Set turn color to the side not out of time in order to check their material
+      insufficientMaterial = ChessHelper.insufficientMaterial(fen, variantData, 'b');
     else if(btime < 0)
-      fen = chess.fen().replace(' b ', ' w ');
-
-    chess.load(fen);
-    insufficientMaterial = chess.insufficient_material();
+      insufficientMaterial = ChessHelper.insufficientMaterial(fen, variantData, 'w');
 
     if(insufficientMaterial) {
-      reason = Reason.Draw;
       reasonStr = `${wtime < 0 ? game.wname : game.bname} ran out of time and ${wtime >= 0 ? game.wname : game.bname} has no material to mate`;
-      scoreStr = '1/2-1/2';
+      isDraw = true;
     }
     else {
       winner = (wtime >= 0 ? game.wname : game.bname);
@@ -3440,7 +3435,7 @@ function checkGameEnd(game: Game) {
     }
     gameEnd = true;
   }
-  else if(chess.in_checkmate()) {
+  else if(lastMove.move.san.includes('#')) {
     winner = (turnColor === 'w' ? game.bname : game.wname);
     loser = (turnColor === 'w' ? game.wname : game.bname);
     reason = Reason.Checkmate;
@@ -3449,19 +3444,26 @@ function checkGameEnd(game: Game) {
 
     gameEnd = true;
   }
-  else if(chess.in_draw() || isThreefold) {
+  else if(game.history.isThreefoldRepetition()) {
+    reasonStr = 'Game drawn by repetition';
+    isDraw = true;
+  }
+  else if(ChessHelper.insufficientMaterial(fen, variantData)) {
+    reasonStr = 'Neither player has mating material';
+    isDraw = true;
+  }
+  else if(ChessHelper.stalemate(fen, variantData)) {
+    reasonStr = 'Game drawn by stalemate';
+    isDraw = true;
+  }
+  else if(ChessHelper.fiftyMoves(fen)) {
+    reasonStr = 'Game drawn by the 50 move rule';
+    isDraw = true;
+  }
+
+  if(isDraw) {
     reason = Reason.Draw;
     scoreStr = '1/2-1/2';
-
-    if(isThreefold)
-      reasonStr = 'Game drawn by repetition';
-    else if(chess.insufficient_material())
-      reasonStr = 'Neither player has mating material';
-    else if(chess.in_stalemate())
-      reasonStr = 'Game drawn by stalemate';
-    else
-      reasonStr = 'Game drawn by the 50 move rule';
-
     gameEnd = true;
   }
 

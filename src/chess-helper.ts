@@ -11,6 +11,153 @@ export interface VariantData {
   promoted: string[],
 }
 
+export interface Piece {
+  type: 'k' | 'q' | 'r' | 'b' | 'n' | 'p',
+  color: 'w' | 'b'
+}
+
+/**
+ * Represents a chess position as an 8x8 array of Piece objects.
+ */
+export class Position {
+  private board: (Piece | null)[][];
+
+  public static SQUARES = [
+    'a8', 'b8', 'c8', 'd8', 'e8', 'f8', 'g8', 'h8',
+    'a7', 'b7', 'c7', 'd7', 'e7', 'f7', 'g7', 'h7',
+    'a6', 'b6', 'c6', 'd6', 'e6', 'f6', 'g6', 'h6',
+    'a5', 'b5', 'c5', 'd5', 'e5', 'f5', 'g5', 'h5',
+    'a4', 'b4', 'c4', 'd4', 'e4', 'f4', 'g4', 'h4',
+    'a3', 'b3', 'c3', 'd3', 'e3', 'f3', 'g3', 'h3',
+    'a2', 'b2', 'c2', 'd2', 'e2', 'f2', 'g2', 'h2',
+    'a1', 'b1', 'c1', 'd1', 'e1', 'f1', 'g1', 'h1'
+  ];
+
+  constructor(fen?: string) {
+    if(!fen)
+      fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+    this.board = [];
+    const rows = fen.split(' ')[0].split('/'); // Only take the board layout part of the FEN
+    rows.forEach(row => {
+      const boardRow = [];
+      for(const char of row) {
+        if(/\d/.test(char)) 
+          boardRow.push(...Array(parseInt(char)).fill(null));
+        else {
+          const color = char === char.toLowerCase() ? 'b' : 'w';
+          const type = char.toLowerCase() as 'k' | 'q' | 'r' | 'b' | 'n' | 'p';
+          boardRow.push({ type, color });
+        }
+      }
+      this.board.push(boardRow);
+    });
+  }
+
+  public get(square: string): Piece | null {
+    const file = square[0]; 
+    const rank = square[1]; 
+    const colIndex = file.charCodeAt(0) - 'a'.charCodeAt(0); 
+    const rowIndex = 8 - parseInt(rank); 
+    return this.board[rowIndex][colIndex];
+  }
+
+  public set(square: string, piece: Piece | null) {
+    const file = square[0]; 
+    const rank = square[1]; 
+    const colIndex = file.charCodeAt(0) - 'a'.charCodeAt(0); 
+    const rowIndex = 8 - parseInt(rank); 
+    this.board[rowIndex][colIndex] = piece;
+  }
+
+  public remove(square: string) {
+    this.set(square, null);
+  }
+}
+
+/**
+ * Checks if the position specified by fen is in stalemate for the plyaer to move.
+ * For Crazyhouse/bughouse this takes into account captured/held pieces 
+ * @param variantData Used by crazyhouse/bughouse
+ * @returns true if player is in stalemate, otherwise false
+ */
+export function stalemate(fen: string, variantData?: VariantData): boolean {
+  if(variantData && variantData.holdings) {
+    const turnColor = getTurnColorFromFEN(fen);
+    const holdings = variantData.holdings;
+    for(const key in holdings) {
+      // Can't be in stalemate if the player has holdings (captured pieces) in crazyhouse/bughouse
+      if((key.toUpperCase() === key && turnColor === 'w') || (key.toLowerCase() === key && turnColor === 'b') 
+          && holdings[key])
+        return false;
+    }
+  }
+
+  const chess = new Chess(fen);
+  return chess.in_stalemate();
+}
+
+/**
+ * Returns true if the position is a 50 moves draw
+ */
+export function fiftyMoves(fen: string): boolean {
+  const fenWords = splitFEN(fen);
+  return +fenWords.plyClock >= 50;
+}
+
+/**
+ * Checks if there is insufficient material to mate 
+ * @param variantData Used by crazyhouse/bughouse
+ * @param color Color can be 'w', 'b' or undefined. If the color is not specified then the function
+ * only returns true if both sides have insufficient material to mate
+ * @returns true if insufficient material to mate, otherwise false
+ */
+export function insufficientMaterial(fen: string, variantData?: VariantData, color?: string): boolean {
+  let whiteValue = 0, blackValue = 0;
+
+  if(variantData && variantData.holdings) {
+    const holdings = variantData.holdings;
+    for(const key in holdings) {
+      const value = (key.toLowerCase() === 'n' || key.toLowerCase() === 'b') ? 0.5 * holdings[key] : holdings[key];
+      if(key === key.toUpperCase()) 
+        whiteValue += value;
+      else 
+        blackValue += value;
+    }
+  }
+  
+  const material = {
+    P: 0, R: 0, Bw: 0, Bb: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, bw: 0, bb: 0, n: 0, q: 0, k: 0 
+  };
+
+  const pos = new Position(fen);
+  for(const sq of Position.SQUARES) {
+    const piece = pos.get(sq);
+    if(piece && (!color || color === piece.color)) {
+      const pieceColorType = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
+      if(piece.type === 'b') {
+        const fileNum = sq[0].charCodeAt(0) - 'a'.charCodeAt(0) + 1;
+        const rankNum = +sq[1]; 
+        const squareColor = fileNum + rankNum % 2 ? 'w' : 'b';
+        material[`${pieceColorType}${squareColor}`] = 1;
+      }
+      else
+        material[pieceColorType]++;
+    }
+  }
+
+  for(const key in material) {
+    const lowKey = key.toLowerCase();
+    const value = (lowKey === 'n' || lowKey === 'bw' || lowKey === 'bb') ? 0.5 * material[key] : material[key];
+    if(key[0] === key[0].toUpperCase()) 
+      whiteValue += value;
+    else 
+      blackValue += value;
+  }
+
+  return (color === 'w' && whiteValue < 3) || (color === 'b' && blackValue < 3) || (!color && whiteValue < 3 && blackValue < 3);
+}
+
 export function parseMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>) {
   // Parse variant move
   const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
