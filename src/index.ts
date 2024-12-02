@@ -714,6 +714,7 @@ function gameStart(game: Game) {
   // Reset HTML elements
   game.element.find('.player-status .captured').text('');
   game.element.find('.opponent-status .captured').text('');
+  game.captured = undefined;
   game.element.find('.card-header').css('--bs-card-cap-bg', '');
   game.element.find('.card-footer').css('--bs-card-cap-bg', '');
   game.element.find('.clock').removeClass('low-time');
@@ -758,6 +759,7 @@ function gameStart(game: Game) {
     game.gameListFilter = '';
     $('#game-list-button').hide();
     game.history = new History(game, game.fen, game.time * 60000, game.time * 60000);
+    game.history.first().variantData = game.variantData;
     updateEditMode(game);
     game.analyzing = false;
     if(game.setupBoard)
@@ -1822,7 +1824,10 @@ function showCapturedMaterial(game: Game) {
     P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0
   };
 
-  if(game.category === 'crazyhouse' || game.category === 'bughouse')
+  if(!game.captured)
+    game.captured = { ...captured };
+
+  if(game.category === 'crazyhouse' || game.category === 'bughouse') 
     captured = game.history.current().variantData.holdings; // for crazyhouse/bughouse we display the actual pieces captured
   else {
     const material = {
@@ -1851,16 +1856,15 @@ function showCapturedMaterial(game: Game) {
     }
   }
 
-  if(game.captured !== undefined) {
-    for(const key in captured) {
-      if(game.captured[key] != captured[key]) {
-        if(key === key.toUpperCase())
-          blackChanged = true;
-        else
-          whiteChanged = true;
-      }
+  for(const key in captured) {
+    if(game.captured[key] != captured[key]) {
+      if(key === key.toUpperCase()) 
+        blackChanged = true;
+      else
+        whiteChanged = true;
     }
   }
+
   game.captured = captured;
 
   if(whiteChanged) {
@@ -3175,7 +3179,8 @@ $('#play-computer-form').on('submit', (event) => {
     playerInc: +$('#play-computer-inc').val(),
     gameType: $('[name="play-computer-type"]:checked').next().text(),
     difficulty: $('[name="play-computer-level"]:checked').next().text(),
-    fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    variantData: {},
   };
 
   if($('#play-computer-start-from-pos').prop('checked')) {
@@ -3188,6 +3193,7 @@ $('#play-computer-form').on('submit', (event) => {
       fenWords.plyClock = '0';
       fenWords.moveNo = '1';
       params.fen = ChessHelper.joinFEN(fenWords);
+      params.variantData = game.history.current().variantData;
     }
 
     const category = params.gameType === 'Chess960' ? 'wild/fr' : params.gameType.toLowerCase();
@@ -3268,7 +3274,8 @@ function playComputer(params: any) {
     flip: (params.playerColor === 'White' ? false : true), // whether game starts with board flipped
     category: category,                     // game variant or type
     color: params.playerColor === 'White' ? 'w' : 'b',
-    difficulty: params.difficulty           // Computer difficulty level
+    difficulty: params.difficulty,          // Computer difficulty level
+    variantData: params.variantData         // Inject variant data into the first move
   }
 
   // Show game status mmessage

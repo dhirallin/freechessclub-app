@@ -45,6 +45,7 @@ export class GameData {
   category: string = '';                // category or variant
   color: string = 'w';
   difficulty: number = 0;               // computer difficulty level
+  variantData: any = {};              // variant data such as holdings used by crazyhouse/bughouse
 
   public isPlaying() { return this.role === Role.MY_MOVE || this.role === Role.OPPONENTS_MOVE || this.role === Role.PLAYING_COMPUTER; }
   public isPlayingOnline() { return this.role === Role.MY_MOVE || this.role === Role.OPPONENTS_MOVE; }
@@ -129,7 +130,7 @@ export class GameList {
   }
 
   public remove(game: Game) {
-    let index = this.gamelist.indexOf(game);
+    const index = this.gamelist.indexOf(game);
     if(index !== -1)
       this.gamelist.splice(index, 1);
   }
