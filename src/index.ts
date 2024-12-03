@@ -2394,6 +2394,16 @@ function flipBoard(game: Game) {
     game.element.find('.player-status').appendTo(game.element.find('.top-panel'));
     game.element.find('.opponent-status').appendTo(game.element.find('.bottom-panel'));
   }
+
+  // Swap pieces in Setup Board panel
+  if(game.element.find('.setup-board-white').parent().hasClass('setup-board-top')) {
+    game.element.find('.setup-board-white').appendTo(game.element.find('.setup-board-bottom'));
+    game.element.find('.setup-board-black').appendTo(game.element.find('.setup-board-top'));
+  }
+  else {
+    game.element.find('.setup-board-white').appendTo(game.element.find('.setup-board-top'));
+    game.element.find('.setup-board-black').appendTo(game.element.find('.setup-board-bottom'));
+  }
 }
 
 /** ***********************
