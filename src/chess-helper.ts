@@ -85,10 +85,10 @@ export function stalemate(fen: string, variantData?: VariantData): boolean {
   if(variantData && variantData.holdings) {
     const turnColor = getTurnColorFromFEN(fen);
     const holdings = variantData.holdings;
-    for(const key in holdings) {
+    for(const [key, value] of Object.entries(holdings)) {
       // Can't be in stalemate if the player has holdings (captured pieces) in crazyhouse/bughouse
-      if((key.toUpperCase() === key && turnColor === 'w') || (key.toLowerCase() === key && turnColor === 'b')
-          && holdings[key])
+      if((key.toLowerCase() === key && turnColor === 'w') || (key.toUpperCase() === key && turnColor === 'b')
+          && value)
         return false;
     }
   }
@@ -142,7 +142,7 @@ export function insufficientMaterial(fen: string, variantData?: VariantData, col
         const squareColor = fileNum + rankNum % 2 ? 'w' : 'b';
         material[`${pieceColorType}${squareColor}`] = 1;
       }
-      else 
+      else
         material[pieceColorType]++;
     }
   }
@@ -150,9 +150,9 @@ export function insufficientMaterial(fen: string, variantData?: VariantData, col
   Object.entries(material).forEach(([key, value]) => {
     const lowKey = key.toLowerCase();
     const weight = (lowKey === 'n' || lowKey === 'bw' || lowKey === 'bb') ? 0.5 * value : value;
-    if(key[0] === key[0].toUpperCase()) 
+    if(key[0] === key[0].toUpperCase())
       whiteWeight += weight;
-    else 
+    else
       blackWeight += weight;
   });
 

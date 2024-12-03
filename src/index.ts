@@ -758,7 +758,6 @@ function gameStart(game: Game) {
     game.gameListFilter = '';
     $('#game-list-button').hide();
     game.history = new History(game, game.fen, game.time * 60000, game.time * 60000);
-    game.history.first().variantData = game.variantData;
     updateEditMode(game);
     game.analyzing = false;
     if(game.setupBoard)
@@ -1830,7 +1829,7 @@ function showCapturedMaterial(game: Game) {
     game.captured = { ...captured };
 
   if(game.category === 'crazyhouse' || game.category === 'bughouse') {
-    const holdings = game.history.current().variantData.holdings; 
+    const holdings = game.history.current().variantData.holdings;
     if(holdings)
       captured = holdings; // for crazyhouse/bughouse we display the actual pieces captured
   }
@@ -2194,7 +2193,7 @@ export function movePiece(source: any, target: any, metadata: any) {
     from: (!cgRoles.hasOwnProperty(source) ? source : ''),
     to: target,
     promotion: promotePiece,
-    piece: pieceRole,
+    piece: cgRoles.hasOwnProperty(source) ? pieceRole : undefined,
   };
 
   const parsedMove = parseGameMove(game, prevHEntry.fen, inMove);
@@ -3196,7 +3195,6 @@ $('#play-computer-form').on('submit', (event) => {
     gameType: $('[name="play-computer-type"]:checked').next().text(),
     difficulty: $('[name="play-computer-level"]:checked').next().text(),
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-    variantData: {},
   };
 
   if($('#play-computer-start-from-pos').prop('checked')) {
@@ -3209,7 +3207,6 @@ $('#play-computer-form').on('submit', (event) => {
       fenWords.plyClock = '0';
       fenWords.moveNo = '1';
       params.fen = ChessHelper.joinFEN(fenWords);
-      params.variantData = game.history.current().variantData;
     }
 
     const category = params.gameType === 'Chess960' ? 'wild/fr' : params.gameType.toLowerCase();
@@ -3291,7 +3288,6 @@ function playComputer(params: any) {
     category,                               // game variant or type
     color: params.playerColor === 'White' ? 'w' : 'b',
     difficulty: params.difficulty,          // Computer difficulty level
-    variantData: params.variantData         // Inject variant data into the first move
   }
 
   // Show game status mmessage
@@ -3333,8 +3329,15 @@ function getPlayComputerMoveParams(game: Game): string {
 }
 
 function playComputerBestMove(game: Game, bestMove: string, score = '=0.00') {
+  if(!bestMove)
+    return;
+
   const move = bestMove[1] === '@' // Crazyhouse/bughouse
-    ? bestMove
+    ? {
+      piece: bestMove[0].toLowerCase(),
+      from: null,
+      to: bestMove.slice(2,4)
+    }
     : {
       from: bestMove.slice(0,2),
       to: bestMove.slice(2,4),
