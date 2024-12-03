@@ -120,7 +120,7 @@ export function insufficientMaterial(fen: string, variantData?: VariantData, col
     const holdings = variantData.holdings;
     Object.entries(holdings).forEach(([key, value]) => {
       const weight = (key.toLowerCase() === 'n' || key.toLowerCase() === 'b') ? 0.5 * value : value;
-      if(key === key.toUpperCase())
+      if(key === key.toLowerCase())
         whiteWeight += weight;
       else
         blackWeight += weight;
@@ -142,7 +142,7 @@ export function insufficientMaterial(fen: string, variantData?: VariantData, col
         const squareColor = fileNum + rankNum % 2 ? 'w' : 'b';
         material[`${pieceColorType}${squareColor}`] = 1;
       }
-      else
+      else 
         material[pieceColorType]++;
     }
   }
@@ -150,13 +150,13 @@ export function insufficientMaterial(fen: string, variantData?: VariantData, col
   Object.entries(material).forEach(([key, value]) => {
     const lowKey = key.toLowerCase();
     const weight = (lowKey === 'n' || lowKey === 'bw' || lowKey === 'bb') ? 0.5 * value : value;
-    if(key[0] === key[0].toUpperCase())
+    if(key[0] === key[0].toUpperCase()) 
       whiteWeight += weight;
-    else
+    else 
       blackWeight += weight;
   });
 
-  return (color === 'w' && whiteWeight < 3) || (color === 'b' && blackWeight < 3) || (!color && whiteWeight < 3 && blackWeight < 3);
+  return (color === 'w' && whiteWeight < 2) || (color === 'b' && blackWeight < 2) || (!color && whiteWeight < 2 && blackWeight < 2);
 }
 
 export function parseMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>) {

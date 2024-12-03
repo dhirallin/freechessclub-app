@@ -1829,12 +1829,13 @@ function showCapturedMaterial(game: Game) {
   if(!game.captured)
     game.captured = { ...captured };
 
-  if(game.category === 'crazyhouse' || game.category === 'bughouse')
-    captured = game.history.current().variantData.holdings; // for crazyhouse/bughouse we display the actual pieces captured
+  if(game.category === 'crazyhouse' || game.category === 'bughouse') {
+    const holdings = game.history.current().variantData.holdings; 
+    if(holdings)
+      captured = holdings; // for crazyhouse/bughouse we display the actual pieces captured
+  }
   else {
-    const material = {
-      P: 0, R: 0, B: 0, N: 0, Q: 0, K: 0, p: 0, r: 0, b: 0, n: 0, q: 0, k: 0
-    };
+    const material = { ...captured };
 
     const pos = game.history.current().fen.split(/\s+/)[0];
     for(const ch of pos) {
@@ -1858,14 +1859,14 @@ function showCapturedMaterial(game: Game) {
     }
   }
 
-  for(const key in captured) {
-    if(game.captured[key] !== captured[key]) {
+  Object.keys(captured).forEach(key => {
+    if(game.captured[key] !== key) {
       if(key === key.toUpperCase())
         blackChanged = true;
       else
         whiteChanged = true;
     }
-  }
+  });
 
   game.captured = captured;
 
