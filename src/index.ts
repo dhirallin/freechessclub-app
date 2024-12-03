@@ -3936,8 +3936,12 @@ function createMoveContextMenu(cmEvent: any) {
     moveElement.find('.move').removeClass('hovered');
     const target = $(event.target);
     const nags = target.attr('data-nags');
-    if(nags)
+    if(nags) {
       game.history.setAnnotation(hEntry, nags);
+      updateGamePreserved(game, true);
+      if(hEntry.parent)
+        updateEditMode(game, true);
+    }
     else {
       const action = target.attr('data-action');
       switch(action) {
@@ -3945,11 +3949,17 @@ function createMoveContextMenu(cmEvent: any) {
           setViewModeList(); // Switch to List View so the user can edit the comment in-place.
           gotoMove(hEntry);
           game.history.editCommentBefore(hEntry);
+          updateGamePreserved(game, true);
+          if(hEntry.parent)
+            updateEditMode(game, true);
           break;
         case 'edit-comment-after':
           setViewModeList();
           gotoMove(hEntry);
           game.history.editCommentAfter(hEntry);
+          updateGamePreserved(game, true);
+          if(hEntry.parent)
+            updateEditMode(game, true);
           break;
         case 'delete-annotation':
           game.history.removeAnnotation(hEntry);
