@@ -901,7 +901,7 @@ export function isAttacked(fen: string, square: string, color: string) : boolean
   const chess = new Chess(fen);
 
   // Find king and replace it with a placeholder pawn
-  for(const s of Object.keys(Chess.SQUARES)) {
+  for(const s of chess.SQUARES) {
     const piece = chess.get(s);
     if(piece && piece.type === 'k' && piece.color === color) {
       chess.remove(s);
