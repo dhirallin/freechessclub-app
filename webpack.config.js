@@ -7,8 +7,10 @@ module.exports = {
         filename: "bundle.js"
     },
     externals: {
-      $: "jquery",
-	    d3: "d3",
+      $: 'jquery',
+	  d3: 'd3',
+      '@popperjs/core': 'Popper',
+      bootstrap: 'Bootstrap'
     },
     resolve: {
         // Add '.ts' and '.tsx' as a resolvable extension.
