@@ -98,8 +98,8 @@ async function onDeviceReady() {
   await storage.init();
   initSettings();
 
-  if((window as any).Capacitor !== undefined) {
-    (window as any).Capacitor.Plugins.SafeArea.enable({
+  if(Utils.isCapacitor()) {
+    Capacitor.Plugins.SafeArea.enable({
       config: {
         customColorsForSystemBars: false
       },
