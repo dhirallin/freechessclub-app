@@ -1,6 +1,9 @@
 const webpack = require('webpack');
+const InjectManifestPlugin = require('./src/inject-manifest-webpack-plugin.js');
+const workboxWebpack = require('workbox-webpack-plugin');
 
-module.exports = {
+module.exports = [{
+    name: 'bundle',
     entry: "./src/index.ts",
     output: {
         path: __dirname + "/assets/js/",
@@ -63,5 +66,18 @@ module.exports = {
           },
         compress: true,
         port: 8080,
+    }
+},
+{
+    name: 'service-worker',
+    entry: './service-worker.js',
+    target: 'webworker',
+    dependencies: ['bundle'],
+    output: {
+        filename: 'service-worker.js',
+        path: __dirname,
     },
-}
+    plugins: [
+        new InjectManifestPlugin(),
+    ],
+}]

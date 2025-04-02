@@ -157,6 +157,8 @@ async function onDeviceReady() {
 $(window).on('load', () => {
   $('#left-panel-header').css('visibility', 'visible');
   $('#right-panel-header').css('visibility', 'visible');
+
+  // Register service worker
 });
 
 /** Prompt before unloading page if in a game */
