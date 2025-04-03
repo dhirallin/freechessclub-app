@@ -20,7 +20,8 @@ const externals = [
   {"url":"https://fonts.gstatic.com/s/notosansmath/v15/7Aump_cpkSecTWaHRlH2hyV5UEl981w.woff2","revision":"1"},
 ];
 
-// Use network first strategy for html and css files (so we can modify them without having to re-inject the manifest)
+// Use network first strategy for html and css files, so we can modify them without having to do cache busting
+// (by rebuilding and injecting the manifest)
 registerRoute(
   ({ request }) => request.destination === 'document' || request.destination === 'style',
   new NetworkFirst({
