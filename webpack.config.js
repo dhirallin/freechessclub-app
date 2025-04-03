@@ -70,7 +70,6 @@ module.exports = [{
     name: 'service-worker',
     entry: './src/service-worker.js',
     target: 'webworker',
-    dependencies: ['bundle'],
     output: {
         filename: 'service-worker.js',
         path: __dirname,

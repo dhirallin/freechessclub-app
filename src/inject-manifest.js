@@ -5,7 +5,7 @@ workboxBuild.injectManifest({
   swDest: "./service-worker.js",
   globDirectory: process.cwd(),
   globPatterns: [
-    "*.html",
+    "play.html",
     "assets/**/*.{html,js,css,png,jpg,svg,json,bin,tsv,ico}",
   ],
 });
