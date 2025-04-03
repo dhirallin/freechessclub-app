@@ -158,7 +158,8 @@ $(window).on('load', () => {
   $('#left-panel-header').css('visibility', 'visible');
   $('#right-panel-header').css('visibility', 'visible');
 
-  // Register service worker
+  if('serviceWorker' in navigator)
+    navigator.serviceWorker.register('/service-worker.js');
 });
 
 /** Prompt before unloading page if in a game */
