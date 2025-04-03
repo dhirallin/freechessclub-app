@@ -2,6 +2,7 @@ import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
 
+// pre-cache external resources
 const externals = [
   {"url":"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css", "revision":"1"},
   {"url":"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.woff2?v=4.7.0", "revision":"1"},
@@ -19,6 +20,7 @@ const externals = [
   {"url":"https://fonts.gstatic.com/s/notosansmath/v15/7Aump_cpkSecTWaHRlH2hyV5UEl981w.woff2","revision":"1"},
 ];
 
+// Use network first strategy for html and css files (so we can modify them without having to re-inject the manifest)
 registerRoute(
   ({ request }) => request.destination === 'document' || request.destination === 'style',
   new NetworkFirst({
