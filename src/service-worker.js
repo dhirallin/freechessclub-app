@@ -1,4 +1,4 @@
-import { precacheAndRoute } from 'workbox-precaching';
+import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
 
@@ -33,6 +33,8 @@ registerRoute(
     }],
   })
 );
+
+cleanupOutdatedCaches();
 
 // __WB_MANIFEST is injected by inject-manifest.js
 precacheAndRoute([...self.__WB_MANIFEST, ...externals]);
