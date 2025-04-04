@@ -1,4 +1,4 @@
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { precacheAndRoute, matchPrecache, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
 
@@ -40,13 +40,17 @@ else {
   registerRoute(
     ({ request }) => request.destination === 'document' || request.destination === 'style',
     async (options) => {
-      const response = await networkFirst.handle(options);
+      let response;
+      try { response = await networkFirst.handle(options); }
+      catch(error) {}
+
       if(!response) {
         // If both network and runtime cache fail, retrieve the file from the precache
         const precacheResponse = await matchPrecache(options.request.url);
         if(precacheResponse) 
           return precacheResponse;
       }
+
       return response || Response.error();
     }
   );
