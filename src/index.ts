@@ -159,7 +159,7 @@ $(window).on('load', () => {
   $('#right-panel-header').css('visibility', 'visible');
 
   if('serviceWorker' in navigator)
-    navigator.serviceWorker.register('/service-worker.js');
+    navigator.serviceWorker.register(`/service-worker.js?env=${Utils.isCapacitor() || Utils.isElectron() ? 'app' : 'web'}`);
 });
 
 /** Prompt before unloading page if in a game */

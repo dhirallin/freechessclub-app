@@ -20,24 +20,40 @@ const externals = [
   {"url":"https://fonts.gstatic.com/s/notosansmath/v15/7Aump_cpkSecTWaHRlH2hyV5UEl981w.woff2","revision":"1"},
 ];
 
-// Use network first strategy for html and css files, so we can modify them without having to do cache busting
-// (by rebuilding and injecting the manifest)
-registerRoute(
-  ({ request }) => request.destination === 'document' || request.destination === 'style',
-  new NetworkFirst({
+cleanupOutdatedCaches();
+
+const urlParams = new URLSearchParams(self.location.search);
+if(urlParams.get('env') === 'app') // Capacitor or Electron app, don't cache static assets or use network first strategy
+  precacheAndRoute(externals);
+else {
+  // Use network first strategy for html and css files, so we can modify them without having to do cache busting
+  // (by rebuilding and injecting the manifest)
+  const networkFirst = new NetworkFirst({
     cacheName: 'html-css-cache',
     plugins: [{
       cacheWillUpdate: async ({ response }) => {
         return response && response.status === 200 ? response : null;
       },
     }],
-  })
-);
+  });
 
-cleanupOutdatedCaches();
+  registerRoute(
+    ({ request }) => request.destination === 'document' || request.destination === 'style',
+    async (options) => {
+      const response = await networkFirst.handle(options);
+      if(!response) {
+        // If both network and runtime cache fail, retrieve the file from the precache
+        const precacheResponse = await matchPrecache(options.request.url);
+        if(precacheResponse) 
+          return precacheResponse;
+      }
+      return response || Response.error();
+    }
+  );
 
-// __WB_MANIFEST is injected by inject-manifest.js
-precacheAndRoute([...self.__WB_MANIFEST, ...externals]);
+  // __WB_MANIFEST is injected by inject-manifest.js
+  precacheAndRoute([...self.__WB_MANIFEST, ...externals]);
+}
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
