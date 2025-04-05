@@ -90,6 +90,12 @@ const channels = {
 
 let maximized = false;
 
+window.addEventListener('unhandledrejection', (event) => {
+  // This is to get around bug in gh-emoji where it throws an 'Uncaught (in promise) Type Error' when 
+  // it fails to fetch the emojis due to being offline etc.
+  event.preventDefault();  
+});
+
 export class Chat {
   private user: string;
   private userRE: RegExp;
