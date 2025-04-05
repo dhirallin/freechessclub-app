@@ -2,7 +2,7 @@ import { precacheAndRoute, matchPrecache, cleanupOutdatedCaches } from 'workbox-
 import { registerRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
 
-// pre-cache external assets (like CDN fonts and icons)
+// pre-cache external resources
 const externals = [
   {"url":"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css", "revision":"1"},
   {"url":"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.woff2?v=4.7.0", "revision":"1"},
