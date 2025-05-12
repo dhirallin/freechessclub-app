@@ -2185,6 +2185,12 @@ export function movePiece(source: any, target: any, metadata: any) {
   if(game.setupBoard)
     return;
 
+  console.log('test1');
+  if(game.history.current().turnColor !== game.color) {
+    console.log('test2');
+    return;
+  }
+
   const prevHEntry = currentGameMove(game);
 
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
@@ -2300,6 +2306,10 @@ function preMovePiece(source: any, target: any, metadata: any) {
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;
     showPromotionPanel(game, true);
+  }
+  else {
+    game.board.move(source, target);
+    //game.board.playPremove();
   }
 }
 
