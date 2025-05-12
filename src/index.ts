@@ -2185,12 +2185,6 @@ export function movePiece(source: any, target: any, metadata: any) {
   if(game.setupBoard)
     return;
 
-  console.log('test1');
-  if(game.history.current().turnColor !== game.color) {
-    console.log('test2');
-    return;
-  }
-
   const prevHEntry = currentGameMove(game);
 
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
@@ -2285,7 +2279,13 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 
   updateHistory(game, move, fen);
 
-  game.board.playPremove();
+  //game.board.playPremove();
+  const premove = game.premoves.shift();
+  if(premove) {
+    console.log('test 1');
+    movePiece(premove.source, premove.target, premove.metadata);
+  }
+
   game.board.playPredrop(() => true);
 
   checkGameEnd(game); // Check whether game is over when playing against computer (offline mode)
@@ -2308,8 +2308,10 @@ function preMovePiece(source: any, target: any, metadata: any) {
     showPromotionPanel(game, true);
   }
   else {
+    game.board.set({ animation: { enabled: false }});
     game.board.move(source, target);
-    //game.board.playPremove();
+    game.board.set({ animation: { enabled: true }});
+    game.premoves.push({source, target, metadata});
   }
 }
 
