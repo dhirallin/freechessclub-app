@@ -2036,8 +2036,15 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
 
   setClocks(game);
 
-  if(setBoard && !game.setupBoard)
+  if(setBoard && !game.setupBoard) {
     game.board.set({ fen });
+    if(game.premoves.length) {
+      game.board.set({ animation: { enabled: false }});
+      for(let premove of game.premoves) 
+        game.board.move(premove.source, premove.target);
+      game.board.set({ animation: { enabled: true }});
+    }
+  }
 
   if(game.element.find('.promotion-panel').is(':visible')) {
     game.board.cancelPremove();
@@ -2280,10 +2287,10 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
   updateHistory(game, move, fen);
 
   //game.board.playPremove();
-  const premove = game.premoves.shift();
-  if(premove) {
-    console.log('test 1');
-    movePiece(premove.source, premove.target, premove.metadata);
+  if(game.history.current().turnColor === game.color) {
+    const premove = game.premoves.shift();
+    if(premove) 
+      movePiece(premove.source, premove.target, premove.metadata);
   }
 
   game.board.playPredrop(() => true);
