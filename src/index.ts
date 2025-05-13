@@ -2039,9 +2039,16 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
   if(setBoard && !game.setupBoard) {
     game.board.set({ fen });
     if(game.premoves.length) {
+      const pieces = game.board.state.pieces;
       game.board.set({ animation: { enabled: false }});
-      for(let premove of game.premoves) 
+      for(let i = 0; i < game.premoves.length; i++) {
+        const premove = game.premoves[i];
+        if(!pieces.get(premove.source)) {
+          game.premoves.splice(i);
+          break;
+        }        
         game.board.move(premove.source, premove.target);
+      }
       game.board.set({ animation: { enabled: true }});
     }
   }
@@ -2218,6 +2225,7 @@ export function movePiece(source: any, target: any, metadata: any) {
   const move = parsedMove ? parsedMove.move : inMove;
 
   if(!parsedMove && SupportedCategories.includes(game.category)) {
+    game.premoves = [];
     updateBoard(game, false, true);
     return;
   }
