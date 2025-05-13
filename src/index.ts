@@ -2040,7 +2040,7 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
     game.board.set({ fen });
     if(game.premoves.length) {
       const pieces = game.board.state.pieces;
-      //game.board.set({ animation: { enabled: false }});
+      game.board.set({ animation: { enabled: false }});
       for(let i = 0; i < game.premoves.length; i++) {
         const premove = game.premoves[i];
         const sourcePiece = pieces.get(premove.source);
@@ -2054,7 +2054,7 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
           [premove.target, sourcePiece]
         ]);
       }
-      //game.board.set({ animation: { enabled: true }});
+      game.board.set({ animation: { enabled: true }});
     }
   }
 
@@ -2328,13 +2328,12 @@ function preMovePiece(source: any, target: any, metadata: any) {
     showPromotionPanel(game, true);
   }
   else {
-    //game.board.set({ animation: { enabled: false }});
-    //game.board.move(source, target);
-    //game.board.set({ animation: { enabled: true }});
+    game.board.set({ animation: { enabled: false }});
     game.board.setPieces([
       [source, null],
       [target, sourcePiece]
     ]);
+    game.board.set({ animation: { enabled: true }});
     game.premoves.push({source, target, metadata});
   }
 }
@@ -2388,10 +2387,12 @@ function showPromotionPanel(game: Game, premove = false) {
       const pieces = game.board.state.pieces;
       const sourcePiece = pieces.get(source);
       sourcePiece.role = cgRoles[game.promotePiece];
+      game.board.set({ animation: { enabled: false }});
       game.board.setPieces([
         [source, null],
         [target, sourcePiece]
       ]);
+      game.board.set({ animation: { enabled: true }});
     }
   });
 }
