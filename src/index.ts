@@ -2040,16 +2040,21 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
     game.board.set({ fen });
     if(game.premoves.length) {
       const pieces = game.board.state.pieces;
-      game.board.set({ animation: { enabled: false }});
+      //game.board.set({ animation: { enabled: false }});
       for(let i = 0; i < game.premoves.length; i++) {
         const premove = game.premoves[i];
-        if(!pieces.get(premove.source)) {
+        const sourcePiece = pieces.get(premove.source);
+        if(!sourcePiece) {
           game.premoves.splice(i);
           break;
         }        
-        game.board.move(premove.source, premove.target);
+        //game.board.move(premove.source, premove.target);
+        game.board.setPieces([
+          [premove.source, null],
+          [premove.target, sourcePiece]
+        ]);
       }
-      game.board.set({ animation: { enabled: true }});
+      //game.board.set({ animation: { enabled: true }});
     }
   }
 
@@ -2323,9 +2328,13 @@ function preMovePiece(source: any, target: any, metadata: any) {
     showPromotionPanel(game, true);
   }
   else {
-    game.board.set({ animation: { enabled: false }});
-    game.board.move(source, target);
-    game.board.set({ animation: { enabled: true }});
+    //game.board.set({ animation: { enabled: false }});
+    //game.board.move(source, target);
+    //game.board.set({ animation: { enabled: true }});
+    game.board.setPieces([
+      [source, null],
+      [target, sourcePiece]
+    ]);
     game.premoves.push({source, target, metadata});
   }
 }
@@ -2371,9 +2380,19 @@ function showPromotionPanel(game: Game, premove = false) {
 
   $('.promotion-piece').on('click', (event) => {
     hidePromotionPanel();
-    games.focused.promotePiece = $(event.target).attr('data-piece');
+    game.promotePiece = $(event.target).attr('data-piece');
     if(!premove)
       movePiece(source, target, metadata);
+    else {
+      const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
+      const pieces = game.board.state.pieces;
+      const sourcePiece = pieces.get(source);
+      sourcePiece.role = cgRoles[game.promotePiece];
+      game.board.setPieces([
+        [source, null],
+        [target, sourcePiece]
+      ]);
+    }
   });
 }
 
