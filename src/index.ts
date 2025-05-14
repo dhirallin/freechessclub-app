@@ -2036,9 +2036,9 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
 
   setClocks(game);
 
+  const premoveSquares = new Map();
   if(setBoard && !game.setupBoard) {
     game.board.set({ fen });
-    const premoveSquares: SquareClasses = new Map(); // blah
     if(game.premoves.length) {
       const pieces = game.board.state.pieces;
       game.board.set({ animation: { enabled: false }});
@@ -2054,6 +2054,8 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
           [premove.source, null],
           [premove.target, sourcePiece]
         ]);
+        premoveSquares.set(premove.source, 'current-premove');
+        premoveSquares.set(premove.target, 'current-premove');
       }
       game.board.set({ animation: { enabled: true }});
     }
