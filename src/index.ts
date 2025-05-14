@@ -2329,8 +2329,6 @@ function preMovePiece(source: any, target: any, metadata: any) {
     return;
   const pieces = game.board.state.pieces;
   const sourcePiece = pieces.get(source);
-  const pieceRole = sourcePiece ? cgRoles[sourcePiece.role] : undefined;
-  const pieceColor = sourcePiece ? sourcePiece.color : undefined;
 
   game.board.set({ animation: { enabled: false }});
   game.board.setPieces([
@@ -2341,7 +2339,10 @@ function preMovePiece(source: any, target: any, metadata: any) {
   const premoveSquares = game.board.state.highlight.custom;
   premoveSquares.set(source, 'current-premove');
   premoveSquares.set(target, 'current-premove');
+  game.board.cancelPremove();
 
+  const pieceRole = sourcePiece ? cgRoles[sourcePiece.role] : undefined;
+  const pieceColor = sourcePiece ? sourcePiece.color : undefined;
   if(pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1')) {
     game.movePieceSource = source;
     game.movePieceTarget = target;
