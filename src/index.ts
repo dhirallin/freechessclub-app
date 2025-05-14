@@ -2050,8 +2050,11 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
           break;
         }        
         //game.board.move(premove.source, premove.target);
-        if(premove.promotion)
-          sourcePiece.role = premove.promotion;
+        if(premove.promotion) {
+          const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
+          sourcePiece.role = cgRoles[premove.promotion];
+        }
+
         game.board.setPieces([
           [premove.source, null],
           [premove.target, sourcePiece]
@@ -2329,24 +2332,24 @@ function preMovePiece(source: any, target: any, metadata: any) {
   const pieceRole = sourcePiece ? cgRoles[sourcePiece.role] : undefined;
   const pieceColor = sourcePiece ? sourcePiece.color : undefined;
 
+  game.board.set({ animation: { enabled: false }});
+  game.board.setPieces([
+    [source, null],
+    [target, sourcePiece]
+  ]);
+  game.board.set({ animation: { enabled: true }});
+  const premoveSquares = game.board.state.highlight.custom;
+  premoveSquares.set(source, 'current-premove');
+  premoveSquares.set(target, 'current-premove');
+
   if(pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1')) {
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;
     showPromotionPanel(game, true);
   }
-  else {
-    game.board.set({ animation: { enabled: false }});
-    game.board.setPieces([
-      [source, null],
-      [target, sourcePiece]
-    ]);
-    game.board.set({ animation: { enabled: true }});
-    const premoveSquares = game.board.state.highlight.custom;
-    premoveSquares.set(source, 'current-premove');
-    premoveSquares.set(target, 'current-premove');
+  else
     game.premoves.push({source, target, metadata});
-  }
 }
 
 function showPromotionPanel(game: Game, premove = false) {
@@ -2396,17 +2399,14 @@ function showPromotionPanel(game: Game, premove = false) {
     else {
       const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
       const pieces = game.board.state.pieces;
-      const sourcePiece = pieces.get(source);
-      sourcePiece.role = cgRoles[game.promotePiece];
+      const targetPiece = pieces.get(target);
+      targetPiece.role = cgRoles[game.promotePiece];
       game.board.set({ animation: { enabled: false }});
       game.board.setPieces([
-        [source, null],
-        [target, sourcePiece]
+        [target, null],
+        [target, targetPiece]
       ]);
       game.board.set({ animation: { enabled: true }});
-      const premoveSquares = game.board.state.highlight.custom;
-      premoveSquares.set(source, 'current-premove');
-      premoveSquares.set(target, 'current-premove');
       game.premoves.push({source, target, metadata, promotion: game.promotePiece});
     }
   });
