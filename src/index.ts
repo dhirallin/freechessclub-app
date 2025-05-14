@@ -2038,6 +2038,7 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
 
   if(setBoard && !game.setupBoard) {
     game.board.set({ fen });
+    const premoveSquares: SquareClasses = new Map(); // blah
     if(game.premoves.length) {
       const pieces = game.board.state.pieces;
       game.board.set({ animation: { enabled: false }});
@@ -2110,7 +2111,8 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
     },
     highlight: {
       lastMove: settings.highlightsToggle,
-      check: settings.highlightsToggle
+      check: settings.highlightsToggle,
+      custom: premoveSquares
     },
     predroppable: { enabled: game.category === 'crazyhouse' || game.category === 'bughouse' },
     check: !game.setupBoard && /[+#]/.test(move?.san) ? color : false,
