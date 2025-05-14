@@ -2050,6 +2050,8 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
           break;
         }        
         //game.board.move(premove.source, premove.target);
+        if(premove.promotion)
+          sourcePiece.role = premove.promotion;
         game.board.setPieces([
           [premove.source, null],
           [premove.target, sourcePiece]
@@ -2306,8 +2308,10 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
   //game.board.playPremove();
   if(game.history.current().turnColor === game.color) {
     const premove = game.premoves.shift();
-    if(premove) 
+    if(premove) {
+      game.promotePiece = premove.promotion;
       movePiece(premove.source, premove.target, premove.metadata);
+    }
   }
 
   game.board.playPredrop(() => true);
@@ -2338,6 +2342,9 @@ function preMovePiece(source: any, target: any, metadata: any) {
       [target, sourcePiece]
     ]);
     game.board.set({ animation: { enabled: true }});
+    const premoveSquares = game.board.state.highlight.custom;
+    premoveSquares.set(source, 'current-premove');
+    premoveSquares.set(target, 'current-premove');
     game.premoves.push({source, target, metadata});
   }
 }
@@ -2397,6 +2404,10 @@ function showPromotionPanel(game: Game, premove = false) {
         [target, sourcePiece]
       ]);
       game.board.set({ animation: { enabled: true }});
+      const premoveSquares = game.board.state.highlight.custom;
+      premoveSquares.set(source, 'current-premove');
+      premoveSquares.set(target, 'current-premove');
+      game.premoves.push({source, target, metadata, promotion: game.promotePiece});
     }
   });
 }
