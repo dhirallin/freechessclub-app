@@ -2340,13 +2340,14 @@ function preMovePiece(source: any, target: any, metadata: any) {
     const premoveSquares = game.board.state.highlight.custom;
     premoveSquares.set(source, 'current-premove');
     premoveSquares.set(target, 'current-premove');
-    
+  
     game.board.set({ animation: { enabled: false }});
-    game.board.set({ fen: fenMove.fen });
-    game.board.set({ 
-      animation: { enabled: true },
-      drawable: { enabled: false }
-    });
+    const targetPiece = game.board.get(source);
+    game.board.setPieces([
+      [source, null],
+      [target, targetPiece]
+    ]);
+    game.board.set({ animation: { enabled: true } });
   }
   else {
     if(!game.premoves.length)
