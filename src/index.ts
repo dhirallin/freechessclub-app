@@ -2017,12 +2017,12 @@ function createBoard(element: any): any {
     premovable: {
       events: {
         set: preMovePiece,
-        unset: cancelPremove,
+        unset: hidePromotionPanel,
       }
     },
     events: {
       change: boardChanged
-    }
+    },
   });
 }
 
@@ -2316,8 +2316,12 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
   if(game.history.current().turnColor === game.color) {
     const premove = game.premoves.shift();
     if(premove) {
-      if(!game.premoves.length)
+      if(!game.premoves.length) {
         game.board.cancelPremove();
+        game.board.set({
+          drawable: { enabled: true }
+        });
+      }
       game.promotePiece = premove.promotion;
       movePiece(premove.source, premove.target, premove.metadata);
     }
@@ -2329,6 +2333,8 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 }
 
 function preMovePiece(source: any, target: any, metadata: any) {
+  console.log('test 0: ' + games.focused.board.getFen());
+
   const game = games.focused;
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
   if(cgRoles.hasOwnProperty(source)) // piece drop rather than move
@@ -2352,14 +2358,20 @@ function preMovePiece(source: any, target: any, metadata: any) {
     [source, null],
     [target, sourcePiece]
   ]);*/
+  console.log('test 1: ' + game.board.getFen());
   game.board.set({ fen });
-  game.board.set({ animation: { enabled: true }});
+  game.board.set({ 
+    animation: { enabled: true },
+    drawable: { enabled: false }
+  });
+  console.log('test 2: ' + game.board.getFen());
   const premoveSquares = game.board.state.highlight.custom;
   premoveSquares.set(source, 'current-premove');
   premoveSquares.set(target, 'current-premove');
   //game.board.cancelPremove();
 
   console.log('promote: ' + promote);
+
   if(promote && !settings.autoPromoteToggle) {
     console.log('hello?');
     game.movePieceSource = source;
@@ -2367,14 +2379,25 @@ function preMovePiece(source: any, target: any, metadata: any) {
     game.movePieceMetadata = metadata;
     showPromotionPanel(game, true);
   }
-  else
+  else {
+    if(!game.premoves.length)
+      game.element.one('contextmenu', () => {
+        cancelMultiplePremove(game);
+      });
+      
     game.premoves.push({source, target, metadata});
+  }
 }
 
-function cancelPremove() {
-  const game = games.focused;
+function cancelMultiplePremove(game: Game) {
   game.premoves = [];
+  game.board.set({ animation: { enabled: false }});
   updateBoard(game, false, true);
+  game.board.set({
+    animation: { enabled: true },
+    drawable: { enabled: true }
+  });
+  game.board.cancelPremove();
 }
 
 function showPromotionPanel(game: Game, premove = false) {
@@ -2432,6 +2455,11 @@ function showPromotionPanel(game: Game, premove = false) {
         [target, targetPiece]
       ]);
       game.board.set({ animation: { enabled: true }});
+      if(!game.premoves.length)
+        game.element.one('contextmenu', () => {
+          cancelMultiplePremove(game);
+        });
+
       game.premoves.push({source, target, metadata, promotion: game.promotePiece});
     }
   });

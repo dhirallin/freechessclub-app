@@ -247,7 +247,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
   let outFen = chess.fen();
 
   /** Manually update FEN for non-standard moves **/
-  if(!outMove
+  if(!outMove || premove 
       || (category.startsWith('wild') && san.toUpperCase().startsWith('O-O'))) {
     san = san.replace(/[+#]/, ''); // remove check and checkmate, we'll add it back at the end
     chess = new Chess(fen);
@@ -427,10 +427,13 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     }
     else if(premove) {
       console.log('test 2');
-
+      console.log('fen: ' + fen);
+      console.log('chess.fen: ' + chess.fen());
+      console.log('move.from: ' + move.from);
       const piece = chess.get(move.from);
       if(move.promotion)
         piece.type = move.promotion;
+      console.log(piece);
       chess.remove(move.from);
       chess.put(piece, move.to);
     }
