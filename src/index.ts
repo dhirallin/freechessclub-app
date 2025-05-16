@@ -2041,14 +2041,14 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
     game.board.set({ fen });
     if(game.premoves.length) {
       const pieces = game.board.state.pieces;
-      game.board.set({ animation: { enabled: false }});
+      let premoveFen = fen;
       for(let i = 0; i < game.premoves.length; i++) {
-        const premove = game.premoves[i];
-        const sourcePiece = pieces.get(premove.source);
+        const premove = game.premoves[i].move;
+        /*const sourcePiece = pieces.get(premove.move.from);
         if(!sourcePiece) {
           game.premoves.splice(i);
           break;
-        }        
+        }        */
         //game.board.move(premove.source, premove.target);
         /*if(premove.promotion) {
           const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
@@ -2059,13 +2059,18 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
           [premove.target, sourcePiece]
         ]);*/
 
-        const inFen = `${game.board.getFen()} ${sourcePiece.color === 'white' ? 'w' : 'b'} KQkq - 0 1`;
-        const { fen } = parseGameMove(game, inFen, {from: premove.source, to: premove.target, promotion: premove.promotion}, true);
-        game.board.set({ fen });
+        let moveFen = parseGameMove(game, premoveFen, premove, true);
+        premoveFen = moveFen.fen;
+        if(!premoveFen) {
+          game.premoves.splice(i);
+          break;
+        }
 
-        premoveSquares.set(premove.source, 'current-premove');
-        premoveSquares.set(premove.target, 'current-premove');
+        premoveSquares.set(premove.from, 'current-premove');
+        premoveSquares.set(premove.to, 'current-premove');
       }
+      game.board.set({ animation: { enabled: false }});
+      game.board.set({ premoveFen });
       game.board.set({ animation: { enabled: true }});
     }
   }
@@ -2385,7 +2390,10 @@ function preMovePiece(source: any, target: any, metadata: any) {
         cancelMultiplePremove(game);
       });
       
-    game.premoves.push({source, target, metadata});
+    const prevFen = game.premoves[game.premoves.length - 1] || game.history.current().fen;  
+    const move = {from: source, to: target};
+    const fen = parseGameMove(game, prevFen, move, true);
+    game.premoves.push({ fen, move });
   }
 }
 
