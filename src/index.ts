@@ -2304,7 +2304,7 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
         cancelMultiplePremove(game);
       
       game.promotePiece = premove.promotion;
-      movePiece(premove.move.from, premove.move.to, null);
+      movePiece(premove.from, premove.to, null);
     }
   }
 
