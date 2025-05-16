@@ -2017,7 +2017,7 @@ function createBoard(element: any): any {
     premovable: {
       events: {
         set: preMovePiece,
-        unset: hidePromotionPanel,
+        unset: cancelPremove,
       }
     },
     events: {
@@ -2332,8 +2332,6 @@ function preMovePiece(source: any, target: any, metadata: any) {
   }
   
   if(promote && !settings.autoPromoteToggle) {  
-    console.log('HELLO 1');
-
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;
@@ -2365,6 +2363,15 @@ function preMovePiece(source: any, target: any, metadata: any) {
       drawable: { enabled: false }
     });
   }
+}
+
+function cancelPremove() {
+  const game = games.focused;
+  const promotionPanel = game.element.find('.promotion-panel');
+  if(promotionPanel.length) {
+    hidePromotionPanel(game);
+    updateBoard(game, false, true);
+  } 
 }
 
 function cancelMultiplePremove(game: Game) {

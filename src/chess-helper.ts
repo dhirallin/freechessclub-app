@@ -428,13 +428,9 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     }
     else if(premove) {
       const piece = chess.get(move.from);
-      console.log('CHESS HELPER: ' + fen + ' ' + move.from);
-      console.log('piece: ' + piece);
-      console.log('color: ' + color);
-      if(!piece || piece.color !== color) {
-        console.log('YO');
+      if(!piece || piece.color !== color) 
         return null;
-      }
+      
       colorAfter = color;
       if(move.promotion)
         piece.type = move.promotion;
