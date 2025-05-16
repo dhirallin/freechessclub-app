@@ -2050,15 +2050,18 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
           break;
         }        
         //game.board.move(premove.source, premove.target);
-        if(premove.promotion) {
+        /*if(premove.promotion) {
           const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
           sourcePiece.role = cgRoles[premove.promotion];
         }
-
         game.board.setPieces([
           [premove.source, null],
           [premove.target, sourcePiece]
-        ]);
+        ]);*/
+
+        const { fen } = parseGameMove(game, game.board.getFen(), {from: premove.source, to: premove.target, promotion: premove.promotion}, true);
+        game.board.set({ fen });
+
         premoveSquares.set(premove.source, 'current-premove');
         premoveSquares.set(premove.target, 'current-premove');
       }
@@ -2330,20 +2333,29 @@ function preMovePiece(source: any, target: any, metadata: any) {
   const pieces = game.board.state.pieces;
   const sourcePiece = pieces.get(source);
 
+  const pieceRole = sourcePiece ? cgRoles[sourcePiece.role] : undefined;
+  const pieceColor = sourcePiece ? sourcePiece.color : undefined;
+  const promote = (pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1'));
+  const move = {
+    from: source,
+    to: target,
+    promotion: promote && settings.autoPromoteToggle ? 'q' : null
+  }
+  
   game.board.set({ animation: { enabled: false }});
-  game.board.setPieces([
+  const { fen } = parseGameMove(game, game.board.getFen(), move, true);
+  /*game.board.setPieces([
     [source, null],
     [target, sourcePiece]
-  ]);
+  ]);*/
+  game.board.set({ fen });
   game.board.set({ animation: { enabled: true }});
   const premoveSquares = game.board.state.highlight.custom;
   premoveSquares.set(source, 'current-premove');
   premoveSquares.set(target, 'current-premove');
   game.board.cancelPremove();
 
-  const pieceRole = sourcePiece ? cgRoles[sourcePiece.role] : undefined;
-  const pieceColor = sourcePiece ? sourcePiece.color : undefined;
-  if(pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1')) {
+  if(promote && !settings.autoPromoteToggle) {
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;
@@ -2484,8 +2496,8 @@ function flipBoard(game: Game) {
  **************************/
 
 /** Wrapper function for parseMove */
-function parseGameMove(game: Game, fen: string, move: any) {
-  return ChessHelper.parseMove(fen, move, game.history.first().fen, game.category, game.history.current().variantData);
+function parseGameMove(game: Game, fen: string, move: any, premove = false) {
+  return ChessHelper.parseMove(fen, move, game.history.first().fen, game.category, game.history.current().variantData, premove);
 }
 
 /** Wrapper function for toDests */

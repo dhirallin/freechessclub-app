@@ -159,11 +159,11 @@ export function insufficientMaterial(fen: string, variantData?: VariantData, col
   return (color === 'w' && whiteWeight < 2) || (color === 'b' && blackWeight < 2) || (!color && whiteWeight < 2 && blackWeight < 2);
 }
 
-export function parseMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>) {
+export function parseMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>, premove=false) {
   // Parse variant move
   const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
-  if(!standardCategories.includes(category))
-    return parseVariantMove(fen, move, startFen, category, variantData);
+  if(!standardCategories.includes(category) || premove)
+    return parseVariantMove(fen, move, startFen, category, variantData, premove);
 
   // Parse standard move
   const chess = new Chess(fen);
@@ -176,7 +176,7 @@ export function parseMove(fen: string, move: any, startFen: string, category: st
   return { fen: outFen, move: outMove };
 }
 
-function parseVariantMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>) {
+function parseVariantMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>, premove=false) {
   const supportedCategories = ['crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
   if(!supportedCategories.includes(category))
     return null;
@@ -349,40 +349,42 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       }
 
       // Check castling is legal
-      // Can king pass through all squares between start and end squares?
-      let startCode: number;
-      let endCode: number;
-      if(kingFrom.charCodeAt(0) < kingTo.charCodeAt(0)) {
-        startCode = kingFrom.charCodeAt(0);
-        endCode = kingTo.charCodeAt(0);
-      }
-      else {
-        startCode = kingTo.charCodeAt(0);
-        endCode = kingFrom.charCodeAt(0);
-      }
-      for(let code = startCode; code <= endCode; code++) {
-        const square = `${String.fromCharCode(code)}${kingFrom[1]}`;
-        // square blocked?
-        if(square !== kingFrom && square !== rookFrom && chess.get(square))
-          return null;
-        // square under attack?
-        if(isAttacked(fen, square, color))
-          return null;
-      }
-      // Can rook pass through all squares between start and end squares?
-      if(rookFrom.charCodeAt(0) < rookTo.charCodeAt(0)) {
-        startCode = rookFrom.charCodeAt(0);
-        endCode = rookTo.charCodeAt(0);
-      }
-      else {
-        startCode = rookTo.charCodeAt(0);
-        endCode = rookFrom.charCodeAt(0);
-      }
-      for(let code = startCode; code <= endCode; code++) {
-        const square = `${String.fromCharCode(code)}${rookFrom[1]}`;
-        // square blocked?
-        if(square !== rookFrom && square !== kingFrom && chess.get(square))
-          return null;
+      if(!premove) {
+        // Can king pass through all squares between start and end squares?
+        let startCode: number;
+        let endCode: number;
+        if(kingFrom.charCodeAt(0) < kingTo.charCodeAt(0)) {
+          startCode = kingFrom.charCodeAt(0);
+          endCode = kingTo.charCodeAt(0);
+        }
+        else {
+          startCode = kingTo.charCodeAt(0);
+          endCode = kingFrom.charCodeAt(0);
+        }
+        for(let code = startCode; code <= endCode; code++) {
+          const square = `${String.fromCharCode(code)}${kingFrom[1]}`;
+          // square blocked?
+          if(square !== kingFrom && square !== rookFrom && chess.get(square))
+            return null;
+          // square under attack?
+          if(isAttacked(fen, square, color))
+            return null;
+        }
+        // Can rook pass through all squares between start and end squares?
+        if(rookFrom.charCodeAt(0) < rookTo.charCodeAt(0)) {
+          startCode = rookFrom.charCodeAt(0);
+          endCode = rookTo.charCodeAt(0);
+        }
+        else {
+          startCode = rookTo.charCodeAt(0);
+          endCode = rookFrom.charCodeAt(0);
+        }
+        for(let code = startCode; code <= endCode; code++) {
+          const square = `${String.fromCharCode(code)}${rookFrom[1]}`;
+          // square blocked?
+          if(square !== rookFrom && square !== kingFrom && chess.get(square))
+            return null;
+        }
       }
 
       chess.remove(kingFrom);
@@ -415,6 +417,13 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
         outMove.to = rookFrom; // Fischer random specifies castling to/from coorindates using 'rook castling'
       else
         outMove.to = kingTo;
+    }
+    else if(premove) {
+      const piece = chess.get(move.from);
+      if(move.promotion)
+        piece.type = move.promotion;
+      chess.remove(move.from);
+      chess.put(piece, move.to);
     }
 
     boardAfter = chess.fen().split(/\s+/)[0];
