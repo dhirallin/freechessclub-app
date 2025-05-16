@@ -2040,6 +2040,7 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
   if(setBoard && !game.setupBoard) {
     game.board.set({ fen });
     if(game.premoves.length) {
+      console.log('ANOTHER TEST');
       const pieces = game.board.state.pieces;
       let premoveFen = fen;
       for(let i = 0; i < game.premoves.length; i++) {
@@ -2060,11 +2061,11 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
         ]);*/
 
         let moveFen = parseGameMove(game, premoveFen, premove, true);
-        premoveFen = moveFen.fen;
-        if(!premoveFen) {
+        if(!moveFen) {
           game.premoves.splice(i);
           break;
         }
+        premoveFen = moveFen.fen;
 
         premoveSquares.set(premove.from, 'current-premove');
         premoveSquares.set(premove.to, 'current-premove');
@@ -2356,26 +2357,28 @@ function preMovePiece(source: any, target: any, metadata: any) {
     promotion: promote && settings.autoPromoteToggle ? 'q' : null
   }
   
+  console.log('test 2: ' + game.board.getFen());
+
+
+  console.log('promote: ' + promote);
+
+  const prevFen = game.premoves[game.premoves.length - 1]?.fen || game.history.current().fen;  
+  console.log('TESTING TESTING: ' + prevFen);
+  const fenMove = parseGameMove(game, prevFen, move, true);
+
+  if(!fenMove)
+    return;
+
+  const premoveSquares = game.board.state.highlight.custom;
+  premoveSquares.set(source, 'current-premove');
+  premoveSquares.set(target, 'current-premove');
+  
   game.board.set({ animation: { enabled: false }});
-  const inFen = `${game.board.getFen()} ${pieceColor === 'white' ? 'w' : 'b'} KQkq - 0 1`;
-  const { fen } = parseGameMove(game, inFen, move, true);
-  /*game.board.setPieces([
-    [source, null],
-    [target, sourcePiece]
-  ]);*/
-  console.log('test 1: ' + game.board.getFen());
-  game.board.set({ fen });
+  game.board.set({ fen: fenMove.fen });
   game.board.set({ 
     animation: { enabled: true },
     drawable: { enabled: false }
   });
-  console.log('test 2: ' + game.board.getFen());
-  const premoveSquares = game.board.state.highlight.custom;
-  premoveSquares.set(source, 'current-premove');
-  premoveSquares.set(target, 'current-premove');
-  //game.board.cancelPremove();
-
-  console.log('promote: ' + promote);
 
   if(promote && !settings.autoPromoteToggle) {
     console.log('hello?');
@@ -2390,10 +2393,7 @@ function preMovePiece(source: any, target: any, metadata: any) {
         cancelMultiplePremove(game);
       });
       
-    const prevFen = game.premoves[game.premoves.length - 1] || game.history.current().fen;  
-    const move = {from: source, to: target};
-    const fen = parseGameMove(game, prevFen, move, true);
-    game.premoves.push({ fen, move });
+    game.premoves.push(fenMove);
   }
 }
 

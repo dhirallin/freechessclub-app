@@ -261,7 +261,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     const moveNo = afterPre.moveNo;
 
     let boardAfter = board;
-    const colorAfter = (color === 'w' ? 'b' : 'w');
+    let colorAfter = (color === 'w' ? 'b' : 'w');
     let castlingRightsAfter = castlingRights;
     const enPassantAfter = '-';
     let plyClockAfter = +plyClock + 1;
@@ -431,8 +431,11 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       console.log('chess.fen: ' + chess.fen());
       console.log('move.from: ' + move.from);
       const piece = chess.get(move.from);
-      if(!piece || piece.color !== color)
+      if(!piece || piece.color === color) {
+        console.log('YO');
         return null;
+      }
+      colorAfter = color;
       if(move.promotion)
         piece.type = move.promotion;
       console.log(piece);
