@@ -2038,40 +2038,22 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
 
   const premoveSquares = new Map();
   if(setBoard && !game.setupBoard) {
-    if(game.premoves.length) {
-      console.log('ANOTHER TEST');
-      const pieces = game.board.state.pieces;
-      for(let i = 0; i < game.premoves.length; i++) {
-        const premove = game.premoves[i].move;
-        /*const sourcePiece = pieces.get(premove.move.from);
-        if(!sourcePiece) {
-          game.premoves.splice(i);
-          break;
-        }        */
-        //game.board.move(premove.source, premove.target);
-        /*if(premove.promotion) {
-          const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
-          sourcePiece.role = cgRoles[premove.promotion];
-        }
-        game.board.setPieces([
-          [premove.source, null],
-          [premove.target, sourcePiece]
-        ]);*/
+    const origColor = game.history.current().turnColor;
+    fen = fen.replace(` ${origColor} `, ` ${ChessHelper.swapColor(game.color)} `);
 
-        console.log('NEW TEST 1: ' + fen);
-        console.log('NEW TEST 2: ' + JSON.stringify(premove));
-
-        let moveFen = parseGameMove(game, fen, premove, true);
-        if(!moveFen) {
-          game.premoves.splice(i);
-          break;
-        }
-        fen = moveFen.fen;
-
-        premoveSquares.set(premove.from, 'current-premove');
-        premoveSquares.set(premove.to, 'current-premove');
+    for(let i = 0; i < game.premoves.length; i++) {
+      const premove = game.premoves[i].move;
+      let moveFen = parseGameMove(game, fen, premove, true);
+      if(!moveFen) {
+        game.premoves.splice(i);
+        break;
       }
+      fen = moveFen.fen;
+
+      premoveSquares.set(premove.from, 'current-premove');
+      premoveSquares.set(premove.to, 'current-premove');
     }
+    fen = fen.replace(` ${ChessHelper.swapColor(game.color)} `, ` ${origColor} `);
     game.board.set({ fen });
   }
 
@@ -2317,13 +2299,9 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 
   updateHistory(game, move, fen);
 
-  //game.board.playPremove();
-  console.log('WHAT?!');
   if(game.history.current().turnColor === game.color) {
-    console.log('WHAT THE HELL');
     const premove = game.premoves.shift();
     if(premove) {
-      console.log('THIS IS STUPID');
       if(!game.premoves.length) {
         game.board.cancelPremove();
         game.board.set({
@@ -2331,7 +2309,6 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
         });
       }
       game.promotePiece = premove.move.promotion;
-      console.log('ANNOYING: ' + premove.move.from + ' ' + premove.move.to);
       movePiece(premove.move.from, premove.move.to, null);
     }
   }
@@ -2342,8 +2319,6 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 }
 
 function preMovePiece(source: any, target: any, metadata: any) {
-  console.log('test 0: ' + games.focused.board.getFen());
-
   const game = games.focused;
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
   if(cgRoles.hasOwnProperty(source)) // piece drop rather than move
@@ -2360,13 +2335,7 @@ function preMovePiece(source: any, target: any, metadata: any) {
     promotion: promote && settings.autoPromoteToggle ? 'q' : null
   }
   
-  console.log('test 2: ' + game.board.getFen());
-
-
-  console.log('promote: ' + promote);
-
   const prevFen = game.premoves[game.premoves.length - 1]?.fen || game.history.current().fen;  
-  console.log('TESTING TESTING: ' + prevFen);
   const fenMove = parseGameMove(game, prevFen, move, true);
 
   if(!fenMove)
@@ -2384,7 +2353,6 @@ function preMovePiece(source: any, target: any, metadata: any) {
   });
 
   if(promote && !settings.autoPromoteToggle) {
-    console.log('hello?');
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;

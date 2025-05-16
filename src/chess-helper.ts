@@ -431,7 +431,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       console.log('chess.fen: ' + chess.fen());
       console.log('move.from: ' + move.from);
       const piece = chess.get(move.from);
-      if(!piece) {
+      if(!piece || piece.color === color) {
         console.log('YO');
         return null;
       }
