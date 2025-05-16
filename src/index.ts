@@ -2031,18 +2031,16 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
     return;
 
   const move = game.history.current().move;
-  const fen = game.history.current().fen;
+  let fen = game.history.current().fen;
   const color = (ChessHelper.getTurnColorFromFEN(fen) === 'w' ? 'white' : 'black');
 
   setClocks(game);
 
   const premoveSquares = new Map();
   if(setBoard && !game.setupBoard) {
-    game.board.set({ fen });
     if(game.premoves.length) {
       console.log('ANOTHER TEST');
       const pieces = game.board.state.pieces;
-      let premoveFen = fen;
       for(let i = 0; i < game.premoves.length; i++) {
         const premove = game.premoves[i].move;
         /*const sourcePiece = pieces.get(premove.move.from);
@@ -2060,20 +2058,21 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
           [premove.target, sourcePiece]
         ]);*/
 
-        let moveFen = parseGameMove(game, premoveFen, premove, true);
+        console.log('NEW TEST 1: ' + fen);
+        console.log('NEW TEST 2: ' + JSON.stringify(premove));
+
+        let moveFen = parseGameMove(game, fen, premove, true);
         if(!moveFen) {
           game.premoves.splice(i);
           break;
         }
-        premoveFen = moveFen.fen;
+        fen = moveFen.fen;
 
         premoveSquares.set(premove.from, 'current-premove');
         premoveSquares.set(premove.to, 'current-premove');
       }
-      game.board.set({ animation: { enabled: false }});
-      game.board.set({ premoveFen });
-      game.board.set({ animation: { enabled: true }});
     }
+    game.board.set({ fen });
   }
 
   if(game.element.find('.promotion-panel').is(':visible')) {
@@ -2319,17 +2318,21 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
   updateHistory(game, move, fen);
 
   //game.board.playPremove();
+  console.log('WHAT?!');
   if(game.history.current().turnColor === game.color) {
+    console.log('WHAT THE HELL');
     const premove = game.premoves.shift();
     if(premove) {
+      console.log('THIS IS STUPID');
       if(!game.premoves.length) {
         game.board.cancelPremove();
         game.board.set({
           drawable: { enabled: true }
         });
       }
-      game.promotePiece = premove.promotion;
-      movePiece(premove.source, premove.target, premove.metadata);
+      game.promotePiece = premove.move.promotion;
+      console.log('ANNOYING: ' + premove.move.from + ' ' + premove.move.to);
+      movePiece(premove.move.from, premove.move.to, null);
     }
   }
 
