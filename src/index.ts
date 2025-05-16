@@ -2331,11 +2331,13 @@ function preMovePiece(source: any, target: any, metadata: any) {
     promotion: promote && settings.autoPromoteToggle ? 'q' : null
   }
   
-  if(promote && !settings.autoPromoteToggle) {
+  if(promote && !settings.autoPromoteToggle) {  
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;
     showPromotionPanel(game, true);
+
+    // blah
   }
   else {
     if(!game.premoves.length)
@@ -2344,14 +2346,14 @@ function preMovePiece(source: any, target: any, metadata: any) {
       });
       
     game.premoves.push(move);
-  }
 
-  game.board.set({ animation: { enabled: false }});
-  updateBoard(game, false, true);
-  game.board.set({ 
-    animation: { enabled: true },
-    drawable: { enabled: false }
-  });
+    game.board.set({ animation: { enabled: false }});
+    updateBoard(game, false, true);
+    game.board.set({ 
+      animation: { enabled: true },
+      drawable: { enabled: false }
+    });
+  }
 }
 
 function cancelMultiplePremove(game: Game) {
@@ -2411,22 +2413,16 @@ function showPromotionPanel(game: Game, premove = false) {
     if(!premove)
       movePiece(source, target, metadata);
     else {
-      const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
-      const pieces = game.board.state.pieces;
-      const targetPiece = pieces.get(target);
-      targetPiece.role = cgRoles[game.promotePiece];
-      game.board.set({ animation: { enabled: false }});
-      game.board.setPieces([
-        [target, null],
-        [target, targetPiece]
-      ]);
-      game.board.set({ animation: { enabled: true }});
       if(!game.premoves.length)
         game.element.one('contextmenu', () => {
           cancelMultiplePremove(game);
         });
 
       game.premoves.push({from: source, to: target, promotion: game.promotePiece});
+
+      game.board.set({ animation: { enabled: false }});
+      updateBoard(game, false, true);
+      game.board.set({ animation: { enabled: true }});
     }
   });
 }
