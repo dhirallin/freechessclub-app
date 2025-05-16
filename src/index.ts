@@ -2337,7 +2337,16 @@ function preMovePiece(source: any, target: any, metadata: any) {
     game.movePieceMetadata = metadata;
     showPromotionPanel(game, true);
 
-    // blah
+    const premoveSquares = game.board.state.highlight.custom;
+    premoveSquares.set(source, 'current-premove');
+    premoveSquares.set(target, 'current-premove');*/
+    
+    game.board.set({ animation: { enabled: false }});
+    game.board.set({ fen: fenMove.fen });
+    game.board.set({ 
+      animation: { enabled: true },
+      drawable: { enabled: false }
+    });
   }
   else {
     if(!game.premoves.length)
