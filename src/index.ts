@@ -2038,9 +2038,6 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
 
   const premoveSquares = new Map();
   if(setBoard && !game.setupBoard) {
-    const origColor = game.history.current().turnColor;
-    fen = fen.replace(` ${origColor} `, ` ${ChessHelper.swapColor(game.color)} `);
-
     for(let i = 0; i < game.premoves.length; i++) {
       const premove = game.premoves[i].move;
       console.log('TEST 1: ' + fen + ' ' + premove.from);
@@ -2054,7 +2051,6 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
       premoveSquares.set(premove.from, 'current-premove');
       premoveSquares.set(premove.to, 'current-premove');
     }
-    fen = fen.replace(` ${ChessHelper.swapColor(game.color)} `, ` ${origColor} `);
     game.board.set({ fen });
   }
 
@@ -2338,6 +2334,11 @@ function preMovePiece(source: any, target: any, metadata: any) {
   
   const prevFen = game.premoves[game.premoves.length - 1]?.fen || game.history.current().fen;  
   const fenMove = parseGameMove(game, prevFen, move, true);
+  console.log('prevFen: ' + prevFen);
+  console.log('move: ' + move.from);
+  console.log('fenMove' + fenMove);
+  if(fenMove)
+    console.log('fenMove.fen: ' + fenMove.fen);
 
   if(!fenMove)
     return;
@@ -2517,6 +2518,9 @@ function flipBoard(game: Game) {
 
 /** Wrapper function for parseMove */
 function parseGameMove(game: Game, fen: string, move: any, premove = false) {
+  if(premove) 
+    fen = fen.replace(` ${ChessHelper.getTurnColorFromFEN(fen)} `, ` ${game.color} `);
+  
   return ChessHelper.parseMove(fen, move, game.history.first().fen, game.category, game.history.current().variantData, premove);
 }
 
