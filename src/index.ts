@@ -2017,7 +2017,7 @@ function createBoard(element: any): any {
     premovable: {
       events: {
         set: preMovePiece,
-        unset: hidePromotionPanel,
+        unset: cancelPremove,
       }
     },
     events: {
@@ -2059,7 +2059,8 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
           [premove.target, sourcePiece]
         ]);*/
 
-        const { fen } = parseGameMove(game, game.board.getFen(), {from: premove.source, to: premove.target, promotion: premove.promotion}, true);
+        const inFen = `${game.board.getFen()} ${sourcePiece.color === 'white' ? 'w' : 'b'} KQkq - 0 1`;
+        const { fen } = parseGameMove(game, inFen, {from: premove.source, to: premove.target, promotion: premove.promotion}, true);
         game.board.set({ fen });
 
         premoveSquares.set(premove.source, 'current-premove');
@@ -2315,6 +2316,8 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
   if(game.history.current().turnColor === game.color) {
     const premove = game.premoves.shift();
     if(premove) {
+      if(!game.premoves.length)
+        game.board.cancelPremove();
       game.promotePiece = premove.promotion;
       movePiece(premove.source, premove.target, premove.metadata);
     }
@@ -2328,7 +2331,7 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 function preMovePiece(source: any, target: any, metadata: any) {
   const game = games.focused;
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
-  if(cgRoles.hasOwnProperty(source) || settings.autoPromoteToggle) // piece drop rather than move
+  if(cgRoles.hasOwnProperty(source)) // piece drop rather than move
     return;
   const pieces = game.board.state.pieces;
   const sourcePiece = pieces.get(source);
@@ -2343,7 +2346,8 @@ function preMovePiece(source: any, target: any, metadata: any) {
   }
   
   game.board.set({ animation: { enabled: false }});
-  const { fen } = parseGameMove(game, game.board.getFen(), move, true);
+  const inFen = `${game.board.getFen()} ${pieceColor === 'white' ? 'w' : 'b'} KQkq - 0 1`;
+  const { fen } = parseGameMove(game, inFen, move, true);
   /*game.board.setPieces([
     [source, null],
     [target, sourcePiece]
@@ -2353,9 +2357,11 @@ function preMovePiece(source: any, target: any, metadata: any) {
   const premoveSquares = game.board.state.highlight.custom;
   premoveSquares.set(source, 'current-premove');
   premoveSquares.set(target, 'current-premove');
-  game.board.cancelPremove();
+  //game.board.cancelPremove();
 
+  console.log('promote: ' + promote);
   if(promote && !settings.autoPromoteToggle) {
+    console.log('hello?');
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;
@@ -2363,6 +2369,12 @@ function preMovePiece(source: any, target: any, metadata: any) {
   }
   else
     game.premoves.push({source, target, metadata});
+}
+
+function cancelPremove() {
+  const game = games.focused;
+  game.premoves = [];
+  updateBoard(game, false, true);
 }
 
 function showPromotionPanel(game: Game, premove = false) {
