@@ -2026,7 +2026,7 @@ function createBoard(element: any): any {
   });
 }
 
-export function updateBoard(game: Game, playSound = false, setBoard = true) {
+export function updateBoard(game: Game, playSound = false, setBoard = true, animate = true) {
   if(!game.history)
     return;
 
@@ -2051,8 +2051,15 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
 
       premoveSquares.set(premove.from, 'current-premove');
       premoveSquares.set(premove.to, 'current-premove');
-    }
+    }   
+
+    if(!animate)
+      game.board.set({ animation: { enabled: false }});
+  
     game.board.set({ fen });
+  
+    if(!animate)
+      game.board.set({ animation: { enabled: true }});
   }
 
   if(game.element.find('.promotion-panel').is(':visible')) {
@@ -2113,7 +2120,8 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
     predroppable: { enabled: game.category === 'crazyhouse' || game.category === 'bughouse' },
     check: !game.setupBoard && /[+#]/.test(move?.san) ? color : false,
     blockTouchScroll: (game.isPlaying() ? true : false),
-    autoCastle: !game.setupBoard && (categorySupported || game.category === 'atomic')
+    autoCastle: !game.setupBoard && (categorySupported || game.category === 'atomic'),
+    drawable: { enabled: !game.premoves.length } 
   });
 
   showCapturedMaterial(game);
@@ -2356,12 +2364,7 @@ function preMovePiece(source: any, target: any, metadata: any) {
       
     game.premoves.push(move);
 
-    game.board.set({ animation: { enabled: false }});
-    updateBoard(game, false, true);
-    game.board.set({ 
-      animation: { enabled: true },
-      drawable: { enabled: false }
-    });
+    updateBoard(game, false, true, false);
   }
 }
 
@@ -2370,18 +2373,13 @@ function cancelPremove() {
   const promotionPanel = game.element.find('.promotion-panel');
   if(promotionPanel.length) {
     hidePromotionPanel(game);
-    updateBoard(game, false, true);
+    updateBoard(game, false, true, false);
   } 
 }
 
 function cancelMultiplePremove(game: Game) {
   game.premoves = [];
-  game.board.set({ animation: { enabled: false }});
-  updateBoard(game, false, true);
-  game.board.set({
-    animation: { enabled: true },
-    drawable: { enabled: true }
-  });
+  updateBoard(game, false, true, false);
   game.element.off('contextmenu');
   game.board.cancelPremove();
 }
@@ -2437,10 +2435,7 @@ function showPromotionPanel(game: Game, premove = false) {
         });
 
       game.premoves.push({from: source, to: target, promotion: game.promotePiece});
-
-      game.board.set({ animation: { enabled: false }});
-      updateBoard(game, false, true);
-      game.board.set({ animation: { enabled: true }});
+      updateBoard(game, false, true, false);
     }
   });
 }
