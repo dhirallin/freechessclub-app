@@ -2342,7 +2342,8 @@ function preMovePiece(source: any, target: any, metadata: any) {
     premoveSquares.set(target, 'current-premove');
   
     game.board.set({ animation: { enabled: false }});
-    const targetPiece = game.board.get(source);
+    const pieces = game.board.state.pieces;
+    const targetPiece = pieces.get(source);
     game.board.setPieces([
       [source, null],
       [target, targetPiece]
