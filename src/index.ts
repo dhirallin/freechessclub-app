@@ -2378,6 +2378,7 @@ function cancelMultiplePremove(game: Game) {
     animation: { enabled: true },
     drawable: { enabled: true }
   });
+  game.element.off('contextmenu');
   game.board.cancelPremove();
 }
 
@@ -2966,6 +2967,7 @@ function cleanupGame(game: Game) {
   if(chat)
     chat.closeGameTab(game.id);
   hidePromotionPanel(game);
+  cancelMultiplePremove(game);
   game.clock.stopClocks();
 
   if(game.watchersInterval)
