@@ -2303,7 +2303,7 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
       if(!game.premoves.length) 
         cancelMultiplePremove(game);
       
-      game.promotePiece = premove.move.promotion;
+      game.promotePiece = premove.promotion;
       movePiece(premove.move.from, premove.move.to, null);
     }
   }
@@ -2332,6 +2332,8 @@ function preMovePiece(source: any, target: any, metadata: any) {
   }
   
   if(promote && !settings.autoPromoteToggle) {  
+    console.log('HELLO 1');
+
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;
@@ -2342,11 +2344,9 @@ function preMovePiece(source: any, target: any, metadata: any) {
     premoveSquares.set(target, 'current-premove');
   
     game.board.set({ animation: { enabled: false }});
-    const pieces = game.board.state.pieces;
-    const targetPiece = pieces.get(source);
     game.board.setPieces([
       [source, null],
-      [target, targetPiece]
+      [target, sourcePiece]
     ]);
     game.board.set({ animation: { enabled: true } });
   }
