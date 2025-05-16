@@ -246,6 +246,13 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
   if(!outMove || premove 
       || (category.startsWith('wild') && san.toUpperCase().startsWith('O-O'))) {
     san = san.replace(/[+#]/, ''); // remove check and checkmate, we'll add it back at the end
+    
+    if(premove) {
+      const fenWords = splitFEN(fen);
+      fenWords.enPassant = '-';
+      fen = joinFEN(fenWords);
+    }
+
     chess = new Chess(fen);
 
     const board = afterPre.board;
@@ -420,13 +427,9 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
         outMove.to = kingTo;
     }
     else if(premove) {
-      const pos = new Position(fen);
-      const piece = pos.get(move.from);
-
+      const piece = chess.get(move.from);
       console.log('CHESS HELPER: ' + fen + ' ' + move.from);
       console.log('piece: ' + piece);
-      if(piece)
-        console.log('piece.color: ' + piece.color);
       console.log('color: ' + color);
       if(!piece || piece.color === color) {
         console.log('YO');
@@ -435,8 +438,8 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       colorAfter = color;
       if(move.promotion)
         piece.type = move.promotion;
-      pos.remove(move.from);
-      pos.set(move.to, piece);
+      chess.remove(move.from);
+      chess.put(piece, move.to);
       outMove.from = move.from;
       outMove.to = move.to;
       outMove.piece = piece.type;
