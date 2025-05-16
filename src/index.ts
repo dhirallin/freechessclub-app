@@ -2040,10 +2040,11 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
   if(setBoard && !game.setupBoard) {
     for(let i = 0; i < game.premoves.length; i++) {
       const premove = game.premoves[i].move;
-      console.log('TEST 1: ' + fen + ' ' + premove.from);
       let moveFen = parseGameMove(game, fen, premove, true);
       if(!moveFen) {
         game.premoves.splice(i);
+        if(!game.premoves.length)
+          cancelMultiplePremove(game);
         break;
       }
       fen = moveFen.fen;
@@ -2300,10 +2301,11 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
     const premove = game.premoves.shift();
     if(premove) {
       if(!game.premoves.length) {
-        game.board.cancelPremove();
+        cancelMultiplePremove(game);
+        /*game.board.cancelPremove();
         game.board.set({
           drawable: { enabled: true }
-        });
+        });*/
       }
       game.promotePiece = premove.move.promotion;
       movePiece(premove.move.from, premove.move.to, null);
@@ -2326,33 +2328,31 @@ function preMovePiece(source: any, target: any, metadata: any) {
   const pieceRole = sourcePiece ? cgRoles[sourcePiece.role] : undefined;
   const pieceColor = sourcePiece ? sourcePiece.color : undefined;
   const promote = (pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1'));
+  
   const move = {
     from: source,
     to: target,
     promotion: promote && settings.autoPromoteToggle ? 'q' : null
   }
   
+  /*
   const prevFen = game.premoves[game.premoves.length - 1]?.fen || game.history.current().fen;  
   const fenMove = parseGameMove(game, prevFen, move, true);
-  console.log('prevFen: ' + prevFen);
-  console.log('move: ' + move.from);
-  console.log('fenMove' + fenMove);
-  if(fenMove)
-    console.log('fenMove.fen: ' + fenMove.fen);
 
   if(!fenMove)
     return;
+  */
 
-  const premoveSquares = game.board.state.highlight.custom;
+  /*const premoveSquares = game.board.state.highlight.custom;
   premoveSquares.set(source, 'current-premove');
-  premoveSquares.set(target, 'current-premove');
+  premoveSquares.set(target, 'current-premove');*/
   
-  game.board.set({ animation: { enabled: false }});
+  /*game.board.set({ animation: { enabled: false }});
   game.board.set({ fen: fenMove.fen });
   game.board.set({ 
     animation: { enabled: true },
     drawable: { enabled: false }
-  });
+  });*/
 
   if(promote && !settings.autoPromoteToggle) {
     game.movePieceSource = source;
@@ -2366,8 +2366,15 @@ function preMovePiece(source: any, target: any, metadata: any) {
         cancelMultiplePremove(game);
       });
       
-    game.premoves.push(fenMove);
+    game.premoves.push({fen: 'testing', move});
   }
+
+  game.board.set({ animation: { enabled: false }});
+  updateBoard(game, false, true);
+  game.board.set({ 
+    animation: { enabled: true },
+    drawable: { enabled: false }
+  });
 }
 
 function cancelMultiplePremove(game: Game) {
