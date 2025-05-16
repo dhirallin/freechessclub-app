@@ -2043,6 +2043,7 @@ export function updateBoard(game: Game, playSound = false, setBoard = true) {
 
     for(let i = 0; i < game.premoves.length; i++) {
       const premove = game.premoves[i].move;
+      console.log('TEST 1: ' + fen + ' ' + premove.from);
       let moveFen = parseGameMove(game, fen, premove, true);
       if(!moveFen) {
         game.premoves.splice(i);

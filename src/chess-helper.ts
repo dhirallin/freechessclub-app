@@ -163,8 +163,6 @@ export function parseMove(fen: string, move: any, startFen: string, category: st
   // Parse variant move
   const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
   
-  console.log('test 10');
-  
   if(!standardCategories.includes(category) || premove)
     return parseVariantMove(fen, move, startFen, category, variantData, premove);
 
@@ -183,8 +181,6 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
   const supportedCategories = ['crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
   if(!supportedCategories.includes(category) && !premove)
     return null;
-
-  console.log('fen: ' + fen + 'move: ' + move);
 
   let chess = new Chess(fen);
   let san = '';
@@ -251,8 +247,6 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       || (category.startsWith('wild') && san.toUpperCase().startsWith('O-O'))) {
     san = san.replace(/[+#]/, ''); // remove check and checkmate, we'll add it back at the end
     chess = new Chess(fen);
-
-    console.log('test 1');
 
     const board = afterPre.board;
     const color = afterPre.color;
@@ -426,11 +420,14 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
         outMove.to = kingTo;
     }
     else if(premove) {
-      console.log('test 2');
-      console.log('fen: ' + fen);
-      console.log('chess.fen: ' + chess.fen());
-      console.log('move.from: ' + move.from);
-      const piece = chess.get(move.from);
+      const pos = new Position(fen);
+      const piece = pos.get(move.from);
+
+      console.log('CHESS HELPER: ' + fen + ' ' + move.from);
+      console.log('piece: ' + piece);
+      if(piece)
+        console.log('piece.color: ' + piece.color);
+      console.log('color: ' + color);
       if(!piece || piece.color === color) {
         console.log('YO');
         return null;
@@ -438,9 +435,8 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       colorAfter = color;
       if(move.promotion)
         piece.type = move.promotion;
-      console.log(piece);
-      chess.remove(move.from);
-      chess.put(piece, move.to);
+      pos.remove(move.from);
+      pos.set(move.to, piece);
       outMove.from = move.from;
       outMove.to = move.to;
       outMove.piece = piece.type;
@@ -541,8 +537,6 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
 
   if(!outMove || !outFen)
     return null;
-
-  console.log('test 3: ' + outFen);
 
   return {fen: outFen, move: outMove};
 }
