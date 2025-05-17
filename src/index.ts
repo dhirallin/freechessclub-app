@@ -5870,6 +5870,9 @@ function initSettings() {
   settings.multiboardToggle = (storage.get('multiboard') !== 'false');
   $('#multiboard-toggle').prop('checked', settings.multiboardToggle);
 
+  settings.multiplePremovesToggle = (storage.get('multiplepremoves') === 'true');
+  $('#multiple-premoves-toggle').prop('checked', settings.multiplePremovesToggle);
+
   settings.rememberMeToggle = (storage.get('rememberme') === 'true');
   $('#remember-me').prop('checked', settings.rememberMeToggle);
 
@@ -5935,6 +5938,11 @@ $('#multiboard-toggle').on('click', () => {
   }
   initGameTools(games.focused);
   storage.set('multiboard', String(settings.multiboardToggle));
+});
+
+$('#multiple-premoves-toggle').on('click', () => {
+  settings.multiplePremovesToggle = !settings.multiplePremovesToggle;
+  storage.set('multiplepremoves', String(settings.multiplePremovesToggle));
 });
 
 /** *****************************
