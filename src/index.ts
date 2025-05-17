@@ -2044,7 +2044,7 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
       if(!moveFen) {
         game.premoves.splice(i);
         if(!game.premoves.length)
-          cancelMultiplePremove(game);
+          cancelMultiplePremoves(game);
         break;
       }
       fen = moveFen.fen;
@@ -2305,18 +2305,22 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 
   updateHistory(game, move, fen);
 
-  if(game.history.current().turnColor === game.color) {
-    const premove = game.premoves.shift();
-    if(premove) {
-      if(!game.premoves.length) 
-        cancelMultiplePremove(game);
-      
-      game.promotePiece = premove.promotion;
-      movePiece(premove.from, premove.to, null);
+  if(settings.multiplePremovesToggle) {
+    if(game.history.current().turnColor === game.color) {
+      const premove = game.premoves.shift();
+      if(premove) {
+        if(!game.premoves.length) 
+          cancelMultiplePremoves(game);
+        
+        game.promotePiece = premove.promotion;
+        movePiece(premove.from, premove.to, null);
+      }
     }
   }
-
-  game.board.playPredrop(() => true);
+  else {
+    game.board.playPremove();
+    game.board.playPredrop(() => true);    
+  }
 
   checkGameEnd(game); // Check whether game is over when playing against computer (offline mode)
 }
@@ -2355,7 +2359,7 @@ function preMovePiece(source: any, target: any, metadata: any) {
   else if(settings.multiplePremovesToggle) {
     if(!game.premoves.length)
       game.element.one('contextmenu', () => {
-        cancelMultiplePremove(game);
+        cancelMultiplePremoves(game);
       });
       
     const move = {
@@ -2379,11 +2383,13 @@ function cancelPremove() {
   } 
 }
 
-function cancelMultiplePremove(game: Game) {
-  game.premoves = [];
-  updateBoard(game, false, true, false);
-  game.element.off('contextmenu');
-  game.board.cancelPremove();
+function cancelMultiplePremoves(game: Game) {
+  if(settings.multiplePremovesToggle) { 
+    game.premoves = [];
+    updateBoard(game, false, true, false);
+    game.element.off('contextmenu');
+    game.board.cancelPremove();
+  }
 }
 
 function showPromotionPanel(game: Game, premove = false) {
@@ -2433,7 +2439,7 @@ function showPromotionPanel(game: Game, premove = false) {
     else {
       if(!game.premoves.length)
         game.element.one('contextmenu', () => {
-          cancelMultiplePremove(game);
+          cancelMultiplePremoves(game);
         });
 
       game.premoves.push({from: source, to: target, promotion: game.promotePiece});
