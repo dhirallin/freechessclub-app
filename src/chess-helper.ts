@@ -430,8 +430,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       const piece = chess.get(move.from);
       if(!piece || piece.color !== color) 
         return null;
-      
-      colorAfter = color;
+
       if(move.promotion)
         piece.type = move.promotion;
       chess.remove(move.from);
