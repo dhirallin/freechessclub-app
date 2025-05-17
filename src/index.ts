@@ -2020,6 +2020,11 @@ function createBoard(element: any): any {
         unset: cancelPremove,
       }
     },
+    predroppable: {
+      events: {
+        set: preDropPiece
+      }
+    },
     events: {
       change: boardChanged
     },
@@ -2051,7 +2056,8 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
       fen = moveFen.fen;
 
       // Set premove square highlighting 
-      premoveSquares.set(premove.from, 'current-premove');
+      if(premove.from)
+        premoveSquares.set(premove.from, 'current-premove');
       premoveSquares.set(premove.to, 'current-premove');
     }   
 
@@ -2315,7 +2321,7 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
           cancelMultiplePremoves(game);
         
         game.promotePiece = premove.promotion;
-        movePiece(premove.from, premove.to, null);
+        movePiece(premove.from || premove.piece, premove.to, null);
       }
     }
   }
@@ -2325,6 +2331,21 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
   }
 
   checkGameEnd(game); // Check whether game is over when playing against computer (offline mode)
+}
+
+function preDropPiece(role: string, key: string) {
+  if(settings.multiplePremovesToggle) {
+    const game = games.focused;
+    const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
+    
+    if(!game.premoves.length)
+      game.element.one('contextmenu', () => {
+        cancelMultiplePremoves(game);
+      });
+      
+    game.premoves.push({to: key, piece: cgRoles[role]});
+    updateBoard(game, false, true, false);
+  }
 }
 
 function preMovePiece(source: any, target: any, metadata: any) {
