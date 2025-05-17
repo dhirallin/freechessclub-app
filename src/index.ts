@@ -2038,10 +2038,11 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
 
   const premoveSquares = new Map();
   if(setBoard && !game.setupBoard) {
+    // Display premoves (when multiple premoves setting enabled)
     for(let i = 0; i < game.premoves.length; i++) {
       const premove = game.premoves[i];
       let moveFen = parseGameMove(game, fen, premove, true);
-      if(!moveFen) {
+      if(!moveFen) { // Remove impossible premove and all following premoves
         game.premoves.splice(i);
         if(!game.premoves.length)
           cancelMultiplePremoves(game);
@@ -2049,6 +2050,7 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
       }
       fen = moveFen.fen;
 
+      // Set premove square highlighting 
       premoveSquares.set(premove.from, 'current-premove');
       premoveSquares.set(premove.to, 'current-premove');
     }   
@@ -5950,6 +5952,10 @@ $('#multiboard-toggle').on('click', () => {
 
 $('#multiple-premoves-toggle').on('click', () => {
   settings.multiplePremovesToggle = !settings.multiplePremovesToggle;
+  if(!settings.multiplePremovesToggle) {
+    for(const g of games) 
+      cancelMultiplePremoves(g);
+  }
   storage.set('multiplepremoves', String(settings.multiplePremovesToggle));
 });
 
