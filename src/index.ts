@@ -2384,7 +2384,7 @@ function cancelPremove() {
 }
 
 function cancelMultiplePremoves(game: Game) {
-  if(settings.multiplePremovesToggle) { 
+  if(game.premoves.length) { 
     game.premoves = [];
     updateBoard(game, false, true, false);
     game.element.off('contextmenu');
@@ -2436,7 +2436,7 @@ function showPromotionPanel(game: Game, premove = false) {
     game.promotePiece = $(event.target).attr('data-piece');
     if(!premove)
       movePiece(source, target, metadata);
-    else {
+    else if(settings.multiplePremovesToggle) {
       if(!game.premoves.length)
         game.element.one('contextmenu', () => {
           cancelMultiplePremoves(game);
@@ -2968,7 +2968,7 @@ function cleanupGame(game: Game) {
   if(chat)
     chat.closeGameTab(game.id);
   hidePromotionPanel(game);
-  cancelMultiplePremove(game);
+  cancelMultiplePremoves(game);
   game.clock.stopClocks();
 
   if(game.watchersInterval)
