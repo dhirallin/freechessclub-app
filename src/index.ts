@@ -2332,36 +2332,38 @@ function preMovePiece(source: any, target: any, metadata: any) {
   const pieceRole = sourcePiece ? cgRoles[sourcePiece.role] : undefined;
   const pieceColor = sourcePiece ? sourcePiece.color : undefined;
   const promote = (pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1'));
-  
-  const move = {
-    from: source,
-    to: target,
-    promotion: promote && settings.autoPromoteToggle ? 'q' : null
-  }
-  
+   
   if(promote && !settings.autoPromoteToggle) {  
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;
     showPromotionPanel(game, true);
 
-    const premoveSquares = game.board.state.highlight.custom;
-    premoveSquares.set(source, 'current-premove');
-    premoveSquares.set(target, 'current-premove');
-  
-    game.board.set({ animation: { enabled: false }});
-    game.board.setPieces([
-      [source, null],
-      [target, sourcePiece]
-    ]);
-    game.board.set({ animation: { enabled: true } });
+    if(settings.multiplePremovesToggle) {
+      const premoveSquares = game.board.state.highlight.custom;
+      premoveSquares.set(source, 'current-premove');
+      premoveSquares.set(target, 'current-premove');
+    
+      game.board.set({ animation: { enabled: false }});
+      game.board.setPieces([
+        [source, null],
+        [target, sourcePiece]
+      ]);
+      game.board.set({ animation: { enabled: true } });
+    }
   }
-  else {
+  else if(settings.multiplePremovesToggle) {
     if(!game.premoves.length)
       game.element.one('contextmenu', () => {
         cancelMultiplePremove(game);
       });
       
+    const move = {
+      from: source,
+      to: target,
+      promotion: promote && settings.autoPromoteToggle ? 'q' : null
+    }
+
     game.premoves.push(move);
 
     updateBoard(game, false, true, false);
