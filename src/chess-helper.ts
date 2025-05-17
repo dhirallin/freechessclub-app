@@ -626,6 +626,36 @@ function variantToDests(fen: string, startFen: string, category: string, variant
   return dests;
 }
 
+export function premoveToDests(fen: string, startFen: string, category: string, variantData?: Partial<VariantData>): Map<string, string[]> {
+  let dests: Map<any, any>;
+  
+  if(category.startsWith('wild')) {
+    const cPieces = getCastlingPieces(startFen, getTurnColorFromFEN(fen), category);
+    const king = cPieces.king;
+    const leftRook = cPieces.leftRook;
+    const rightRook = cPieces.rightRook;
+
+    dests = new Map();
+    let parsedMove = parseMove(fen, 'O-O', startFen, category, variantData, true);
+    if(parsedMove) {
+      const from = parsedMove.move.from;
+      const to = category === 'wild/fr' ? rightRook : parsedMove.move.to;
+      dests.set(from, [to]);
+    }
+    parsedMove = parseMove(fen, 'O-O-O', startFen, category, variantData, true);
+    if(parsedMove) {
+      const from = parsedMove.move.from;
+      const to = category === 'wild/fr' ? leftRook : parsedMove.move.to;
+      const kingDests = dests.get(from);
+      if(kingDests)
+        kingDests.push(to);
+      else dests.set(from, [to]);
+    }
+  }
+
+  return dests;
+}
+
 export function updateVariantMoveData(fen: string, move: any, prevVariantData: Partial<VariantData>, category: string): Partial<VariantData> {
   // Maintain map of captured pieces for crazyhouse variant
   const currVariantData: Partial<VariantData> = {};
