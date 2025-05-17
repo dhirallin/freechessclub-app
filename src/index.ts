@@ -2085,7 +2085,6 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
     game.board.set({ lastMove: false });
 
   let dests: Map<string, string[]> | undefined;
-  let premoveDests: Map<string, string[]> | undefined;
   let movableColor: string | undefined;
   let turnColor: string | undefined;
 
@@ -2096,7 +2095,6 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
     movableColor = (game.color === 'w' ? 'white' : 'black');
     dests = gameToDests(game);
     turnColor = color;
-    premoveDests = gamePremoveToDests(game);
   }
   else if(game.setupBoard || (!categorySupported && game.role === Role.NONE)) {
     movableColor = 'both';
@@ -2127,7 +2125,6 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
       check: settings.highlightsToggle,
       custom: premoveSquares
     },
-    premovable: { customDests: premoveDests },
     predroppable: { enabled: game.category === 'crazyhouse' || game.category === 'bughouse' },
     check: !game.setupBoard && /[+#]/.test(move?.san) ? color : false,
     blockTouchScroll: (game.isPlaying() ? true : false),
