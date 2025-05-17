@@ -2321,7 +2321,8 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
           cancelMultiplePremoves(game);
         
         game.promotePiece = premove.promotion;
-        movePiece(premove.from || premove.piece, premove.to, null);
+        const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
+        movePiece(premove.from || cgRoles[premove.piece], premove.to, null);
       }
     }
   }
@@ -2412,6 +2413,7 @@ function cancelMultiplePremoves(game: Game) {
     updateBoard(game, false, true, false);
     game.element.off('contextmenu');
     game.board.cancelPremove();
+    game.board.cancelPredrop();
   }
 }
 
