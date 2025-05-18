@@ -2026,7 +2026,8 @@ function createBoard(element: any): any {
       }
     },
     events: {
-      change: boardChanged
+      change: boardChanged,
+      select: squareSelected
     },
   });
 }

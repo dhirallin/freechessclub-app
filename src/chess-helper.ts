@@ -585,73 +585,47 @@ function variantToDests(fen: string, startFen: string, category: string, variant
   }
 
   // Add irregular castling moves for wild variants
-  if(category.startsWith('wild')) {
-    const cPieces = getCastlingPieces(startFen, chess.turn(), category);
-    const king = cPieces.king;
-    const leftRook = cPieces.leftRook;
-    const rightRook = cPieces.rightRook;
-
-    // Remove any castling moves already in dests
-    let kingDests = dests.get(king);
-    if(kingDests) {
-      kingDests.filter((dest) => {
-        return Math.abs(dest.charCodeAt(0) - king.charCodeAt(0)) > 1;
-      }).forEach((dest) => {
-        kingDests.splice(kingDests.indexOf(dest), 1);
-      });
-      if(kingDests.length === 0)
-        dests.delete(king);
-    }
-
-    let parsedMove = parseMove(chess.fen(), 'O-O', startFen, category, variantData);
-    if(parsedMove) {
-      const from = parsedMove.move.from;
-      const to = category === 'wild/fr' ? rightRook : parsedMove.move.to;
-      kingDests = dests.get(from);
-      if(kingDests)
-        kingDests.push(to);
-      else dests.set(from, [to]);
-    }
-    parsedMove = parseMove(chess.fen(), 'O-O-O', startFen, category, variantData);
-    if(parsedMove) {
-      const from = parsedMove.move.from;
-      const to = category === 'wild/fr' ? leftRook : parsedMove.move.to;
-      kingDests = dests.get(from);
-      if(kingDests)
-        kingDests.push(to);
-      else dests.set(from, [to]);
-    }
-  }
-
+  const cPieces = getCastlingPieces(startFen, chess.turn(), category);
+  const king = cPieces.king;
+  let kingDests = dests.get(king);
+  kingDests = adjustKingDests(kingDests, fen, startFen, category);
+  dests.set(king, kingDests);    
   return dests;
 }
 
-export function premoveToDests(fen: string, startFen: string, category: string, variantData?: Partial<VariantData>): Map<string, string[]> {
-  let dests: Map<any, any>;
-  
+export function adjustKingDests(dests: string[], fen: string, startFen: string, category: string, premove = false) { 
   if(category.startsWith('wild')) {
+    if(!dests)
+      dests = [];
+    
     const cPieces = getCastlingPieces(startFen, getTurnColorFromFEN(fen), category);
     const king = cPieces.king;
     const leftRook = cPieces.leftRook;
     const rightRook = cPieces.rightRook;
-
-    dests = new Map();
-    let parsedMove = parseMove(fen, 'O-O', startFen, category, variantData, true);
-    if(parsedMove) {
-      const from = parsedMove.move.from;
-      const to = category === 'wild/fr' ? rightRook : parsedMove.move.to;
-      dests.set(from, [to]);
+  
+    // Remove any castling moves already in dests
+    if(dests) {
+      dests.filter((dest) => {
+        return Math.abs(dest.charCodeAt(0) - king.charCodeAt(0)) > 1;
+      }).forEach((dest) => {
+        dests.splice(dests.indexOf(dest), 1);
+      });
     }
-    parsedMove = parseMove(fen, 'O-O-O', startFen, category, variantData, true);
+
+    let parsedMove = parseMove(fen, 'O-O', startFen, category, null, true);
     if(parsedMove) {
-      const from = parsedMove.move.from;
+      const to = category === 'wild/fr' ? rightRook : parsedMove.move.to;
+      dests.push(to);
+    }
+    parsedMove = parseMove(fen, 'O-O-O', startFen, category, null, true);
+    if(parsedMove) {
       const to = category === 'wild/fr' ? leftRook : parsedMove.move.to;
-      const kingDests = dests.get(from);
-      if(kingDests)
-        kingDests.push(to);
-      else dests.set(from, [to]);
+      dests.push(to);
     }
   }
+
+  if(dests && !dests.length)
+    dests = null;
 
   return dests;
 }
