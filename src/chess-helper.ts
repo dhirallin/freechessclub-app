@@ -593,6 +593,13 @@ function variantToDests(fen: string, startFen: string, category: string, variant
   return dests;
 }
 
+/** Correct the castling dests for wild variants 
+ * @dests initial array of dests for the king
+ * @param fen the current position
+ * @param startFen the starting position of the game.
+ * @returns dests modified with correct castling dests
+ * @premove are these dests for a premove or regular move (less castling validation for premove)
+ */
 export function adjustKingDests(dests: string[], fen: string, startFen: string, category: string, premove = false) { 
   if(category.startsWith('wild')) {
     if(!dests)
@@ -869,8 +876,7 @@ export function getCastlingPieces(fen: string, color: string, category?: string)
  * the initial positions of the kings and rooks from the starting position. I.e. If the king or
  * rooks are no longer in their starting positions.
  * @param fen the fen being inspected
- * @param startFen the starting position of the game. If not specified, gets the starting position
- * from the Game's move list.
+ * @param startFen the starting position of the game.
  * @returns the fen with some castling rights possibly removed
  */
 export function adjustCastlingRights(fen: string, startFen: string, category?: string): string {
