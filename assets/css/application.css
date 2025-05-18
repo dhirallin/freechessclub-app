@@ -938,3 +938,12 @@ input[type="number"]:focus {
   appearance: initial;
 }
 
+.premove-target::before {
+  content: attr(data-order);
+  position: absolute;
+  top: 0.5em;
+  right: 0.25em;
+  color: white;
+  font-size: 0.75em;
+  pointer-events: none;
+}

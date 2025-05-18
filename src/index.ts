@@ -2066,9 +2066,9 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
         fen = moveFen.fen;
 
         // Set premove square highlighting 
-        if(premove.from)
+        if(premove.from && !premoveSquares.get(premove.from))
           premoveSquares.set(premove.from, 'current-premove');
-        premoveSquares.set(premove.to, 'current-premove');
+        premoveSquares.set(premove.to, 'current-premove premove-target');
       }
     }   
 
@@ -2418,10 +2418,23 @@ function preMovePiece(source: any, target: any, metadata: any) {
     }
   }
   else if(settings.multiplePremovesToggle) {
-    if(!game.premoves.length)
+    if(!game.premoves.length) {
+      game.premoveObserver = new MutationObserver((mutations) => {
+        for(const mutation of mutations) {
+          for(const node of mutation.addedNodes) {
+            const elem = node as Element;
+            if(elem.nodeType === 1 && elem.classList.contains('premove-target')) {
+              assignPremoveOrder(game, elem);
+            }
+          }
+        }
+      });
+      game.premoveObserver.observe(game.element.find('.board')[0], { childList: true, subtree: true });
+      
       game.element.one('contextmenu', () => {
         cancelMultiplePremoves(game);
       });
+    }
       
     const move = {
       from: source,
@@ -2432,6 +2445,19 @@ function preMovePiece(source: any, target: any, metadata: any) {
     game.premoves.push(move);
 
     updateBoard(game, false, true, false);
+  }
+}
+
+function assignPremoveOrder(game: Game, elem: any) {
+  const rect = elem.getBoundingClientRect();
+  const x = rect.left + (rect.right - rect.left) / 2;
+  const y = rect.top + (rect.bottom - rect.top) / 2;
+  let key = game.board.getKeyAtDomPos([x, y]);
+  for(let i = 0; i < game.premoves.length; i++) {
+    if(game.premoves[i].to === key) {
+      $(elem).attr('data-order', i + 1);
+      break;  
+    }
   }
 }
 

@@ -68,6 +68,7 @@ export class Game extends GameData {
   watchers: any = [];
   watchersInterval: any = null;
   premoves: any = []; // list of premoves for multiple pre-move mode
+  premoveObserver: any; // MutationObserver for adding numbers to premove squares
 
   // HTML elements associated with this Game
   element: any = null; // The main game card including the board
