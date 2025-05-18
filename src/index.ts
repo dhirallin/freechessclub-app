@@ -2176,13 +2176,13 @@ function squareSelected(square: string) {
       premovable: { customDests: null }
     });
 
-  if(!game.isPlaying() || !game.category.startsWith('wild'))
+  if(!game.isPlaying() || currentGameMove(game).turnColor === game.color || !game.category.startsWith('wild'))
     return;
 
   /** Correct castling dests for premove */
   const pieces = game.board.state.pieces;
   const piece = pieces.get(square);
-  if(piece && piece.role === 'king' && piece.color[0] === game.color && currentGameMove(game).turnColor !== game.color) {
+  if(piece && piece.role === 'king' && piece.color[0] === game.color) {
     let kingDests = game.board.state.premovable.dests;
     const fen = `{game.board.getFen()} ${game.color} KQkq - 0 1`;
     kingDests = ChessHelper.adjustKingDests(kingDests, fen, game.history.first().fen, game.category, true);
