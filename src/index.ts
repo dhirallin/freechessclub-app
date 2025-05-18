@@ -2456,8 +2456,10 @@ function assignPremoveOrder(game: Game, elem: any) {
   const x = rect.left + (rect.right - rect.left) / 2;
   const y = rect.top + (rect.bottom - rect.top) / 2;
   let key = game.board.getKeyAtDomPos([x, y]);
+  console.log(key);
   for(let i = 0; i < game.premoves.length; i++) {
     if(game.premoves[i].to === key) {
+      console.log('INSIDE');
       $(elem).attr('data-order', i + 1);
       break;  
     }
