@@ -585,8 +585,7 @@ function variantToDests(fen: string, startFen: string, category: string, variant
   }
 
   // Add irregular castling moves for wild variants
-  const cPieces = getCastlingPieces(startFen, chess.turn(), category);
-  const king = cPieces.king;
+  const king = getKing(fen, getTurnColorFromFEN(fen));
   let kingDests = dests.get(king);
   if(kingDests)
     kingDests = adjustKingDests(kingDests, fen, startFen, category);
@@ -613,12 +612,12 @@ export function adjustKingDests(dests: string[], fen: string, startFen: string, 
       });
     }
 
-    let parsedMove = parseMove(fen, 'O-O', startFen, category, null, true);
+    let parsedMove = parseMove(fen, 'O-O', startFen, category, null, premove);
     if(parsedMove) {
       const to = category === 'wild/fr' ? rightRook : parsedMove.move.to;
       dests.push(to);
     }
-    parsedMove = parseMove(fen, 'O-O-O', startFen, category, null, true);
+    parsedMove = parseMove(fen, 'O-O-O', startFen, category, null, premove);
     if(parsedMove) {
       const to = category === 'wild/fr' ? leftRook : parsedMove.move.to;
       dests.push(to);
@@ -787,6 +786,19 @@ export function validateFEN(fen: string, category?: string): string {
       return 'Black\'s king or rooks aren\'t in valid locations for castling.';
   }
 
+  return null;
+}
+
+/**
+ * Gets the position of the king of a chosen color given a fen
+ */
+export function getKing(fen: string, color: string): string {
+  const pos = new Position(fen);
+  for(const sq of Position.SQUARES) {
+    const piece = pos.get(sq);
+    if(piece && color === piece.color) 
+      return sq;
+  }
   return null;
 }
 

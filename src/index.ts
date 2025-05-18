@@ -2168,6 +2168,23 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
   }
 }
 
+function squareSelected(square: string) {
+  const game = games.focused;
+  if(!game.isPlaying())
+    return;
+
+  const pieces = game.board.state.pieces;
+  const piece = pieces.get(square);
+  if(piece && piece.role === 'king' && piece.color[0] === game.color) {
+    let premoveDests = game.board.state.premovable.dests;
+    const fen = `{game.board.getFen()} ${game.color} KQkq - 0 1`;
+    premoveDests = ChessHelper.adjustKingDests(premoveDests, fen, game.history.first().fen, game.category, true);
+    game.board.set({ 
+      premovable: { dests: premoveDests }
+    });
+  }
+}
+
 function boardChanged() {
   const game = games.focused;
   if(game.setupBoard) {
