@@ -2281,8 +2281,7 @@ export function movePiece(source: any, target: any, metadata: any) {
   const move = parsedMove ? parsedMove.move : inMove;
 
   if(!parsedMove && SupportedCategories.includes(game.category)) {
-    game.premoves = [];
-    updateBoard(game, false, true);
+    cancelMultiplePremoves(game);
     return;
   }
 
@@ -2475,6 +2474,8 @@ function cancelMultiplePremoves(game: Game) {
     game.premoves = [];
     updateBoard(game, false, true, false);
     game.element.off('contextmenu');
+    game.premoveObserver.disconnect();
+    game.premoveObserver = null;
   }
   game.board.cancelPremove();
   game.board.cancelPredrop();
