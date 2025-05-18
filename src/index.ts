@@ -2355,7 +2355,11 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
       if(premove) {
         if(!game.premoves.length) 
           cancelMultiplePremoves(game);
-        
+        else
+          $('.premove-target').each(function() { 
+            assignPremoveOrder(game, this)
+          });
+          
         game.promotePiece = premove.promotion;
         const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
         movePiece(premove.from || cgRoles[premove.piece], premove.to, null);
