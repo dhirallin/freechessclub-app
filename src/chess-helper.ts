@@ -585,11 +585,15 @@ function variantToDests(fen: string, startFen: string, category: string, variant
   }
 
   // Add irregular castling moves for wild variants
-  const king = getKing(fen, getTurnColorFromFEN(fen));
-  let kingDests = dests.get(king);
-  if(kingDests)
-    kingDests = adjustKingDests(kingDests, fen, startFen, category);
-  dests.set(king, kingDests);    
+  const cPieces = getCastlingPieces(startFen, getTurnColorFromFEN(fen), category);
+  const kingSquare = cPieces.king;
+  const piece = chess.get(kingSquare);
+  if(piece && piece.type === 'k' && piece.color === getTurnColorFromFEN(fen)) {
+    let kingDests = dests.get(kingSquare);
+    if(kingDests)
+      kingDests = adjustKingDests(kingDests, fen, startFen, category);
+    dests.set(kingSquare, kingDests);    
+  }
   return dests;
 }
 
@@ -793,19 +797,6 @@ export function validateFEN(fen: string, category?: string): string {
       return 'Black\'s king or rooks aren\'t in valid locations for castling.';
   }
 
-  return null;
-}
-
-/**
- * Gets the position of the king of a chosen color given a fen
- */
-export function getKing(fen: string, color: string): string {
-  const pos = new Position(fen);
-  for(const sq of Position.SQUARES) {
-    const piece = pos.get(sq);
-    if(piece && color === piece.color) 
-      return sq;
-  }
   return null;
 }
 
