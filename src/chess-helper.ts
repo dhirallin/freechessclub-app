@@ -588,7 +588,8 @@ function variantToDests(fen: string, startFen: string, category: string, variant
   const cPieces = getCastlingPieces(startFen, chess.turn(), category);
   const king = cPieces.king;
   let kingDests = dests.get(king);
-  kingDests = adjustKingDests(kingDests, fen, startFen, category);
+  if(kingDests)
+    kingDests = adjustKingDests(kingDests, fen, startFen, category);
   dests.set(king, kingDests);    
   return dests;
 }
