@@ -1683,6 +1683,14 @@ function handleMiscMessage(data: any) {
     }
   }
 
+  /** Cancel premoves when illegal move made */
+  match = msg.match(/^Illegal move \(\S+\)\./m);
+  if(match) {
+    const game = games.getPlayingExaminingGame();
+    if(game && game.isPlaying()) 
+      cancelMultiplePremoves(game);
+  }
+
   // Enter setup mode when server (other user or us) issues 'bsetup' command
   match = msg.match(/^Entering setup mode\./m);
   if(!match)
@@ -2710,10 +2718,9 @@ function updateHistory(game: Game, move?: any, fen?: string) {
       sameMove = true;
 
     else if(game.isPlaying() || game.isObserving()) {
-      if(hEntry !== game.history.last()) {
-        game.board.cancelPremove();
-        game.board.cancelPredrop();
-      }
+      if(hEntry !== game.history.last()) 
+        cancelMultiplePremoves(game);
+      
       while(hEntry !== game.history.last())
         game.history.removeLast(); // move is earlier, we need to take-back
     }
