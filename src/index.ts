@@ -2439,9 +2439,9 @@ function cancelMultiplePremoves(game: Game) {
     game.premoves = [];
     updateBoard(game, false, true, false);
     game.element.off('contextmenu');
-    game.board.cancelPremove();
-    game.board.cancelPredrop();
   }
+  game.board.cancelPremove();
+  game.board.cancelPredrop();
 }
 
 function showPromotionPanel(game: Game, premove = false) {
