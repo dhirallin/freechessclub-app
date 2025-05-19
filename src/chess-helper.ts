@@ -981,6 +981,35 @@ export function getAdjacentSquares(square: string) : string[] {
   return adjacent;
 }
 
+export function isReachable(source: string, dest: string, pieceType: string, pieceColor: string): boolean {
+  const sRow = source.charCodeAt(0) - 'a'.charCodeAt(0) + 1; 
+  const sCol = +source[1];
+  const dRow = dest.charCodeAt(0) - 'a'.charCodeAt(0) + 1; 
+  const dCol = +dest[1];
+
+  switch(pieceType) {
+    case 'r': 
+      return sRow === dRow || sCol === dCol;
+    case 'q': 
+      return sRow === dRow || sCol === dCol || Math.abs(sRow - dRow) === Math.abs(sCol - dCol);
+    case 'b':
+      return Math.abs(sRow - dRow) === Math.abs(sCol - dCol);
+    case 'n':
+      return (Math.abs(sRow - dRow) === 2 && Math.abs(sCol - dCol) === 1)
+        || (Math.abs(sRow - dRow) === 1 && Math.abs(sCol - dCol) === 2);
+    case 'p': 
+      return (((pieceColor === 'w' && dRow - sRow === 1) || (pieceColor === 'b' && sRow - dRow === 1))
+          && (dCol === sCol || Math.abs(dCol - sCol) === 1))
+        || (dCol === sCol && ((pieceColor === 'w' && sRow === 2 && dRow === 4) || (pieceColor === 'b' && sRow === 7 && dRow === 5)));
+    case 'k': 
+      return (Math.abs(sCol - dCol) <= 1 && Math.abs(sRow - dRow) <= 1)
+        || (pieceColor === 'w' && sRow === 1 && dRow === 1)
+        || (pieceColor === 'b' && sRow === 8 && dRow === 8);
+  }
+  
+  return false;
+}
+
 export function generateChess960FEN(idn?: number): string {
   // Generate random Chess960 starting position using Scharnagl's method.
 

@@ -2202,21 +2202,51 @@ function squareSelected(square: string) {
       premovable: { customDests: null }
     });
 
-  if(!game.isPlaying() || currentGameMove(game).turnColor === game.color || !game.category.startsWith('wild'))
+  if(!game.isPlaying())
     return;
 
-  /** Correct castling dests for premove */
   const pieces = game.board.state.pieces;
   const piece = pieces.get(square);
-  if(piece && piece.role === 'king' && piece.color[0] === game.color) {
-    let kingDests = game.board.state.premovable.dests;
-    const fen = `{game.board.getFen()} ${game.color} KQkq - 0 1`;
-    kingDests = ChessHelper.adjustKingDests(kingDests, fen, game.history.first().fen, game.category, true);
-    const dests = new Map<string, string[]>();
-    dests.set(square, kingDests);
-    game.board.set({ 
-      premovable: { customDests: dests }
-    });
+
+  if(settings.smartmoveToggle && (!piece || piece.color[0] !== game.color)) {
+    console.log('SQUARE: ' + square);
+    let source = null;
+    for(const [key, value] of pieces) {
+      if(value.color === game.color && ChessHelper.isReachable(key, square, value.role, value.color)) {
+        const move = {
+          from: key,
+          to: square
+        }
+        
+        if(game.turn !== game.color || parseGameMove(game, game.history.last().fen, move)) {
+          if(source) {
+            source = null; // Multiple source pieces
+            break;
+          }             
+          source = value;
+        }
+      }
+    }
+    if(source) {
+      if(game.turn === game.color)
+        movePiece(source, square, null);
+      //else
+        // preMovePiece
+    }
+  }
+
+  if(currentGameMove(game).turnColor !== game.color && game.category.startsWith('wild')) {
+    /** Correct castling dests for premove */
+    if(piece && piece.role === 'king' && piece.color[0] === game.color) {
+      let kingDests = game.board.state.premovable.dests;
+      const fen = `{game.board.getFen()} ${game.color} KQkq - 0 1`;
+      kingDests = ChessHelper.adjustKingDests(kingDests, fen, game.history.first().fen, game.category, true);
+      const dests = new Map<string, string[]>();
+      dests.set(square, kingDests);
+      game.board.set({ 
+        premovable: { customDests: dests }
+      });
+    }
   }
 }
 
