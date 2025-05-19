@@ -2016,6 +2016,7 @@ function hitClock(game: Game, bSetClocks = false) {
 
 function createBoard(element: any): any {
   return Chessground(element[0], {
+    disableContextMenu: true,
     movable: {
       events: {
         after: movePiece,
