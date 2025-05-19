@@ -2315,10 +2315,11 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
   game.movePieceSource = source;
   game.movePieceTarget = target;
   game.movePieceMetadata = metadata;
+  game.movePiecePromotion = promotePiece;
   const nextMove = game.history.next();
 
   if(promotePanel) {
-    showPromotionPanel(game, false);
+    showPromotionPanel(game);
     game.board.set({ movable: { color: undefined } });
     return;
   }
@@ -2425,7 +2426,7 @@ function preMovePiece(source: any, target: any, metadata: any) {
     game.movePieceSource = source;
     game.movePieceTarget = target;
     game.movePieceMetadata = metadata;
-    showPromotionPanel(game, true);
+    showPromotionPanel(game);
 
     if(settings.multiplePremovesToggle) {
       const premoveSquares = game.board.state.highlight.custom;
@@ -2510,13 +2511,13 @@ function cancelMultiplePremoves(game: Game) {
   game.board.cancelPredrop();
 }
 
-function showPromotionPanel(game: Game, premove = false) {
+function showPromotionPanel(game: Game) {
   const source = game.movePieceSource;
   const target = game.movePieceTarget;
   const metadata = game.movePieceMetadata;
   const showKing = !SupportedCategories.includes(game.category) && game.category !== 'atomic';
+  const premove = game.isPlaying() && game.color !== game.turn;
 
-  game.promoteIsPremove = premove;
   const orientation = game.board.state.orientation;
   const color = (target.charAt(1) === '8' ? 'white' : 'black');
   const fileNum = target.toLowerCase().charCodeAt(0) - 97;
@@ -2591,7 +2592,7 @@ function createNewVariationMenu(game: Game) {
       game.newVariationMode = NewVariationMode.NEW_VARIATION;
     else
       game.newVariationMode = NewVariationMode.OVERWRITE_VARIATION;
-    movePiece(game.movePieceSource, game.movePieceTarget, game.movePieceMetadata);
+    movePiece(game.movePieceSource, game.movePieceTarget, game.movePieceMetadata, null, game.movePiecePromotion);
   }
 
   const x = lastPointerCoords.x;
@@ -2605,7 +2606,7 @@ function flipBoard(game: Game) {
 
   // If pawn promotion dialog is open, redraw it in the correct location
   if(game.element.find('.promotion-panel').is(':visible'))
-    showPromotionPanel(game, game.promoteIsPremove);
+    showPromotionPanel(game);
 
   // Swap player and opponent status panels
   if(game.element.find('.player-status').parent().hasClass('top-panel')) {

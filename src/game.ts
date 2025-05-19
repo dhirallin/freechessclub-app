@@ -80,13 +80,11 @@ export class Game extends GameData {
   analyzing = false;
   currentStatusTab: any = null;
 
-  // Store result of promotion dialog to pass to movePiece()
-  promoteIsPremove;
-
   // Store parameters to movePiece temporarily while handling any intermediate popups, e.g. promotion dialog or new variation menu
   movePieceSource;
   movePieceTarget;
   movePieceMetadata;
+  movePiecePromotion;
 
   // Used to buffer navigation buttons when in examine mode
   bufferedHistoryEntry: any = null;
