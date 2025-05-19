@@ -2287,18 +2287,14 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
   else
     pieceColor = targetPiece ? (targetPiece.color === 'white' ? 'w' : 'b') : undefined;
 
-  let promotePanel = false;
-  if(!promotePiece && pieceRole === 'p' && !cgRoles.hasOwnProperty(source) && target.charAt(1) === (pieceColor === 'w' ? '8' : '1')) {
-    if(settings.autoPromoteToggle)
-      promotePiece = 'q';
-    else
-      promotePanel = true;
-  }
+  let promote = false;
+  if(pieceRole === 'p' && !cgRoles.hasOwnProperty(source) && target.charAt(1) === (pieceColor === 'w' ? '8' : '1')) 
+    promote = true;
 
   const inMove = {
     from: (!cgRoles.hasOwnProperty(source) ? source : ''),
     to: target,
-    promotion: promotePiece,
+    promotion: promotePiece || (promote ? 'q' : ''),
     piece: cgRoles.hasOwnProperty(source) ? pieceRole : undefined,
   };
 
@@ -2318,7 +2314,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
   game.movePiecePromotion = promotePiece;
   const nextMove = game.history.next();
 
-  if(promotePanel) {
+  if(promote && !promotePiece && !settings.autoPromoteToggle) {
     showPromotionPanel(game);
     game.board.set({ movable: { color: undefined } });
     return;
