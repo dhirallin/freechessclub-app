@@ -987,13 +987,6 @@ export function isReachable(source: string, dest: string, pieceType: string, pie
   const dCol = dest.charCodeAt(0) - 'a'.charCodeAt(0) + 1; 
   const dRow = +dest[1];
 
-  console.log('sRow: ' + sRow);
-  console.log('sCol: ' + sCol);
-  console.log('dRow: ' + dRow);
-  console.log('dCol: ' + dCol);
-  console.log('pieceType: ' + pieceType);
-  console.log('pieceColor: ' + pieceColor);
-
   switch(pieceType) {
     case 'r': 
       return sRow === dRow || sCol === dCol;
