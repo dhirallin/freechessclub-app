@@ -2077,10 +2077,10 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
         }
         fen = moveFen.fen;
 
-        // Set premove square highlighting 
+        // Set premove square highlighting and numbering classes
         if(premove.from && !premoveSquares.get(premove.from))
           premoveSquares.set(premove.from, 'current-premove');
-        premoveSquares.set(premove.to, 'current-premove premove-target');
+        premoveSquares.set(premove.to, `current-premove premove-target premove-square-${premove.to}`);
       }
     }   
 
@@ -2466,7 +2466,7 @@ function createPremovesObserver(game: Game) {
  * when multiple premoves is enabled. 
  */
 function assignPremoveOrder(game: Game, elem: any) {
-  for(let i = 0; i < game.premoves.length; i++) {
+  for(let i = 0; i < game.premoves.length; i++) {   
     if(game.premoves[i].to === elem.cgKey) {
       $(elem).attr('data-order', i + 1);
       break;  
