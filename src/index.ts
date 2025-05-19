@@ -2448,7 +2448,7 @@ function preMovePiece(source: any, target: any, metadata: any) {
  * added to the DOM.
  */
 function createPremovesObserver(game: Game) {
-  game.premoveObserver = new MutationObserver((mutations) => {
+  game.premovesObserver = new MutationObserver((mutations) => {
     for(const mutation of mutations) {
       for(const node of mutation.addedNodes) {
         const elem = node as Element;
@@ -2458,7 +2458,7 @@ function createPremovesObserver(game: Game) {
       }
     }
   });
-  game.premoveObserver.observe(game.element.find('.board')[0], { childList: true, subtree: true });
+  game.premovesObserver.observe(game.element.find('.board')[0], { childList: true, subtree: true });
 }
 
 /**
@@ -2494,8 +2494,8 @@ function cancelMultiplePremoves(game: Game) {
     game.premoves = [];
     updateBoard(game, false, true, false);
     game.element.off('contextmenu');
-    game.premoveObserver.disconnect();
-    game.premoveObserver = null;
+    game.premovesObserver.disconnect();
+    game.premovesObserver = null;
   }
   game.board.cancelPremove();
   game.board.cancelPredrop();
