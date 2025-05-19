@@ -982,10 +982,17 @@ export function getAdjacentSquares(square: string) : string[] {
 }
 
 export function isReachable(source: string, dest: string, pieceType: string, pieceColor: string): boolean {
-  const sRow = source.charCodeAt(0) - 'a'.charCodeAt(0) + 1; 
-  const sCol = +source[1];
-  const dRow = dest.charCodeAt(0) - 'a'.charCodeAt(0) + 1; 
-  const dCol = +dest[1];
+  const sCol = source.charCodeAt(0) - 'a'.charCodeAt(0) + 1; 
+  const sRow = +source[1];
+  const dCol = dest.charCodeAt(0) - 'a'.charCodeAt(0) + 1; 
+  const dRow = +dest[1];
+
+  console.log('sRow: ' + sRow);
+  console.log('sCol: ' + sCol);
+  console.log('dRow: ' + dRow);
+  console.log('dCol: ' + dCol);
+  console.log('pieceType: ' + pieceType);
+  console.log('pieceColor: ' + pieceColor);
 
   switch(pieceType) {
     case 'r': 
@@ -1006,7 +1013,7 @@ export function isReachable(source: string, dest: string, pieceType: string, pie
         || (pieceColor === 'w' && sRow === 1 && dRow === 1)
         || (pieceColor === 'b' && sRow === 8 && dRow === 8);
   }
-  
+
   return false;
 }
 

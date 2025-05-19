@@ -2210,26 +2210,36 @@ function squareSelected(square: string) {
 
   if(settings.smartmoveToggle && (!piece || piece.color[0] !== game.color)) {
     console.log('SQUARE: ' + square);
-    let source = null;
+    let validMove = null;
+    const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
     for(const [key, value] of pieces) {
-      if(value.color === game.color && ChessHelper.isReachable(key, square, value.role, value.color)) {
+      const color = value.color[0];
+      const role = cgRoles[value.role];
+      console.log('test 0');
+      if(color === game.color && ChessHelper.isReachable(key, square, role, color)) {
+        console.log('test 1');
         const move = {
           from: key,
-          to: square
+          to: square,
+          piece: role
         }
         
         if(game.turn !== game.color || parseGameMove(game, game.history.last().fen, move)) {
-          if(source) {
-            source = null; // Multiple source pieces
+          console.log('test 2');
+          if(validMove) {
+            validMove = null; // Multiple source pieces
             break;
           }             
-          source = value;
+          validMove = move;
         }
       }
     }
-    if(source) {
-      if(game.turn === game.color)
-        movePiece(source, square, null);
+    if(validMove) {
+      console.log('test 3');
+      if(game.turn === game.color) {
+        console.log('test 4');
+        movePiece(validMove.from, validMove.to, null, validMove.piece);
+      }
       //else
         // preMovePiece
     }
@@ -2386,6 +2396,8 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
   game.wtime = game.clock.getWhiteTime();
   game.btime = game.clock.getBlackTime();
 
+  console.log('test 5');
+
   if(parsedMove && parsedMove.move)
     movePieceAfter(game, move, fen);
 
@@ -2399,6 +2411,8 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
   // go to current position if user is looking at earlier move in the move list
   if((game.isPlaying() || game.isObserving()) && game.history.current() !== game.history.last())
     game.history.display(game.history.last());
+
+  console.log('test 6');
 
   updateHistory(game, move, fen);
 
