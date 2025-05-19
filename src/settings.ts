@@ -17,8 +17,10 @@ export const settings = {
   wakelockToggle: true,
   // toggle for multi-board mode / single-board mode
   multiboardToggle: true,
-  // toggle for allowing multiple premoves
+  // toggle for enabling multiple premoves
   multiplePremovesToggle: false,
+  // toggle for enabling smart move
+  smartmoveToggle: false,
   // toggle for remembering user's login and password between sessions
   rememberMeToggle: false,
 

@@ -5991,6 +5991,9 @@ function initSettings() {
   settings.multiplePremovesToggle = (storage.get('multiplepremoves') === 'true');
   $('#multiple-premoves-toggle').prop('checked', settings.multiplePremovesToggle);
 
+  settings.smartmoveToggle = (storage.get('smartmove') === 'true');
+  $('#smartmove-toggle').prop('checked', settings.smartmoveToggle);
+
   settings.rememberMeToggle = (storage.get('rememberme') === 'true');
   $('#remember-me').prop('checked', settings.rememberMeToggle);
 
@@ -6069,6 +6072,11 @@ $('#multiple-premoves-toggle').on('click', () => {
     }
   }
   storage.set('multiplepremoves', String(settings.multiplePremovesToggle));
+});
+
+$('#smartmove-toggle').on('click', () => {
+  settings.smartmoveToggle = !settings.smartmoveToggle;
+  storage.set('smartmove', String(settings.smartmoveToggle));
 });
 
 /** *****************************
