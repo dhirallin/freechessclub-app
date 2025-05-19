@@ -2452,14 +2452,8 @@ function preMovePiece(source: any, target: any, metadata: any) {
 }
 
 function assignPremoveOrder(game: Game, elem: any) {
-  const rect = elem.getBoundingClientRect();
-  const x = rect.left + (rect.right - rect.left) / 2;
-  const y = rect.top + (rect.bottom - rect.top) / 2;
-  let key = game.board.getKeyAtDomPos([x, y]);
-  console.log(key);
   for(let i = 0; i < game.premoves.length; i++) {
-    if(game.premoves[i].to === key) {
-      console.log('INSIDE');
+    if(game.premoves[i].to === elem.cgKey) {
       $(elem).attr('data-order', i + 1);
       break;  
     }
