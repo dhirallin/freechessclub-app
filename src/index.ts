@@ -239,8 +239,10 @@ Utils.createContextMenuTrigger((event) => {
 }, (event) => { 
   const element = $(event.target).closest('.game-card');
   for(const g of games) {
-    if(g.element.is(element))
+    if(g.element.is(element) && g.premoves.length) {
       cancelMultiplePremoves(g);
+      updateBoard(g);
+    }
   }
 });
 
@@ -1698,8 +1700,10 @@ function handleMiscMessage(data: any) {
   match = msg.match(/^Illegal move \(\S+\)\./m);
   if(match) {
     const game = games.getPlayingExaminingGame();
-    if(game && game.isPlaying()) 
+    if(game && game.isPlaying() && game.premoves.length) {
       cancelMultiplePremoves(game);
+      updateBoard(game);
+    }
   }
 
   // Enter setup mode when server (other user or us) issues 'bsetup' command
@@ -2255,7 +2259,7 @@ export function scrollToBoard(game?: Game) {
   }
 }
 
-export function movePiece(source: any, target: any, metadata: any, pieceRole?: string) {
+export function movePiece(source: any, target: any, metadata: any, pieceRole?: string, promotePiece: string) {
   const game = games.focused;
 
   if(game.isObserving())
@@ -2271,21 +2275,25 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
 
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
   
-  let pieceColor: string;
-  if(pieceRole)
-    pieceColor = game.color;
-  else {
-    const pieces = game.board.state.pieces;
-    const targetPiece = pieces.get(target);
+  const pieces = game.board.state.pieces;
+  const targetPiece = pieces.get(target);
+  
+  if(!pieceRole)
     pieceRole = targetPiece ? cgRoles[targetPiece.role] : undefined;
-    pieceColor = targetPiece ? (targetPiece.color === 'white' ? 'w' : 'b') : undefined;
-  }
 
-  let promotePiece = '';
-  if(game.promotePiece)
-    promotePiece = game.promotePiece;
-  else if(pieceRole === 'p' && !cgRoles.hasOwnProperty(source) && target.charAt(1) === (pieceColor === 'w' ? '8' : '1'))
-    promotePiece = 'q';
+  let pieceColor: string;
+  if(game.isPlaying())
+    pieceColor = game.color;
+  else
+    pieceColor = targetPiece ? (targetPiece.color === 'white' ? 'w' : 'b') : undefined;
+
+  let promotePanel = false;
+  if(!promotePiece && pieceRole === 'p' && !cgRoles.hasOwnProperty(source) && target.charAt(1) === (pieceColor === 'w' ? '8' : '1')) {
+    if(settings.autoPromoteToggle)
+      promotePiece = 'q';
+    else
+      promotePanel = true;
+  }
 
   const inMove = {
     from: (!cgRoles.hasOwnProperty(source) ? source : ''),
@@ -2300,6 +2308,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
 
   if(!parsedMove && SupportedCategories.includes(game.category)) {
     cancelMultiplePremoves(game);
+    updateBoard(game);
     return;
   }
 
@@ -2308,7 +2317,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
   game.movePieceMetadata = metadata;
   const nextMove = game.history.next();
 
-  if(promotePiece && !game.promotePiece && !settings.autoPromoteToggle) {
+  if(promotePanel) {
     showPromotionPanel(game, false);
     game.board.set({ movable: { color: undefined } });
     return;
@@ -2350,7 +2359,6 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
   game.wtime = game.clock.getWhiteTime();
   game.btime = game.clock.getBlackTime();
 
-  game.promotePiece = null;
   if(parsedMove && parsedMove.move)
     movePieceAfter(game, move, fen);
 
@@ -2378,9 +2386,8 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
             assignPremoveOrder(game, this)
           });
           
-        game.promotePiece = premove.promotion;
         const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
-        movePiece(premove.from || cgRoles[premove.piece], premove.to, null, premove.piece);
+        movePiece(premove.from || cgRoles[premove.piece], premove.to, null, premove.piece, premove.promotion);
       }
     }
   }
@@ -2496,13 +2503,9 @@ function cancelPremove() {
  * Cancels all premoves when multiple premoves mode is enabled 
  */
 function cancelMultiplePremoves(game: Game) {
-  if(game.premoves.length) { 
-    game.premoves = [];
-    updateBoard(game, false, true, false);
-    game.element.off('contextmenu');
-    game.premovesObserver.disconnect();
-    game.premovesObserver = null;
-  }
+  game.premoves = [];
+  game.premovesObserver?.disconnect();
+  game.premovesObserver = null;
   game.board.cancelPremove();
   game.board.cancelPredrop();
 }
@@ -2548,13 +2551,13 @@ function showPromotionPanel(game: Game, premove = false) {
 
   $('.promotion-piece').on('click', (event) => {
     hidePromotionPanel();
-    game.promotePiece = $(event.target).attr('data-piece');
+    const promotePiece = $(event.target).attr('data-piece');
     if(!premove)
-      movePiece(source, target, metadata);
+      movePiece(source, target, metadata, 'p', promotePiece);
     else if(settings.multiplePremovesToggle) {
       if(!game.premoves.length)
         createPremovesObserver(game);
-      game.premoves.push({from: source, to: target, promotion: game.promotePiece});
+      game.premoves.push({from: source, to: target, promotion: promotePiece});
       updateBoard(game, false, true, false);
     }
   });
@@ -2564,7 +2567,6 @@ function hidePromotionPanel(game?: Game) {
   if(!game)
     game = games.focused;
 
-  game.promotePiece = null;
   game.element.find('.promotion-panel').remove();
 }
 
@@ -6062,8 +6064,12 @@ $('#multiboard-toggle').on('click', () => {
 $('#multiple-premoves-toggle').on('click', () => {
   settings.multiplePremovesToggle = !settings.multiplePremovesToggle;
   if(!settings.multiplePremovesToggle) {
-    for(const g of games) 
-      cancelMultiplePremoves(g);
+    for(const g of games) {
+      if(g.premoves.length) {
+        cancelMultiplePremoves(g);
+        updateBoard(g);
+      }
+    }
   }
   storage.set('multiplepremoves', String(settings.multiplePremovesToggle));
 });

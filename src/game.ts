@@ -81,7 +81,6 @@ export class Game extends GameData {
   currentStatusTab: any = null;
 
   // Store result of promotion dialog to pass to movePiece()
-  promotePiece;
   promoteIsPremove;
 
   // Store parameters to movePiece temporarily while handling any intermediate popups, e.g. promotion dialog or new variation menu
