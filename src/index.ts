@@ -2255,7 +2255,7 @@ export function scrollToBoard(game?: Game) {
   }
 }
 
-export function movePiece(source: any, target: any, metadata: any) {
+export function movePiece(source: any, target: any, metadata: any, pieceRole?: string) {
   const game = games.focused;
 
   if(game.isObserving())
@@ -2270,15 +2270,21 @@ export function movePiece(source: any, target: any, metadata: any) {
   const prevHEntry = currentGameMove(game);
 
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
-  const pieces = game.board.state.pieces;
-  const targetPiece = pieces.get(target);
-  const pieceRole = targetPiece ? cgRoles[targetPiece.role] : undefined;
-  const pieceColor = targetPiece ? targetPiece.color : undefined;
+  
+  let pieceColor: string;
+  if(pieceRole)
+    pieceColor = game.color;
+  else {
+    const pieces = game.board.state.pieces;
+    const targetPiece = pieces.get(target);
+    pieceRole = targetPiece ? cgRoles[targetPiece.role] : undefined;
+    pieceColor = targetPiece ? (targetPiece.color === 'white' ? 'w' : 'b') : undefined;
+  }
 
   let promotePiece = '';
   if(game.promotePiece)
     promotePiece = game.promotePiece;
-  else if(pieceRole === 'p' && !cgRoles.hasOwnProperty(source) && target.charAt(1) === (pieceColor === 'white' ? '8' : '1'))
+  else if(pieceRole === 'p' && !cgRoles.hasOwnProperty(source) && target.charAt(1) === (pieceColor === 'w' ? '8' : '1'))
     promotePiece = 'q';
 
   const inMove = {
@@ -2374,7 +2380,7 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
           
         game.promotePiece = premove.promotion;
         const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
-        movePiece(premove.from || cgRoles[premove.piece], premove.to, null);
+        movePiece(premove.from || cgRoles[premove.piece], premove.to, null, premove.piece);
       }
     }
   }
