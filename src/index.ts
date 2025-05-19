@@ -2259,7 +2259,7 @@ export function scrollToBoard(game?: Game) {
   }
 }
 
-export function movePiece(source: any, target: any, metadata: any, pieceRole?: string, promotePiece: string) {
+export function movePiece(source: any, target: any, metadata: any, pieceRole?: string, promotePiece?: string) {
   const game = games.focused;
 
   if(game.isObserving())
