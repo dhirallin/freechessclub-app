@@ -233,6 +233,17 @@ $('.modal').on('hide.bs.modal', () => {
   $(document.activeElement).trigger('blur');
 });
 
+Utils.createContextMenuTrigger((event) => {
+  const target = $(event.target);
+  return settings.multiplePremovesToggle && !!target.closest('.board').length;
+}, (event) => { 
+  const element = $(event.target).closest('.game-card');
+  for(const g of games) {
+    if(g.element.is(element))
+      cancelMultiplePremoves(g);
+  }
+});
+
 /**
  * Override console.log in order to suppress annoying messages from node modules
  */
@@ -2379,12 +2390,7 @@ function preDropPiece(role: string, key: string) {
   if(settings.multiplePremovesToggle) {
     const game = games.focused;
     const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
-    
-    if(!game.premoves.length)
-      game.element.one('contextmenu', () => {
-        cancelMultiplePremoves(game);
-      });
-      
+         
     game.premoves.push({to: key, piece: cgRoles[role]});
     updateBoard(game, false, true, false);
   }
@@ -2422,23 +2428,8 @@ function preMovePiece(source: any, target: any, metadata: any) {
     }
   }
   else if(settings.multiplePremovesToggle) {
-    if(!game.premoves.length) {
-      game.premoveObserver = new MutationObserver((mutations) => {
-        for(const mutation of mutations) {
-          for(const node of mutation.addedNodes) {
-            const elem = node as Element;
-            if(elem.nodeType === 1 && elem.classList.contains('premove-target')) {
-              assignPremoveOrder(game, elem);
-            }
-          }
-        }
-      });
-      game.premoveObserver.observe(game.element.find('.board')[0], { childList: true, subtree: true });
-      
-      game.element.one('contextmenu', () => {
-        cancelMultiplePremoves(game);
-      });
-    }
+    if(!game.premoves.length) 
+      createPremovesObserver(game);
       
     const move = {
       from: source,
@@ -2452,6 +2443,28 @@ function preMovePiece(source: any, target: any, metadata: any) {
   }
 }
 
+/**
+ * Create a MutationObserver which adds premove data to chessground 'square' HTML elements after they are 
+ * added to the DOM.
+ */
+function createPremovesObserver(game: Game) {
+  game.premoveObserver = new MutationObserver((mutations) => {
+    for(const mutation of mutations) {
+      for(const node of mutation.addedNodes) {
+        const elem = node as Element;
+        if(elem.nodeType === 1 && elem.classList.contains('premove-target')) {
+          assignPremoveOrder(game, elem);
+        }
+      }
+    }
+  });
+  game.premoveObserver.observe(game.element.find('.board')[0], { childList: true, subtree: true });
+}
+
+/**
+ * Sets the 'data-order' attribute on a chessground square HTML element to show its premove order
+ * when multiple premoves is enabled. 
+ */
 function assignPremoveOrder(game: Game, elem: any) {
   for(let i = 0; i < game.premoves.length; i++) {
     if(game.premoves[i].to === elem.cgKey) {
@@ -2461,6 +2474,9 @@ function assignPremoveOrder(game: Game, elem: any) {
   }
 }
 
+/**
+ * Hides the promotion panel when the premove is cancelled
+ */
 function cancelPremove() {
   const game = games.focused;
   const promotionPanel = game.element.find('.promotion-panel');
@@ -2470,6 +2486,9 @@ function cancelPremove() {
   } 
 }
 
+/**
+ * Cancels all premoves when multiple premoves mode is enabled 
+ */
 function cancelMultiplePremoves(game: Game) {
   if(game.premoves.length) { 
     game.premoves = [];
@@ -2528,10 +2547,7 @@ function showPromotionPanel(game: Game, premove = false) {
       movePiece(source, target, metadata);
     else if(settings.multiplePremovesToggle) {
       if(!game.premoves.length)
-        game.element.one('contextmenu', () => {
-          cancelMultiplePremoves(game);
-        });
-
+        createPremovesObserver(game);
       game.premoves.push({from: source, to: target, promotion: game.promotePiece});
       updateBoard(game, false, true, false);
     }
