@@ -2202,13 +2202,14 @@ function squareSelected(square: string) {
       premovable: { customDests: null }
     });
 
-  if(!game.isPlaying())
+  if(!game.isPlaying() || game.premoveSet || game.board.state.premovable.current)
     return;
-
+ 
   const pieces = game.board.state.pieces;
   const piece = pieces.get(square);
 
   if(settings.smartmoveToggle && (!piece || piece.color[0] !== game.color)) {
+    console.log('SMART MOVE');
     let validMove = null;
     const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
     for(const [key, value] of pieces) {
@@ -2232,10 +2233,12 @@ function squareSelected(square: string) {
       }
     }
     if(validMove) {
-      if(game.turn === game.color) 
+      game.board.selectSquare(validMove.from);
+      game.board.selectSquare(validMove.to);
+      /*if(game.turn === game.color) 
         movePiece(validMove.from, validMove.to, null, validMove.piece);
       else
-        preMovePiece(validMove.from, validMove.to, null);
+        preMovePiece(validMove.from, validMove.to, null);*/
     }
   }
 
@@ -2443,6 +2446,9 @@ function preDropPiece(role: string, key: string) {
 
 function preMovePiece(source: any, target: any, metadata: any) {
   const game = games.focused;
+
+  game.premoveSet = true;
+
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
   if(cgRoles.hasOwnProperty(source)) // piece drop rather than move
     return;
@@ -2524,6 +2530,7 @@ function assignPremoveOrder(game: Game, elem: any) {
  */
 function cancelPremove() {
   const game = games.focused;
+  game.premoveSet = false;
   const promotionPanel = game.element.find('.promotion-panel');
   if(promotionPanel.length) {
     hidePromotionPanel(game);
