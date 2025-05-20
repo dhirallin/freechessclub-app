@@ -2202,7 +2202,7 @@ function squareSelected(square: string) {
       premovable: { customDests: null }
     });
 
-  if(!game.isPlaying() || game.premoveSet || game.board.state.premovable.current)
+  if(!game.isPlaying() || (game.premoveSet && !settings.multiplePremovesToggle) || game.board.state.premovable.current)
     return;
  
   const pieces = game.board.state.pieces;
@@ -2215,7 +2215,8 @@ function squareSelected(square: string) {
       const move = {
         from: key,
         to: square,
-        piece: cgRoles[value.role]
+        piece: cgRoles[value.role],
+        promotion: 'q'
       }
       
       const castlingRights = ChessHelper.splitFEN(currentGameMove(game).fen).castlingRights;
@@ -2453,7 +2454,7 @@ function preMovePiece(source: any, target: any, metadata: any) {
   const pieceRole = sourcePiece ? cgRoles[sourcePiece.role] : undefined;
   const pieceColor = sourcePiece ? sourcePiece.color : undefined;
   const promote = (pieceRole === 'p' && target.charAt(1) === (pieceColor === 'white' ? '8' : '1'));
-   
+
   if(promote && !settings.autoPromoteToggle) {  
     game.movePieceSource = source;
     game.movePieceTarget = target;
