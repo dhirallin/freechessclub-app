@@ -2212,29 +2212,30 @@ function squareSelected(square: string) {
     let validMove = null;
     const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
     for(const [key, value] of pieces) {
-      const color = value.color[0];
-      const role = cgRoles[value.role];
-      if(color === game.color && ChessHelper.isReachable(key, square, role, color)) {
-        const move = {
-          from: key,
-          to: square,
-          piece: role
-        }
-        
-        if(game.turn !== game.color || parseGameMove(game, game.history.last().fen, move)) {
-          if(validMove) {
-            validMove = null; // Multiple source pieces
-            break;
-          }             
-          validMove = move;
-        }
+      const move = {
+        from: key,
+        to: square,
+        piece: cgRoles[value.role]
+      }
+      
+      const castlingRights = ChessHelper.splitFEN(currentGameMove(game).fen).castlingRights;
+      const fen = (game.turn === game.color 
+        ? currentGameMove(game).fen
+        : `${game.board.getFen()} ${game.color} ${castlingRights} - 0 ${game.color === 'w' ? 1 : 2}`);
+
+      if(parseGameMove(game, fen, move, false)) {
+        if(validMove) {
+          validMove = null; // Multiple source pieces
+          break;
+        }             
+        validMove = move;
       }
     }
     if(validMove) {
       if(game.turn === game.color) 
         movePiece(validMove.from, validMove.to, null, validMove.piece);
-      //else
-        // preMovePiece
+      else
+        preMovePiece(validMove.from, validMove.to, null);
     }
   }
 
@@ -2242,7 +2243,8 @@ function squareSelected(square: string) {
     /** Correct castling dests for premove */
     if(piece && piece.role === 'king' && piece.color[0] === game.color) {
       let kingDests = game.board.state.premovable.dests;
-      const fen = `{game.board.getFen()} ${game.color} KQkq - 0 1`;
+      const castlingRights = ChessHelper.splitFEN(currentGameMove(game).fen).castlingRights;
+      const fen = `${game.board.getFen()} ${game.color} ${castlingRights} - 0 1`;
       kingDests = ChessHelper.adjustKingDests(kingDests, fen, game.history.first().fen, game.category, true);
       const dests = new Map<string, string[]>();
       dests.set(square, kingDests);

@@ -160,9 +160,15 @@ export function insufficientMaterial(fen: string, variantData?: VariantData, col
 }
 
 export function parseMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>, premove=false) {
-  // Parse variant move
+  // Check to see if the dest square is reachable from source square  
+  // Basic initial check for performance reasons
+  if(move && typeof move === 'object' && move.from && move.to && move.piece 
+      && !isReachable(move.from, move.to, move.piece, getTurnColorFromFEN(fen)))
+    return null;
+
   const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
-  
+
+  // Parse variant move
   if(!standardCategories.includes(category) || premove)
     return parseVariantMove(fen, move, startFen, category, variantData, premove);
 
@@ -431,13 +437,18 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       if(!piece || piece.color !== color) 
         return null;
 
+      if(piece.type === 'k' && !isReachable(move.from, move.to, piece.type, color, false))
+        return null;
+
+      outMove.from = move.from;
+      outMove.to = move.to;
+      outMove.piece = piece.type;
+      outMove.promotion = move.promotion;
+
       if(move.promotion)
         piece.type = move.promotion;
       chess.remove(move.from);
       chess.put(piece, move.to);
-      outMove.from = move.from;
-      outMove.to = move.to;
-      outMove.piece = piece.type;
     }
 
     boardAfter = chess.fen().split(/\s+/)[0];
@@ -981,7 +992,14 @@ export function getAdjacentSquares(square: string) : string[] {
   return adjacent;
 }
 
-export function isReachable(source: string, dest: string, pieceType: string, pieceColor: string): boolean {
+/** 
+ * Basic check to see if a piece can reach the dest square from the source on
+ * an empty board.
+ * @includeCastling if true the king can reach any back row square from any other square on the same row.
+ * This is to account for all kinds of castling such as fischer random etc. If false, dest square must be 
+ * adjacent to source square.
+ */
+export function isReachable(source: string, dest: string, pieceType: string, pieceColor: string, includeCastling = true): boolean {
   const sCol = source.charCodeAt(0) - 'a'.charCodeAt(0) + 1; 
   const sRow = +source[1];
   const dCol = dest.charCodeAt(0) - 'a'.charCodeAt(0) + 1; 
@@ -1003,8 +1021,8 @@ export function isReachable(source: string, dest: string, pieceType: string, pie
         || (dCol === sCol && ((pieceColor === 'w' && sRow === 2 && dRow === 4) || (pieceColor === 'b' && sRow === 7 && dRow === 5)));
     case 'k': 
       return (Math.abs(sCol - dCol) <= 1 && Math.abs(sRow - dRow) <= 1)
-        || (pieceColor === 'w' && sRow === 1 && dRow === 1)
-        || (pieceColor === 'b' && sRow === 8 && dRow === 8);
+        || (includeCastling && (pieceColor === 'w' && sRow === 1 && dRow === 1)
+        || (pieceColor === 'b' && sRow === 8 && dRow === 8));
   }
 
   return false;
