@@ -1021,8 +1021,8 @@ export function isReachable(source: string, dest: string, pieceType: string, pie
         || (dCol === sCol && ((pieceColor === 'w' && sRow === 2 && dRow === 4) || (pieceColor === 'b' && sRow === 7 && dRow === 5)));
     case 'k': 
       return (Math.abs(sCol - dCol) <= 1 && Math.abs(sRow - dRow) <= 1)
-        || (includeCastling && (pieceColor === 'w' && sRow === 1 && dRow === 1)
-        || (pieceColor === 'b' && sRow === 8 && dRow === 8));
+        || (includeCastling && ((pieceColor === 'w' && sRow === 1 && dRow === 1)
+        || (pieceColor === 'b' && sRow === 8 && dRow === 8)));
   }
 
   return false;
