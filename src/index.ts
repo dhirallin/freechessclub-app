@@ -241,7 +241,7 @@ Utils.createContextMenuTrigger((event) => {
   for(const g of games) {
     if(g.element.is(element) && g.premoves.length) {
       cancelMultiplePremoves(g);
-      updateBoard(g);
+      updateBoard(g, false, true, false);
     }
   }
 });
@@ -1702,7 +1702,7 @@ function handleMiscMessage(data: any) {
     const game = games.getPlayingExaminingGame();
     if(game && game.isPlaying() && game.premoves.length) {
       cancelMultiplePremoves(game);
-      updateBoard(game);
+      updateBoard(game, false, true, false);
     }
   }
 
@@ -2209,7 +2209,6 @@ function squareSelected(square: string) {
   const piece = pieces.get(square);
 
   if(settings.smartmoveToggle && (!piece || piece.color[0] !== game.color)) {
-    console.log('SMART MOVE');
     let validMove = null;
     const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
     for(const [key, value] of pieces) {
@@ -2235,10 +2234,6 @@ function squareSelected(square: string) {
     if(validMove) {
       game.board.selectSquare(validMove.from);
       game.board.selectSquare(validMove.to);
-      /*if(game.turn === game.color) 
-        movePiece(validMove.from, validMove.to, null, validMove.piece);
-      else
-        preMovePiece(validMove.from, validMove.to, null);*/
     }
   }
 
@@ -2342,7 +2337,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
 
   if(!parsedMove && SupportedCategories.includes(game.category)) {
     cancelMultiplePremoves(game);
-    updateBoard(game);
+    updateBoard(game, false, true, false);
     return;
   }
 
@@ -2547,6 +2542,7 @@ function cancelMultiplePremoves(game: Game) {
   game.premovesObserver = null;
   game.board.cancelPremove();
   game.board.cancelPredrop();
+  game.board.cancelMove();
 }
 
 function showPromotionPanel(game: Game) {
@@ -6109,7 +6105,7 @@ $('#multiple-premoves-toggle').on('click', () => {
     for(const g of games) {
       if(g.premoves.length) {
         cancelMultiplePremoves(g);
-        updateBoard(g);
+        updateBoard(g, false, true, false);
       }
     }
   }
