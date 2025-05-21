@@ -2197,20 +2197,25 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
 function squareSelected(square: string) {
   const game = games.focused;
 
+  console.log('square: ' + square);
+  console.log('piece unselected: ' + game.pieceSelected);
+  console.log('premove cancelled: ' + game.premoveCancelled);
+
   if(game.board.state.premovable.customDests)
     game.board.set({ 
       premovable: { customDests: null }
     });
-
-  const premoveSet = game.board.state.premovable.current;
-  const premoveUnset = game.premoveSet && !game.board.state.premovable.current;
-  if(!game.isPlaying() || premoveSet || (premoveUnset && !settings.multiplePremovesToggle))
+  
+  if(!game.isPlaying())
     return;
- 
+  
+  const pieceSelected = game.board.state.selected;
+  const cancellingPremove = (game.premoveCancelled && !settings.multiplePremovesToggle);
+
   const pieces = game.board.state.pieces;
   const piece = pieces.get(square);
 
-  if(settings.smartmoveToggle && (!piece || piece.color[0] !== game.color)) {
+  if(settings.smartmoveToggle && !cancellingPremove && !game.pieceSelected && !pieceSelected) { // (!piece || piece.color[0] !== game.color)) {
     let validMove = null;
     const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
     for(const [key, value] of pieces) {
@@ -2445,8 +2450,6 @@ function preDropPiece(role: string, key: string) {
 function preMovePiece(source: any, target: any, metadata: any) {
   const game = games.focused;
 
-  game.premoveSet = true;
-
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
   if(cgRoles.hasOwnProperty(source)) // piece drop rather than move
     return;
@@ -2528,7 +2531,6 @@ function assignPremoveOrder(game: Game, elem: any) {
  */
 function cancelPremove() {
   const game = games.focused;
-  game.premoveSet = false;
   const promotionPanel = game.element.find('.promotion-panel');
   if(promotionPanel.length) {
     hidePromotionPanel(game);
@@ -2872,6 +2874,8 @@ function createGame(): Game {
   const gameTouchHandler = () => {
     $('#input-text').trigger('blur');
     setGameWithFocus(game);
+    game.pieceUnselected = !!game.board.state.selected;
+    game.premoveCancelled = !!game.board.state.premovable.current;
   }
   game.element[0].addEventListener('touchstart', gameTouchHandler, {passive: true});
   game.element[0].addEventListener('mousedown', gameTouchHandler);

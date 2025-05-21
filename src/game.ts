@@ -69,7 +69,8 @@ export class Game extends GameData {
   watchersInterval: any = null;
   premoves: any = []; // list of premoves for multiple pre-move mode
   premovesObserver: any; // MutationObserver for adding numbers to premove squares
-  premoveSet: boolean = false; // Used by Smart Move to keep track of whether a premove is currently set or not
+  premoveCancelled: boolean = false; 
+  pieceSelected: string = null;
 
   // HTML elements associated with this Game
   element: any = null; // The main game card including the board
