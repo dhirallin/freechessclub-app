@@ -2198,16 +2198,17 @@ function squareSelected(square: string) {
   const game = games.focused;
 
   console.log('square: ' + square);
-  console.log('piece unselected: ' + game.pieceSelected);
+  console.log('piece unselected: ' + game.pieceUnselected);
   console.log('premove cancelled: ' + game.premoveCancelled);
 
   if(game.board.state.premovable.customDests)
     game.board.set({ 
       premovable: { customDests: null }
     });
-  
+
   if(!game.isPlaying())
     return;
+
   
   const pieceSelected = game.board.state.selected;
   const cancellingPremove = (game.premoveCancelled && !settings.multiplePremovesToggle);
@@ -2215,7 +2216,7 @@ function squareSelected(square: string) {
   const pieces = game.board.state.pieces;
   const piece = pieces.get(square);
 
-  if(settings.smartmoveToggle && !cancellingPremove && !game.pieceSelected && !pieceSelected) { // (!piece || piece.color[0] !== game.color)) {
+  if(settings.smartmoveToggle && !cancellingPremove && !game.pieceUnselected && !pieceSelected) { // (!piece || piece.color[0] !== game.color)) {
     let validMove = null;
     const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
     for(const [key, value] of pieces) {
@@ -2877,8 +2878,8 @@ function createGame(): Game {
     game.pieceUnselected = !!game.board.state.selected;
     game.premoveCancelled = !!game.board.state.premovable.current;
   }
-  game.element[0].addEventListener('touchstart', gameTouchHandler, {passive: true});
-  game.element[0].addEventListener('mousedown', gameTouchHandler);
+  game.element[0].addEventListener('touchstart', gameTouchHandler, {capture: true, passive: true});
+  game.element[0].addEventListener('mousedown', gameTouchHandler, {capture: true});
 
   game.element.on('click', '[title="Close"]', (event) => {
     if(game.preserved || game.history.editMode)
