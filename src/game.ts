@@ -68,6 +68,7 @@ export class Game extends GameData {
   watchers: any = [];
   watchersInterval: any = null;
   premoves: any = []; // list of premoves for multiple pre-move mode
+  premovesFen: string = '';
   premovesObserver: any; // MutationObserver for adding numbers to premove squares
   premoveSet: string[] = null; 
   pieceSelected: string = null;

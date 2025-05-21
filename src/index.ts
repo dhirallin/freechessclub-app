@@ -2069,18 +2069,11 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
   const premoveSquares = new Map();
   if(setBoard && !game.setupBoard) {
     // Display premoves (when multiple premoves setting enabled)
-    if(game.history.current() === game.history.last()) {
+    if(game.premoves.length && game.history.current() === game.history.last()) {
+      fen = game.premovesFen;
+
       for(let i = 0; i < game.premoves.length; i++) {
         const premove = game.premoves[i];
-        let moveFen = parseGameMove(game, fen, premove, true);
-        if(!moveFen) { // Remove impossible premove and all following premoves
-          game.premoves.splice(i);
-          if(!game.premoves.length)
-            cancelMultiplePremoves(game);
-          break;
-        }
-        fen = moveFen.fen;
-
         // Set premove square highlighting and numbering classes
         if(premove.from && !premoveSquares.get(premove.from))
           premoveSquares.set(premove.from, 'current-premove');
@@ -2398,6 +2391,8 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
 
   hitClock(game, false);
 
+  checkPremoves(fen);
+
   game.wtime = game.clock.getWhiteTime();
   game.btime = game.clock.getBlackTime();
 
@@ -2479,20 +2474,42 @@ function preMovePiece(source: any, target: any, metadata: any) {
       game.board.set({ animation: { enabled: true } });
     }
   }
-  else if(settings.multiplePremovesToggle) {
-    if(!game.premoves.length) 
-      createPremovesObserver(game);
-      
+  else if(settings.multiplePremovesToggle) {     
     const move = {
       from: source,
       to: target,
       promotion: promote && settings.autoPromoteToggle ? 'q' : null
     }
-
-    game.premoves.push(move);
-
-    updateBoard(game, false, true, false);
+    addPremove(game, move);
   }
+}
+
+function addPremove(game: Game, move: any) {
+  const fen = game.premoves.length ? game.premovesFen : currentGameMove(game).fen;
+  let moveFen = parseGameMove(game, fen, move, true);
+  if(moveFen) { 
+    if(!game.premoves.length) 
+      createPremovesObserver(game);
+
+    game.premovesFen = moveFen.fen;
+    game.premoves.push(move);
+  }
+  updateBoard(game, false, true, false);
+}
+
+function checkPremoves(game: Game, fen: string) {
+  for(let i = 0; i < game.premoves.length; i++) {
+    const premove = game.premoves[i];
+    let moveFen = parseGameMove(game, fen, premove, true);
+    if(!moveFen) { // Remove impossible premove and all following premoves
+      game.premoves.splice(i);
+      if(!game.premoves.length)
+        cancelMultiplePremoves(game);
+      break;
+    }
+    fen = moveFen.fen;
+  }
+  game.premovesFen = fen;
 }
 
 /**
@@ -2594,12 +2611,8 @@ function showPromotionPanel(game: Game) {
     const promotePiece = $(event.target).attr('data-piece');
     if(!premove)
       movePiece(source, target, metadata, 'p', promotePiece);
-    else if(settings.multiplePremovesToggle) {
-      if(!game.premoves.length)
-        createPremovesObserver(game);
-      game.premoves.push({from: source, to: target, promotion: promotePiece});
-      updateBoard(game, false, true, false);
-    }
+    else if(settings.multiplePremovesToggle) 
+      addPremove(game, {from: source, to: target, promotion: promotePiece});
   });
 }
 
