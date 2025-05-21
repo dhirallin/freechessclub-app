@@ -2198,7 +2198,7 @@ function squareSelected(square: string) {
   const game = games.focused;
 
   console.log('square: ' + square);
-  console.log('piece unselected: ' + game.pieceUnselected);
+  console.log('piece selected: ' + game.pieceSelected);
   console.log('premove cancelled: ' + game.premoveCancelled);
 
   if(game.board.state.premovable.customDests)
@@ -2206,17 +2206,19 @@ function squareSelected(square: string) {
       premovable: { customDests: null }
     });
 
+  const prevPieceSelected = game.pieceSelected;
+  game.pieceSelected = game.board.state.selected;
+
   if(!game.isPlaying())
     return;
 
-  
-  const pieceSelected = game.board.state.selected;
-  const cancellingPremove = (game.premoveCancelled && !settings.multiplePremovesToggle);
+  const cancellingPremove = (game.premoveCancelled && !settings.multiplePremovesToggle) 
+      || game.element.find('.promotion-panel').is(':visible');
 
   const pieces = game.board.state.pieces;
   const piece = pieces.get(square);
 
-  if(settings.smartmoveToggle && !cancellingPremove && !game.pieceUnselected && !pieceSelected) { // (!piece || piece.color[0] !== game.color)) {
+  if(settings.smartmoveToggle && !cancellingPremove && !prevPieceSelected && !game.pieceSelected) { // (!piece || piece.color[0] !== game.color)) {
     let validMove = null;
     const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
     for(const [key, value] of pieces) {
@@ -2241,8 +2243,10 @@ function squareSelected(square: string) {
       }
     }
     if(validMove) {
+      game.board.set({ events: { select: null } });
       game.board.selectSquare(validMove.from);
       game.board.selectSquare(validMove.to);
+      game.board.set({ events: { select: squareSelected } });      
     }
   }
 
@@ -2875,7 +2879,7 @@ function createGame(): Game {
   const gameTouchHandler = () => {
     $('#input-text').trigger('blur');
     setGameWithFocus(game);
-    game.pieceUnselected = !!game.board.state.selected;
+    game.pieceSelected = game.board.state.selected;
     game.premoveCancelled = !!game.board.state.premovable.current;
   }
   game.element[0].addEventListener('touchstart', gameTouchHandler, {capture: true, passive: true});
