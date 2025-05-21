@@ -518,7 +518,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       }
     }
   }
-  if(category.startsWith('wild')) {
+  if(category.startsWith('wild') || premove) {
     if(!san.toUpperCase().startsWith('O-O')) {
       // Restore castling rights which chess.js erroneously removes
       afterPost.castlingRights = afterPre.castlingRights;
