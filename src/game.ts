@@ -70,7 +70,7 @@ export class Game extends GameData {
   premoves: any = []; // list of premoves for multiple pre-move mode
   premovesObserver: any; // MutationObserver for adding numbers to premove squares
   premoveCancelled: boolean = false; 
-  pieceSelected: string = null;
+  pieceUnselected: boolean = false;
 
   // HTML elements associated with this Game
   element: any = null; // The main game card including the board
