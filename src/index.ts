@@ -2205,10 +2205,13 @@ function squareSelected(square: string) {
   const prevPieceSelected = game.pieceSelected;
   game.pieceSelected = game.board.state.selected;
 
+  const prevPremoveSet = game.premoveSet;
+  game.premoveSet = game.board.state.premovable.current;
+
   if(!game.isPlaying())
     return;
 
-  const cancellingPremove = (game.premoveCancelled && !settings.multiplePremovesToggle) 
+  const cancellingPremove = (prevPremoveSet && !settings.multiplePremovesToggle) 
       || game.element.find('.promotion-panel').is(':visible');
 
   const pieces = game.board.state.pieces;
@@ -2872,7 +2875,7 @@ function createGame(): Game {
     $('#input-text').trigger('blur');
     setGameWithFocus(game);
     game.pieceSelected = game.board.state.selected;
-    game.premoveCancelled = !!game.board.state.premovable.current;
+    game.premoveSet = game.board.state.premovable.current;
   }
   game.element[0].addEventListener('touchstart', gameTouchHandler, {capture: true, passive: true});
   game.element[0].addEventListener('mousedown', gameTouchHandler, {capture: true});
