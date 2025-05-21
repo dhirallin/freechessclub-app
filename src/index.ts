@@ -2391,14 +2391,12 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
 
   hitClock(game, false);
 
-  checkPremoves(fen);
-
   game.wtime = game.clock.getWhiteTime();
   game.btime = game.clock.getBlackTime();
 
-  if(parsedMove && parsedMove.move)
-    movePieceAfter(game, move, fen);
-
+  if(parsedMove && parsedMove.move) 
+X    movePieceAfter(game, move, fen);
+ 
   if(game.role === Role.PLAYING_COMPUTER) // Send move to engine in Play Computer mode
     getComputerMove(game);
 
@@ -2410,29 +2408,11 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
   if((game.isPlaying() || game.isObserving()) && game.history.current() !== game.history.last())
     game.history.display(game.history.last());
 
+  if(fen)
+    checkPremoves(game, fen);
+  
   updateHistory(game, move, fen);
-
-  if(settings.multiplePremovesToggle) {
-    if(game.history.current().turnColor === game.color) {
-      const premove = game.premoves.shift();
-      if(premove) {
-        if(!game.premoves.length) 
-          cancelMultiplePremoves(game);
-        else
-          $('.premove-target').each(function() { 
-            assignPremoveOrder(game, this)
-          });
-          
-        const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
-        movePiece(premove.from || cgRoles[premove.piece], premove.to, null, premove.piece, premove.promotion);
-      }
-    }
-  }
-  else {
-    game.board.playPremove();
-    game.board.playPredrop(() => true);    
-  }
-
+  playPremove(game);
   checkGameEnd(game); // Check whether game is over when playing against computer (offline mode)
 }
 
@@ -2510,6 +2490,29 @@ function checkPremoves(game: Game, fen: string) {
     fen = moveFen.fen;
   }
   game.premovesFen = fen;
+}
+
+function playPremove(game: Game) {
+  if(settings.multiplePremovesToggle) {
+    if(game.history.current().turnColor === game.color) {
+      const premove = game.premoves.shift();
+      if(premove) {
+        if(!game.premoves.length) 
+          cancelMultiplePremoves(game);
+        else
+          $('.premove-target').each(function() { 
+            assignPremoveOrder(game, this)
+          });
+          
+        const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
+        movePiece(premove.from || cgRoles[premove.piece], premove.to, null, premove.piece, premove.promotion);
+      }
+    }
+  }
+  else {
+    game.board.playPremove();
+    game.board.playPredrop(() => true);    
+  }
 }
 
 /**
