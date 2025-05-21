@@ -2202,7 +2202,9 @@ function squareSelected(square: string) {
       premovable: { customDests: null }
     });
 
-  if(!game.isPlaying() || (game.premoveSet && !settings.multiplePremovesToggle) || game.board.state.premovable.current)
+  const premoveSet = game.board.state.premovable.current;
+  const premoveUnset = game.premoveSet && !game.board.state.premovable.current;
+  if(!game.isPlaying() || premoveSet || (premoveUnset && !settings.multiplePremovesToggle))
     return;
  
   const pieces = game.board.state.pieces;
