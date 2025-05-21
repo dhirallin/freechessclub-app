@@ -2210,6 +2210,9 @@ function squareSelected(square: string) {
   const pieces = game.board.state.pieces;
   const piece = pieces.get(square);
 
+  let fen = (game.premoves.length ? game.premovesFen : currentGameMove(game).fen);
+  fen = ChessHelper.setFENTurnColor(fen, game.color);
+
   if(settings.smartmoveToggle && !cancellingPremove && !prevPieceSelected && !game.pieceSelected) { // (!piece || piece.color[0] !== game.color)) {
     let validMove = null;
     const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
@@ -2221,11 +2224,6 @@ function squareSelected(square: string) {
         promotion: 'q'
       }
       
-      const castlingRights = ChessHelper.splitFEN(currentGameMove(game).fen).castlingRights;
-      const fen = (game.turn === game.color 
-        ? currentGameMove(game).fen
-        : `${game.board.getFen()} ${game.color} ${castlingRights} - 0 ${game.color === 'w' ? 1 : 2}`);
-
       if(parseGameMove(game, fen, move, false)) {
         if(validMove) {
           validMove = null; // Multiple source pieces
@@ -2246,8 +2244,6 @@ function squareSelected(square: string) {
     /** Correct castling dests for premove */
     if(piece && piece.role === 'king' && piece.color[0] === game.color) {
       let kingDests = game.board.state.premovable.dests;
-      const castlingRights = ChessHelper.splitFEN(currentGameMove(game).fen).castlingRights;
-      const fen = `${game.board.getFen()} ${game.color} ${castlingRights} - 0 1`;
       kingDests = ChessHelper.adjustKingDests(kingDests, fen, game.history.first().fen, game.category, true);
       const dests = new Map<string, string[]>();
       dests.set(square, kingDests);
@@ -2395,7 +2391,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
   game.btime = game.clock.getBlackTime();
 
   if(parsedMove && parsedMove.move) 
-X    movePieceAfter(game, move, fen);
+    movePieceAfter(game, move, fen);
  
   if(game.role === Role.PLAYING_COMPUTER) // Send move to engine in Play Computer mode
     getComputerMove(game);
@@ -2410,7 +2406,7 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
 
   if(fen)
     checkPremoves(game, fen);
-  
+
   updateHistory(game, move, fen);
   playPremove(game);
   checkGameEnd(game); // Check whether game is over when playing against computer (offline mode)
@@ -2691,7 +2687,7 @@ function flipBoard(game: Game) {
 /** Wrapper function for parseMove */
 function parseGameMove(game: Game, fen: string, move: any, premove = false) {
   if(premove) 
-    fen = fen.replace(` ${ChessHelper.getTurnColorFromFEN(fen)} `, ` ${game.color} `);
+    ChessHelper.setFENTurnColor(fen, game.color);
   
   return ChessHelper.parseMove(fen, move, game.history.first().fen, game.category, game.history.current().variantData, premove);
 }

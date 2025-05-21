@@ -755,6 +755,10 @@ export function getTurnColorFromFEN(fen: string): string {
   return fen.split(/\s+/)[1];
 }
 
+export function setFENTurnColor(fen: string, color: string): string {
+  return fen.replace(` ${getTurnColorFromFEN(fen)} `, ` ${color} `);
+}
+
 /**
  * Checks if a fen is in a valid format and represents a valid position.
  * @returns null if fen is valid, otherwise an error string
