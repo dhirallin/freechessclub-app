@@ -2197,10 +2197,6 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
 function squareSelected(square: string) {
   const game = games.focused;
 
-  console.log('square: ' + square);
-  console.log('piece selected: ' + game.pieceSelected);
-  console.log('premove cancelled: ' + game.premoveCancelled);
-
   if(game.board.state.premovable.customDests)
     game.board.set({ 
       premovable: { customDests: null }
@@ -2471,11 +2467,7 @@ function preMovePiece(source: any, target: any, metadata: any) {
     game.movePieceMetadata = metadata;
     showPromotionPanel(game);
 
-    if(settings.multiplePremovesToggle) {
-      const premoveSquares = game.board.state.highlight.custom;
-      premoveSquares.set(source, 'current-premove');
-      premoveSquares.set(target, 'current-premove');
-    
+    if(settings.multiplePremovesToggle) {   
       game.board.set({ animation: { enabled: false }});
       game.board.setPieces([
         [source, null],
