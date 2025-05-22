@@ -2430,6 +2430,9 @@ function addPremove(game: Game, move: any) {
 }
 
 function checkPremoves(game: Game, fen: string) {
+  if(currentGameMove(game).turnColor !== game.color)
+    return;
+
   for(let i = 0; i < game.premoves.length; i++) {
     const premove = game.premoves[i];
     let moveFen = parseGameMove(game, fen, premove, true);
@@ -2446,7 +2449,7 @@ function checkPremoves(game: Game, fen: string) {
 
 function playPremove(game: Game) {
   if(settings.multiplePremovesToggle) {
-    if(game.history.current().turnColor === game.color) {
+    if(currentGameMove(game).turnColor === game.color) {
       const premove = game.premoves.shift();
       if(premove) {
         if(!game.premoves.length) 
