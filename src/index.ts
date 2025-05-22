@@ -2187,73 +2187,6 @@ export function updateBoard(game: Game, playSound = false, setBoard = true, anim
   }
 }
 
-function squareSelected(square: string) {
-  const game = games.focused;
-
-  if(game.board.state.premovable.customDests)
-    game.board.set({ 
-      premovable: { customDests: null }
-    });
-
-  const prevPieceSelected = game.pieceSelected;
-  game.pieceSelected = game.board.state.selected;
-
-  const prevPremoveSet = game.premoveSet;
-  game.premoveSet = game.board.state.premovable.current;
-
-  if(!game.isPlaying())
-    return;
-
-  const cancellingPremove = (prevPremoveSet && !settings.multiplePremovesToggle) 
-      || game.element.find('.promotion-panel').is(':visible');
-
-  const pieces = game.board.state.pieces;
-  const piece = pieces.get(square);
-
-  let fen = (game.premoves.length ? game.premovesFen : currentGameMove(game).fen);
-  fen = ChessHelper.setFENTurnColor(fen, game.color);
-
-  if(settings.smartmoveToggle && !cancellingPremove && !prevPieceSelected && !game.pieceSelected) { // (!piece || piece.color[0] !== game.color)) {
-    let validMove = null;
-    const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
-    for(const [key, value] of pieces) {
-      const move = {
-        from: key,
-        to: square,
-        piece: cgRoles[value.role],
-        promotion: 'q'
-      }
-      
-      if(parseGameMove(game, fen, move, false)) {
-        if(validMove) {
-          validMove = null; // Multiple source pieces
-          break;
-        }             
-        validMove = move;
-      }
-    }
-    if(validMove) {
-      game.board.set({ events: { select: null } });
-      game.board.selectSquare(validMove.from);
-      game.board.selectSquare(validMove.to);
-      game.board.set({ events: { select: squareSelected } });      
-    }
-  }
-
-  if(currentGameMove(game).turnColor !== game.color && game.category.startsWith('wild')) {
-    /** Correct castling dests for premove */
-    if(piece && piece.role === 'king' && piece.color[0] === game.color) {
-      let kingDests = game.board.state.premovable.dests;
-      kingDests = ChessHelper.adjustKingDests(kingDests, fen, game.history.first().fen, game.category, true);
-      const dests = new Map<string, string[]>();
-      dests.set(square, kingDests);
-      game.board.set({ 
-        premovable: { customDests: dests }
-      });
-    }
-  }
-}
-
 function boardChanged() {
   const game = games.focused;
   if(game.setupBoard) {
@@ -2273,6 +2206,29 @@ function boardChanged() {
     game.fen = newFEN;
     updateEngine();
   }
+}
+
+function squareSelected(square: string) {
+  const game = games.focused;
+
+  clearPremoveDests(game);
+
+  const prevPieceSelected = game.pieceSelected;
+  game.pieceSelected = game.board.state.selected;
+
+  const prevPremoveSet = game.premoveSet;
+  game.premoveSet = game.board.state.premovable.current;
+
+  if(!game.isPlaying())
+    return;
+
+  const cancellingPremove = (prevPremoveSet && !settings.multiplePremovesToggle) 
+      || game.element.find('.promotion-panel').is(':visible');
+
+  if(!cancellingPremove && !prevPieceSelected && !game.pieceSelected) 
+    playSmartMove(game, square);
+
+  setPremoveDests(game, square);
 }
 
 /**
@@ -2564,6 +2520,66 @@ function cancelMultiplePremoves(game: Game) {
   game.board.cancelPremove();
   game.board.cancelPredrop();
   game.board.cancelMove();
+}
+
+function setPremoveDests(game: Game, square: string) {
+  if(currentGameMove(game).turnColor !== game.color && game.category.startsWith('wild')) {
+    /** Correct castling dests for premove */
+    const pieces = game.board.state.pieces;
+    const piece = pieces.get(square);
+    if(piece && piece.role === 'king' && piece.color[0] === game.color) {
+      let fen = (game.premoves.length ? game.premovesFen : currentGameMove(game).fen);
+      fen = ChessHelper.setFENTurnColor(fen, game.color);
+      let kingDests = game.board.state.premovable.dests;
+      kingDests = ChessHelper.adjustKingDests(kingDests, fen, game.history.first().fen, game.category, true);
+      const dests = new Map<string, string[]>();
+      dests.set(square, kingDests);
+      game.board.set({ 
+        premovable: { customDests: dests }
+      });
+    }
+  }
+}
+
+function clearPremoveDests(game: Game) {
+  if(game.board.state.premovable.customDests)
+    game.board.set({ 
+      premovable: { customDests: null }
+    });
+}
+
+function playSmartMove(game: Game, square: string) {
+  if(!settings.smartmoveToggle)
+    return;
+
+  const pieces = game.board.state.pieces;
+  let fen = (game.premoves.length ? game.premovesFen : currentGameMove(game).fen);
+  fen = ChessHelper.setFENTurnColor(fen, game.color);
+
+  let validMove = null;
+  const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
+  for(const [key, value] of pieces) {
+    const move = {
+      from: key,
+      to: square,
+      piece: cgRoles[value.role],
+      promotion: 'q'
+    }
+    
+    if(parseGameMove(game, fen, move, false)) {
+      if(validMove) {
+        validMove = null; // Multiple source pieces
+        break;
+      }             
+      validMove = move;
+    }
+  }
+  if(validMove) {
+    game.board.set({ events: { select: null } });
+    game.board.selectSquare(validMove.from);
+    game.board.selectSquare(validMove.to);
+    game.board.set({ events: { select: squareSelected } });      
+  }
 }
 
 function showPromotionPanel(game: Game) {
