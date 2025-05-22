@@ -2444,7 +2444,9 @@ function checkPremoves(game: Game, fen: string) {
     }
     fen = moveFen.fen;
   }
-  game.premovesFen = fen;
+
+  if(game.premoves.length)
+    game.premovesFen = fen;
 }
 
 function playPremove(game: Game) {
@@ -2557,7 +2559,13 @@ function playSmartMove(game: Game, square: string) {
 
   const pieces = game.board.state.pieces;
   let fen = (game.premoves.length ? game.premovesFen : currentGameMove(game).fen);
-  fen = ChessHelper.setFENTurnColor(fen, game.color);
+
+  if(ChessHelper.getTurnColorFromFEN(fen) !== game.color) {
+    const fenWords = ChessHelper.splitFEN(fen);
+    fenWords.color = game.color;
+    fenWords.enPassant = '-';
+    fen = ChessHelper.joinFEN(fenWords);
+  }
 
   let validMove = null;
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
