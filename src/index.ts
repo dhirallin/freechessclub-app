@@ -2620,8 +2620,8 @@ function playSmartMove(game: Game, square: string) {
     }
   }
   if(validMove) {
-    game.board.set({ events: { select: null } }); // Disable squareSelected event to stop potential infinite loop
-    game.board.selectSquare(validMove.from); // Play the move by selecting source and destination square
+    game.board.set({ events: { select: null } }); // Disable squareSelected event to stop potential infinite loop (just in case)
+    game.board.selectSquare(validMove.from); // Play the move/premove by selecting source and destination square
     game.board.selectSquare(validMove.to);
     game.board.set({ events: { select: squareSelected } });      
   }
@@ -2944,14 +2944,16 @@ function createGame(): Game {
     $('#game-tools-close').parent().show();
   }
 
+  // Event triggered when the game's panel (the board etc) is clicked
   const gameTouchHandler = () => {
     $('#input-text').trigger('blur');
-    setGameWithFocus(game);
-    game.pieceSelected = game.board.state.selected;
-    game.premoveSet = game.board.state.premovable.current;
+    setGameWithFocus(game); 
+    // Status flags that need to be set prior to squareSelected event being called (used by smart move)
+    game.pieceSelected = game.board.state.selected; // Tracks whether a piece was currently selected prior to another square being clicked
+    game.premoveSet = game.board.state.premovable.current; // Tracks whether the premove was set prior to a square being clicked
   }
   game.element[0].addEventListener('touchstart', gameTouchHandler, {capture: true, passive: true});
-  game.element[0].addEventListener('mousedown', gameTouchHandler, {capture: true});
+  game.element[0].addEventListener('mousedown', gameTouchHandler, {capture: true}); // Use capture to intercept event before chessground does
 
   game.element.on('click', '[title="Close"]', (event) => {
     if(game.preserved || game.history.editMode)
