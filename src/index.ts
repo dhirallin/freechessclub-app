@@ -2592,7 +2592,8 @@ function playSmartMove(game: Game, square: string) {
 
   const pieces = game.board.state.pieces;
 
-  // If there are multiple premoves, check valid moves from the final premove position
+  // If there are multiple premoves, check valid premoves from the final premove position
+  // Note the new premoves are checked as regualar moves (full validation) 
   let fen = (game.premoves.length ? game.premovesFen : currentGameMove(game).fen);
   if(ChessHelper.getTurnColorFromFEN(fen) !== game.color) {
     const fenWords = ChessHelper.splitFEN(fen);

@@ -67,11 +67,11 @@ export class Game extends GameData {
   board: any = null;
   watchers: any = [];
   watchersInterval: any = null;
-  premoves: any = []; // list of premoves for multiple pre-move mode
-  premovesFen: string = '';
-  premovesObserver: any; // MutationObserver for adding numbers to premove squares
-  premoveSet: string[] = null; 
-  pieceSelected: string = null;
+  premoves: any = []; // List of premoves for multiple premoves mode
+  premovesFen: string = ''; // The position after the final premove (multiple premoves)
+  premovesObserver: any; // MutationObserver for adding numbers to premove squares (multiple premoves)
+  premoveSet: string[] = null; // Status flag that keeps track of whether a Chessground premove is currently set (used by smart move)
+  pieceSelected: string = null; // Status flag that keeps track of whether a piece is currently selected (used by smart move)
 
   // HTML elements associated with this Game
   element: any = null; // The main game card including the board
