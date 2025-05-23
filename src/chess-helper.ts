@@ -161,14 +161,14 @@ export function insufficientMaterial(fen: string, variantData?: VariantData, col
 
 export function parseMove(fen: string, move: any, startFen: string, category: string, variantData?: Partial<VariantData>, premove=false) {
   // Check to see if the dest square is reachable from source square  
-  // Basic initial check for performance reasons
+  // Basic, fast initial check for performance reasons
   if(move && typeof move === 'object' && move.from && move.to && move.piece 
       && !isReachable(move.from, move.to, move.piece, getTurnColorFromFEN(fen)))
     return null;
 
   const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
 
-  // Parse variant move
+  // Parse variant move or premove
   if(!standardCategories.includes(category) || premove)
     return parseVariantMove(fen, move, startFen, category, variantData, premove);
 
@@ -188,6 +188,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
   if(!supportedCategories.includes(category) && !premove)
     return null;
 
+  // clear en passant from FEN for premove since it confuses chess.js (and doesn't make sense for a premove)
   if(premove) {
     const fenWords = splitFEN(fen);
     fenWords.enPassant = '-';
@@ -427,6 +428,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
         outMove.to = kingTo;
     }
     else if(premove) {
+      // Perform very limited validation for premove, simply make sure the piece exists
       const piece = chess.get(move.from);
       if(!piece || piece.color !== color) 
         return null;
