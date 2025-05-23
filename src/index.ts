@@ -2208,16 +2208,20 @@ function boardChanged() {
   }
 }
 
+/**
+ * Triggered when a square is clicked on the board
+ * @param square the square's coordinates
+ */
 function squareSelected(square: string) {
   const game = games.focused;
 
-  clearPremoveDests(game);
+  clearPremoveDests(game); // Clear custom premove dests from the previously selected square
 
-  const prevPieceSelected = game.pieceSelected;
-  game.pieceSelected = game.board.state.selected;
+  const prevPieceSelected = game.pieceSelected; // was a piece selected prior to this click?
+  game.pieceSelected = game.board.state.selected; // is a piece being selected now?
 
-  const prevPremoveSet = game.premoveSet;
-  game.premoveSet = game.board.state.premovable.current;
+  const prevPremoveSet = game.premoveSet; // did this click cancel a chessground premove?
+  game.premoveSet = game.board.state.premovable.current; // did this click set a chessground premove?
 
   if(!game.isPlaying())
     return;
@@ -2225,10 +2229,11 @@ function squareSelected(square: string) {
   const cancellingPremove = (prevPremoveSet && !settings.multiplePremovesToggle) 
       || game.element.find('.promotion-panel').is(':visible');
 
+  // Don't play smart move if the user is cancelling a previous premove or selecting/unselecting a piece
   if(!cancellingPremove && !prevPieceSelected && !game.pieceSelected) 
     playSmartMove(game, square);
 
-  setPremoveDests(game, square);
+  setPremoveDests(game, square); // Set custom dests for premove (correct castling dests for variants)
 }
 
 /**
