@@ -2229,8 +2229,8 @@ function squareSelected(square: string) {
   const cancellingPremove = (prevPremoveSet && !settings.multiplePremovesToggle) 
       || game.element.find('.promotion-panel').is(':visible');
 
-  // Don't play smart move if the user is cancelling a previous premove or selecting/unselecting a piece
-  if(!cancellingPremove && !prevPieceSelected && !game.pieceSelected) 
+  // Don't play smart move if the user is setting/cancelling a previous premove or selecting/unselecting a piece
+  if(!cancellingPremove && !game.premoveSet && !prevPieceSelected && !game.pieceSelected) 
     playSmartMove(game, square);
 
   setPremoveDests(game, square); // Set custom dests for premove (correct castling dests for variants)
@@ -2366,7 +2366,7 @@ function movePieceAfter(game: Game, move: any, fen?: string) {
     game.history.display(game.history.last());
 
   if(fen)
-    checkPremoves(game, fen);
+    checkPremoves(game, fen); // For multiple premoves, prunes premoves that are no longer possible (e.g. the piece was captured)
 
   updateHistory(game, move, fen);
   playPremove(game);
@@ -2403,6 +2403,7 @@ function preMovePiece(source: any, target: any, metadata: any) {
     showPromotionPanel(game);
 
     if(settings.multiplePremovesToggle) {   
+      // Temporarily make premove on the board while waiting for user to select piece from promotion panel
       game.board.set({ animation: { enabled: false }});
       game.board.setPieces([
         [source, null],
@@ -2421,21 +2422,30 @@ function preMovePiece(source: any, target: any, metadata: any) {
   }
 }
 
+/**
+ * In multiple premoves mode, check if the premove is possible then add it to the premove list
+ * Update the final premove FEN and display it on the board
+ * @move a move object (with to, from, piece, promotion etc)
+ */
 function addPremove(game: Game, move: any) {
   const fen = game.premoves.length ? game.premovesFen : currentGameMove(game).fen;
   let moveFen = parseGameMove(game, fen, move, true);
   if(moveFen) { 
     if(!game.premoves.length) 
-      createPremovesObserver(game);
+      createPremovesObserver(game); // Tracks chessground square DOM elements to add premove numbers to the squares
 
-    game.premovesFen = moveFen.fen;
+    game.premovesFen = moveFen.fen; // Update final premove FEN position
     game.premoves.push(move);
   }
   updateBoard(game, false, true, false);
 }
 
+/**
+ * Removes any impossible premove and all premoves following it
+ * @fen the starting position that premoves are checked from
+ */
 function checkPremoves(game: Game, fen: string) {
-  if(currentGameMove(game).turnColor !== game.color)
+  if(currentGameMove(game).turnColor !== game.color) // Only check premoves after the opponent moves
     return;
 
   for(let i = 0; i < game.premoves.length; i++) {
@@ -2451,9 +2461,12 @@ function checkPremoves(game: Game, fen: string) {
   }
 
   if(game.premoves.length)
-    game.premovesFen = fen;
+    game.premovesFen = fen; // Update final premove FEN
 }
 
+/**
+ * Play a premove
+ */
 function playPremove(game: Game) {
   if(settings.multiplePremovesToggle) {
     if(currentGameMove(game).turnColor === game.color) {
@@ -2463,7 +2476,7 @@ function playPremove(game: Game) {
           cancelMultiplePremoves(game);
         else
           $('.premove-target').each(function() { 
-            assignPremoveOrder(game, this)
+            assignPremoveOrder(game, this) // Update premove order numbers on squares
           });
           
         const cgRoles = {p: 'pawn', r: 'rook', n: 'knight', b: 'bishop', q: 'queen', k: 'king'};
@@ -2479,7 +2492,7 @@ function playPremove(game: Game) {
 
 /**
  * Create a MutationObserver which adds premove data to chessground 'square' HTML elements after they are 
- * added to the DOM.
+ * added to the DOM. This allows us to display premove order numbers on the squares.
  */
 function createPremovesObserver(game: Game) {
   game.premovesObserver = new MutationObserver((mutations) => {
@@ -2522,6 +2535,7 @@ function cancelPremove() {
 
 /**
  * Cancels all premoves when multiple premoves mode is enabled 
+ * Triggered by right mouse click or long press on touch screen
  */
 function cancelMultiplePremoves(game: Game) {
   game.premoves = [];
@@ -2532,12 +2546,17 @@ function cancelMultiplePremoves(game: Game) {
   game.board.cancelMove();
 }
 
+/**
+ * Show the correct premove dests for castling when the king is selected (wild variants)
+ * @square the square selected 
+ */
 function setPremoveDests(game: Game, square: string) {
   if(currentGameMove(game).turnColor !== game.color && game.category.startsWith('wild')) {
     /** Correct castling dests for premove */
     const pieces = game.board.state.pieces;
     const piece = pieces.get(square);
     if(piece && piece.role === 'king' && piece.color[0] === game.color) {
+      // If there are multiple premoves, use the final premove position 
       let fen = (game.premoves.length ? game.premovesFen : currentGameMove(game).fen);
       fen = ChessHelper.setFENTurnColor(fen, game.color);
       let kingDests = game.board.state.premovable.dests;
@@ -2551,6 +2570,10 @@ function setPremoveDests(game: Game, square: string) {
   }
 }
 
+/**
+ * Clear custom premove dests when a new square is selected
+ * @param game 
+ */
 function clearPremoveDests(game: Game) {
   if(game.board.state.premovable.customDests)
     game.board.set({ 
@@ -2558,23 +2581,29 @@ function clearPremoveDests(game: Game) {
     });
 }
 
+/**
+ * Allows a move to be made by clicking only the destination square. Checks that there is only one piece
+ * which can move to that square, otherwise no move is played. 
+ * @param square the destination square
+ */
 function playSmartMove(game: Game, square: string) {
   if(!settings.smartmoveToggle)
     return;
 
   const pieces = game.board.state.pieces;
-  let fen = (game.premoves.length ? game.premovesFen : currentGameMove(game).fen);
 
+  // If there are multiple premoves, check valid moves from the final premove position
+  let fen = (game.premoves.length ? game.premovesFen : currentGameMove(game).fen);
   if(ChessHelper.getTurnColorFromFEN(fen) !== game.color) {
     const fenWords = ChessHelper.splitFEN(fen);
-    fenWords.color = game.color;
-    fenWords.enPassant = '-';
+    fenWords.color = game.color; // Check the move from the perspective of the player's color
+    fenWords.enPassant = '-'; // Remove en passant from premove FEN (or chess.js will flag the position as invalid)
     fen = ChessHelper.joinFEN(fenWords);
   }
 
   let validMove = null;
   const cgRoles = {pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k'};
-  for(const [key, value] of pieces) {
+  for(const [key, value] of pieces) { // Check all pieces to see if they can be moved to the destination square
     const move = {
       from: key,
       to: square,
@@ -2584,15 +2613,15 @@ function playSmartMove(game: Game, square: string) {
     
     if(parseGameMove(game, fen, move, false)) {
       if(validMove) {
-        validMove = null; // Multiple source pieces
+        validMove = null; // Multiple valid source pieces, cancel smart move
         break;
       }             
       validMove = move;
     }
   }
   if(validMove) {
-    game.board.set({ events: { select: null } });
-    game.board.selectSquare(validMove.from);
+    game.board.set({ events: { select: null } }); // Disable squareSelected event to stop potential infinite loop
+    game.board.selectSquare(validMove.from); // Play the move by selecting source and destination square
     game.board.selectSquare(validMove.to);
     game.board.set({ events: { select: squareSelected } });      
   }
