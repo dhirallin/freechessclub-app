@@ -206,18 +206,12 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       san = `${move.piece.toUpperCase()}@${move.to}`; // Crazyhouse/bughouse piece placement
 
     if(fromPiece && fromPiece.type === 'k') {
-      if((toPiece && toPiece.type === 'r' && toPiece.color === chess.turn())) { // Fischer random rook-castling
+      if((toPiece && toPiece.type === 'r' && toPiece.color === chess.turn()) // rook castling
+          || (Math.abs(move.to.charCodeAt(0) - move.from.charCodeAt(0)) > 1)) { // Normal castling (king moved 2 or more squares) 
         if(move.to.charCodeAt(0) - move.from.charCodeAt(0) > 0)
-          san = 'O-O';
+          san = (category === 'wild/fr' || move.from[0] === 'e' ? 'O-O' : 'O-O-O'); // King moved towards the h-file
         else
-          san = 'O-O-O';
-      }
-      else if(Math.abs(move.to.charCodeAt(0) - move.from.charCodeAt(0)) > 1) { // Normal castling (king moved 2 or more squares)
-        if(move.to.charCodeAt(0) - move.from.charCodeAt(0) > 0) { // King moved towards the h-file
-          san = (category === 'wild/fr' || move.from[0] === 'e' ? 'O-O' : 'O-O-O');
-        }
-        else // King moved towards the a-file
-          san = (category === 'wild/fr' || move.from[0] === 'e' ? 'O-O-O' : 'O-O');
+          san = (category === 'wild/fr' || move.from[0] === 'e' ? 'O-O-O' : 'O-O'); // King moved towards the a-file
       }
     }
     if(san)
