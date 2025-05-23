@@ -303,15 +303,27 @@ function setPanelSizes() {
   // Make sure the board is smaller than the window height and also leaves room for the other columns' min-widths
   if(!Utils.isSmallWindow()) {
     const scrollBarWidth = Utils.getScrollbarWidth();
+    const scrollBarVisible = (window.innerWidth - window.visualViewport.width) > 1;
+    const scrollBarReservedArea = (scrollBarVisible ? 0 : scrollBarWidth);
+    const viewportWidth = window.visualViewport.width;
 
     // Set board width a bit smaller in order to leave room for a scrollbar on <body>. This is because
     // we don't want to resize all the panels whenever a dropdown or something similar overflows the body.
     const cardMaxWidth = Utils.isMediumWindow() // display 2 columns on md (medium) display
-      ? window.innerWidth - $('#left-col').outerWidth() - scrollBarWidth
-      : window.innerWidth - $('#left-col').outerWidth() - parseFloat($('#right-col').css('min-width')) - scrollBarWidth;
+      ? viewportWidth - $('#left-col').outerWidth() - scrollBarReservedArea
+      : viewportWidth - $('#left-col').outerWidth() - parseFloat($('#right-col').css('min-width')) - scrollBarReservedArea;
 
     const cardMaxHeight = $(window).height() - Utils.getRemainingHeight(maximizedGameCard);
     setGameCardSize(maximizedGame, cardMaxWidth, cardMaxHeight);
+  
+    console.log('cardMaxWidth:', cardMaxWidth);
+    console.log('window.innerWidth:', window.innerWidth);
+    console.log('left-col width:', $('#left-col').outerWidth());
+    console.log('left-col bounding:', $('#left-col')[0].getBoundingClientRect().width);
+    console.log('scrollBarWidth:', scrollBarWidth);
+    console.log('mid-col width:', $('#mid-col').outerWidth());
+    console.log('document width:', document.documentElement.getBoundingClientRect().width);
+    console.log('window.visualViewport.width:', window.visualViewport.width);
   }
   else
     setGameCardSize(maximizedGame);
@@ -377,8 +389,8 @@ function setLeftColumnSizes() {
 
 function setGameCardSize(game: Game, cardMaxWidth?: number, cardMaxHeight?: number) {
   const card = game.element;
-  const roundingCorrection = (card.hasClass('game-card-sm') ? 0.032 : 0.1);
   let cardWidth: number;
+  const roundingCorrection = (card.hasClass('game-card-sm') ? 0.032 : 0.1);
 
   if(cardMaxWidth !== undefined || cardMaxHeight !== undefined) {
     const cardBorderWidth = card.outerWidth() - card.width();
@@ -392,7 +404,7 @@ function setGameCardSize(game: Game, cardMaxWidth?: number, cardMaxHeight?: numb
     if(!cardMaxHeight)
       boardMaxHeight = boardMaxWidth;
 
-    cardWidth = Math.min(boardMaxWidth, boardMaxHeight) - (2 * roundingCorrection); // Subtract small amount for rounding error
+    cardWidth = Math.min(boardMaxWidth, boardMaxHeight) - roundingCorrection;
   }
   else {
     card.css('width', '');
