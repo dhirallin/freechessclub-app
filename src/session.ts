@@ -72,7 +72,7 @@ export class Session {
   }
 
   destroy() {
-    $('body').off('click', this.bodyClickHandler());
+    $('body').off('click', this.bodyClickHandler);
   }
 
   public isRegistered(): boolean {
