@@ -492,10 +492,26 @@ export class Parser {
     if(match) {
       return {
         command: 4,
-        control: msg,
+        control: 'idle',
+        message: msg,
       };
     }
-
+    match = msg.match(/^Logging you out./);
+    if(match) {
+      return {
+        command: 4,
+        control: 'user',
+        message: msg,
+      };
+    }
+    match = msg.match(/^\*\*\*\* \S+ has arrived - you can't both be logged in\. \*\*\*\*/);
+    if(match) {
+      return {
+        command: 4,
+        control: 'duplicate',
+        message: msg,
+      };
+    }
     return { message: msg };
   }
 }

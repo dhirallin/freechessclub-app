@@ -609,11 +609,11 @@ function messageHandler(data: any) {
         cleanup();
         queuedOnlineOnlyEvents = [];
       }
-      else if(data.command === 4) { // Logged out for being idle
+      else if(data.command === 4 && data.control === 'idle') { // Logged out for being idle
         const loginOnClickHandler = (event) => {
           session.connect(session.getUser(), session.getPassword());
           const elem = $(event.target);
-          if(elem.is('button') && elem.closest('[online-only="true"]').length) {
+          if(elem.is('button') && elem.attr('data-bs-toggle') !== 'dropdown' && elem.closest('[online-only="true"]').length) {
             event.stopPropagation();
             queuedOnlineOnlyEvents.push({
               type: event.type,
@@ -622,6 +622,7 @@ function messageHandler(data: any) {
           }
         };
         document.addEventListener('click', loginOnClickHandler, {capture: true, once: true});
+        chat.newMessage('console', data);
       }
       break;
     case MessageType.ChannelTell:
