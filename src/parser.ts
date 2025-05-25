@@ -487,6 +487,15 @@ export class Parser {
       }
     }
 
+    // Logged out for being idle
+    match = msg.match(/^\*\*\*\* Auto-logout because you were idle more than 60 minutes\. \*\*\*\*/);
+    if(match) {
+      return {
+        command: 4,
+        control: msg,
+      };
+    }
+
     return { message: msg };
   }
 }

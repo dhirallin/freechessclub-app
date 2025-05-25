@@ -602,6 +602,12 @@ function messageHandler(data: any) {
         disableOnlineInputs(true);
         cleanup();
       }
+      else if(data.command === 4) { // Logged out for being idle
+        const loginOnClickHandler = (event) => {
+          session.connect(session.getUser(), session.getPassword());
+        };
+        document.addEventListener('click', loginOnClickHandler, {capture: true, once: true});
+      }
       break;
     case MessageType.ChannelTell:
       chat.newMessage(data.channel, data);
@@ -6016,8 +6022,10 @@ $('#login-form').on('submit', (event) => {
     return false;
   }
   const pass: string = Utils.getValue('#login-pass');
-  if(session)
+  if(session) {
     session.disconnect();
+    session.destroy();
+  }
   session = new Session(messageHandler, user, pass);
   settings.rememberMeToggle = $('#remember-me').prop('checked');
   storage.set('rememberme', String(settings.rememberMeToggle));
@@ -6067,6 +6075,7 @@ $('#login-pass').on('change', () => {
       credential.set($('#login-user').val() as string, $('#login-pass').val() as string);
       if(session) {
         session.disconnect();
+        session.destroy();
         session = new Session(messageHandler, credential.username, credential.password);
       }
     }
@@ -6076,8 +6085,10 @@ $('#login-pass').on('change', () => {
 });
 
 $('#connect-guest').on('click', () => {
-  if(session)
+  if(session) {
     session.disconnect();
+    session.destroy();
+  }
   session = new Session(messageHandler);
 });
 

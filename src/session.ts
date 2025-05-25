@@ -87,6 +87,10 @@ export class Session {
     return this.user;
   }
 
+  public getPassword(): string {
+    return this.pass;
+  }
+
   public getParser(): Parser {
     return this.parser;
   }
@@ -134,15 +138,13 @@ export class Session {
         this.reset();
         if(!e.wasClean) {
           if(document.visibilityState === 'visible')
-            reconnect = true;
+            this.connect(this.user, this.pass);
           else {
             $(document).one('visibilitychange', () => {
               this.connect(this.user, this.pass);
             });
           }
         }
-        if(reconnect)
-          this.connect(this.user, this.pass);
       }
     };
 
