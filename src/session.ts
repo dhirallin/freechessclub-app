@@ -134,7 +134,6 @@ export class Session {
     this.websocket.onclose = (e) => {
       // Reconnect automatically if the connection was dropped unexpectedly, i.e. by mobile power management
       if(this.isConnected()) {
-        let reconnect = false;
         this.reset();
         if(!e.wasClean) {
           if(document.visibilityState === 'visible')

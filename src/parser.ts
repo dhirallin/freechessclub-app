@@ -214,6 +214,8 @@ export class Parser {
       return null;
     }
 
+    console.log(msg);
+
     msg = msg.replace(/\[G\]\0/g, () => {
       this.session.send(String.fromCharCode(...[0x02, 0x39]));
       return '';
@@ -496,11 +498,11 @@ export class Parser {
         message: msg,
       };
     }
-    match = msg.match(/^Logging you out./);
+    match = msg.match(/^Logging you out\./);
     if(match) {
       return {
         command: 4,
-        control: 'user',
+        control: 'user-issued',
         message: msg,
       };
     }

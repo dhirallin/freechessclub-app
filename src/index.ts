@@ -75,7 +75,8 @@ let lastComputerGame = null; // Attributes of the last game played against the C
 let partnerGameId = null;
 let lastPointerCoords = {x: 0, y: 0}; // Stores the pointer coordinates from the last touch/mouse event
 let credential: CredentialStorage = null; // The persistently stored username/password
-let queuedOnlineOnlyEvents = [] // If the user clicks an online-only button while offline, this queues the event and retransmits it after they auto-reconnect
+let postConnectEvents = [] // If the user clicks an online-only button while offline, this queues the event and retransmits it after they auto-reconnect
+let reconnectOnClick = 0; // Keeps track of whether the app is auto-reconnecting after being logged out for being idle
 const mainBoard: any = createBoard($('#main-board-area').children().first().find('.board'));
 
 /**
@@ -208,6 +209,22 @@ $('body').on('click', (e) => {
       && $('.popover').has(e.target).length === 0)
     $('#rated-unrated-menu').popover('dispose');
 });
+
+document.addEventListener('click', (event) => {
+  if(reconnectOnClick) {
+    if(reconnectOnClick === 1)
+      session.connect(session.getUser(), session.getPassword());
+    const elem = $(event.target);
+    if(elem.is('button') && elem.attr('data-bs-toggle') !== 'dropdown' && elem.closest('[data-online-only="true"]').length) {
+      event.stopPropagation();
+      postConnectEvents.push({
+        type: event.type,
+        target: elem
+      });
+    }
+    reconnectOnClick++;
+  }
+}, {capture: true});
 
 $(document).on('keydown', (e) => {
   if(e.key === 'Enter') {
@@ -591,9 +608,10 @@ function messageHandler(data: any) {
         }, 59 * 60 * 1000);
 
         queuedOnlineOnlyEvents.forEach((val) => {
+        postConnectEvents.forEach((val) => {
           val.target.trigger(val.type);
         });
-        queuedOnlineOnlyEvents = [];
+        postConnectEvents = [];
       }
       else if(data.command === 2) { // Login error
         session.disconnect();
@@ -607,21 +625,11 @@ function messageHandler(data: any) {
       else if(data.command === 3) { // Disconnected
         disableOnlineInputs(true);
         cleanup();
-        queuedOnlineOnlyEvents = [];
+        postConnectEvents = [];
+        reconnectOnClick = (reconnectOnClick === -1) ? 1 : 0;  
       }
-      else if(data.command === 4 && data.control === 'idle') { // Logged out for being idle
-        const loginOnClickHandler = (event) => {
-          session.connect(session.getUser(), session.getPassword());
-          const elem = $(event.target);
-          if(elem.is('button') && elem.attr('data-bs-toggle') !== 'dropdown' && elem.closest('[online-only="true"]').length) {
-            event.stopPropagation();
-            queuedOnlineOnlyEvents.push({
-              type: event.type,
-              target: elem
-            });
-          }
-        };
-        document.addEventListener('click', loginOnClickHandler, {capture: true, once: true});
+      else if(data.command === 4 && data.control === 'user-issued') { // Logged out for being idle
+        reconnectOnClick = -1;
         chat.newMessage('console', data);
       }
       break;
