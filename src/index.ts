@@ -1873,11 +1873,11 @@ export function cleanup() {
 }
 
 export function disableOnlineInputs(disable: boolean) {
-  $('#pills-pairing *').prop('disabled', disable);
+  /*$('#pills-pairing *').prop('disabled', disable);
   $('#pills-lobby *').prop('disabled', disable);
   $('#quick-game').prop('disabled', disable);
   $('#pills-history *').prop('disabled', disable);
-  $('#pills-observe *').prop('disabled', disable);
+  $('#pills-observe *').prop('disabled', disable);*/
   $('#chan-dropdown *').prop('disabled', disable);
   $('#input-form *').prop('disabled', disable);
 }

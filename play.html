@@ -233,7 +233,7 @@
                             </div>
                           </div>
                           <div class="mb-2 border-bottom border-top py-2 btn-toolbar center w-100">
-                            <button type="button" class="btn btn-outline-secondary btn-block btn-md" aria-expanded="false" id="quick-game">Quick Game</button>
+                            <button type="button" class="btn btn-outline-secondary btn-block btn-md" aria-expanded="false" id="quick-game" data-online-only="true">Quick Game</button>
                             <button type="button" class="btn btn-outline-secondary btn-block btn-md" data-bs-toggle="modal" data-bs-target="#play-computer-modal" aria-expanded="false" id="play-computer"><span class="me-2 fa-solid fa-desktop" aria-hidden="false"></span>Play Computer</button>
                           </div>
                           <ul class="nav nav-tabs nav-fill" id="pills-play-subtab" role="tablist">
@@ -245,7 +245,7 @@
                             </li>
                           </ul>
                           <div id="play-pane-subcontent" class="tab-content flex-grow-1 overflow-auto" style="min-height: 0">
-                            <div class="tab-pane fade show active" id="pills-pairing" role="tabpanel" aria-labelledby="pills-pairing-tab">
+                            <div class="tab-pane fade show active" id="pills-pairing" role="tabpanel" aria-labelledby="pills-pairing-tab" data-online-only="true">
                               <div class="btn-group-vertical btn-block center position-static" role="group" aria-label="New Game Menu">
                                 <div class="pane-status" id="sent-offers-status" style="display: none"></div>
                                 <div class="center pane-status" id="pairing-pane-status" style="display: none"></div>
@@ -336,7 +336,7 @@
                                 </div>
                               </div>
                             </div>
-                            <div class="tab-pane fade h-100" id="pills-lobby" role="tabpanel" aria-labelledby="pills-lobby-tab">
+                            <div class="tab-pane fade h-100" id="pills-lobby" role="tabpanel" aria-labelledby="pills-lobby-tab" data-online-only="true">
                               <div class="d-flex flex-column h-100">
                                 <div class="pane-status" id="lobby-pane-status" style="display: none"></div>
                                 <div id="lobby" class="flex-grow-1" style="min-height: 0">
@@ -365,7 +365,7 @@
                           </div>
                         </div>
                       </div>
-                      <div class="tab-pane pt-2 fade h-100" id="pills-observe" role="tabpanel" aria-labelledby="pills-observe-tab">
+                      <div class="tab-pane pt-2 fade h-100" id="pills-observe" role="tabpanel" aria-labelledby="pills-observe-tab" data-online-only="true">
                         <div class="d-flex flex-column h-100">
                           <div class="center pane-status" id="observe-pane-status" style="display: none"></div>
                           <form id="observe-user">
@@ -378,7 +378,7 @@
                           <div class="flex-grow-1 overflow-auto" style="min-height: 0" id="games-table"></div>
                         </div>
                       </div>
-                      <div class="tab-pane pt-2 fade h-100" id="pills-history" role="tabpanel" aria-labelledby="pills-history-tab">
+                      <div class="tab-pane pt-2 fade h-100" id="pills-history" role="tabpanel" aria-labelledby="pills-history-tab" data-online-only="true">
                         <div class="d-flex flex-column h-100">
                           <div class="center pane-status" id="history-pane-status" style="display: none"></div>
                           <form id="history-user">
