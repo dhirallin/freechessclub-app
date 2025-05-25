@@ -155,6 +155,10 @@ export class Session {
 
     this.websocket.onerror = () => {
       $('#session-status').html('<span class="text-danger"><span class="fa fa-circle" aria-hidden="false"></span>&nbsp;Offline</span>');
+      this.onRecv({
+        command: 3,
+        control: 'Failed to connect'
+      }); 
     };
   }
 

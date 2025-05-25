@@ -75,6 +75,7 @@ let lastComputerGame = null; // Attributes of the last game played against the C
 let partnerGameId = null;
 let lastPointerCoords = {x: 0, y: 0}; // Stores the pointer coordinates from the last touch/mouse event
 let credential: CredentialStorage = null; // The persistently stored username/password
+let queuedOnlineOnlyEvents = [] // If the user clicks an online-only button while offline, this queues the event and retransmits it after they auto-reconnect
 const mainBoard: any = createBoard($('#main-board-area').children().first().find('.board'));
 
 /**
@@ -588,6 +589,11 @@ function messageHandler(data: any) {
           pingRequested = true;
           session.send('ping');  
         }, 59 * 60 * 1000);
+
+        queuedOnlineOnlyEvents.forEach((val) => {
+          val.target.trigger(val.type);
+        });
+        queuedOnlineOnlyEvents = [];
       }
       else if(data.command === 2) { // Login error
         session.disconnect();
@@ -601,10 +607,19 @@ function messageHandler(data: any) {
       else if(data.command === 3) { // Disconnected
         disableOnlineInputs(true);
         cleanup();
+        queuedOnlineOnlyEvents = [];
       }
       else if(data.command === 4) { // Logged out for being idle
         const loginOnClickHandler = (event) => {
           session.connect(session.getUser(), session.getPassword());
+          const elem = $(event.target);
+          if(elem.is('button') && elem.closest('[online-only="true"]').length) {
+            event.stopPropagation();
+            queuedOnlineOnlyEvents.push({
+              type: event.type,
+              target: elem
+            });
+          }
         };
         document.addEventListener('click', loginOnClickHandler, {capture: true, once: true});
       }
