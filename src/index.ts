@@ -39,6 +39,7 @@ let chat: Chat;
 let engine: Engine | null;
 let evalEngine: EvalEngine | null;
 let playEngine: Engine | null;
+let userList: any[];
 let gameExitPending = [];
 let examineModeRequested: Game | null = null;
 let mexamineRequested: Game | null = null;
@@ -1655,7 +1656,19 @@ function handleMiscMessage(data: any) {
     if(!awaiting.resolve('channel-list'))
       chat.newMessage('console', data);
 
-    return chat.addChannels(match[1].split(/\s+/).sort((a, b) => a - b));
+    return chat.addChannelList(match[1].split(/\s+/));
+  }
+  match = msg.match(/^\[(\d+)\] added to your channel list\./m);
+  if(match != null && match.length > 1) {
+    chat.addChannel(match[1]);
+    chat.newMessage('console', data);
+    return;
+  }
+  match = msg.match(/^\[(\d+)\] removed from your channel list\./m);
+  if(match != null && match.length > 1) {
+    chat.removeChannel(match[1]);
+    chat.newMessage('console', data);
+    return;
   }
 
   match = msg.match(/(?:^|\n)-- computer list: \d+ names --([\w\s]*)/);
@@ -1664,14 +1677,6 @@ function handleMiscMessage(data: any) {
       chat.newMessage('console', data);
 
     computerList = match[1].split(/\s+/);
-    return;
-  }
-
-  match = msg.match(/^\[\d+\] (?:added to|removed from) your channel list\./m);
-  if(match != null && match.length > 0) {
-    session.send('=ch');
-    awaiting.set('channel-list');
-    chat.newMessage('console', data);
     return;
   }
 
@@ -1780,6 +1785,13 @@ function handleMiscMessage(data: any) {
     mexamineRequested = mexamineGame;
     return;
   }
+  
+  match = msg.match(/^\s*\d+ players displayed \(of \d+\)\. \(\*\) indicates system administrator\./m);
+  if(match && awaiting.resolve('userlist')) {
+    userList = parseUserList(msg);
+    chat.updateUserList(userList);
+    return;
+  }
 
   match = msg.match(/^Starting a game in examine \(scratch\) mode\./m);
   if(match && examineModeRequested)
@@ -1828,6 +1840,28 @@ export function cleanup() {
       cleanupGame(game);
   }
   clearInterval(keepAliveTimer);
+}
+
+/**
+ * Parse the result from the server 'who' command into a structured user list 
+ */
+function parseUserList(msg: string): any[] {
+  const users: object[] = [];
+  for(let line of msg.split('\n').slice(0, -2)) {
+    const userStrings = line.split(/ {2,}/);
+    userStrings.forEach((val) => {
+      const match = val.match(/([-+\d]{4})(.)([^(]+)(.*)/);
+      if(match) {
+        users.push({
+          rating: match[1],
+          status: match[2],
+          name: match[3],
+          title: match[4]
+        });
+      }
+    });
+  }
+  return users;
 }
 
 /** *******************************************************
@@ -4986,7 +5020,7 @@ $('#game-list-filter').on('input', gameListFilterHandler);
  * Create the game list dropdown
  */
 function addGameListItems(game: Game) {
-  $('#game-list-menu').remove();
+  $('#game-list-menu').closest('li').remove();
   let listElements = '';
   for(let i = 0; i < game.historyList.length; i++) {
     const h = game.historyList[i];
@@ -4994,7 +5028,7 @@ function addGameListItems(game: Game) {
     if(description.toLowerCase().includes(game.gameListFilter.toLowerCase()))
       listElements += `<li style="width: max-content;" class="game-list-item"><a class="dropdown-item" data-index="${i}">${description}</a></li>`
   }
-  $('#game-list-dropdown').append(`<ul id="game-list-menu">${listElements}</ul>`);
+  $('#game-list-dropdown').append(`<li><ul id="game-list-menu">${listElements}</ul></li>`);
 }
 
 /**
