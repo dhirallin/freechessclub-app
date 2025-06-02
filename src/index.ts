@@ -47,6 +47,8 @@ let gamesRequested = false;
 let lobbyRequested = false;
 let channelListRequested = false;
 let computerListRequested = false;
+let userListRequested = false;
+let userList: any[];
 let setupBoardPending = false;
 let gameExitPending = [];
 let examineModeRequested: Game | null = null;
@@ -1680,7 +1682,19 @@ function handleMiscMessage(data: any) {
       chat.newMessage('console', data);
 
     channelListRequested = false;
-    return chat.addChannels(match[1].split(/\s+/).sort((a, b) => a - b));
+    return chat.addChannelList(match[1].split(/\s+/));
+  }
+  match = msg.match(/^\[(\d+)\] added to your channel list\./m);
+  if(match != null && match.length > 1) {
+    chat.addChannel(match[1]);
+    chat.newMessage('console', data);
+    return;
+  }
+  match = msg.match(/^\[(\d+)\] removed from your channel list\./m);
+  if(match != null && match.length > 1) {
+    chat.removeChannel(match[1]);
+    chat.newMessage('console', data);
+    return;
   }
 
   match = msg.match(/(?:^|\n)-- computer list: \d+ names --([\w\s]*)/);
@@ -1690,14 +1704,6 @@ function handleMiscMessage(data: any) {
 
     computerListRequested = false;
     computerList = match[1].split(/\s+/);
-    return;
-  }
-
-  match = msg.match(/^\[\d+\] (?:added to|removed from) your channel list\./m);
-  if(match != null && match.length > 0) {
-    session.send('=ch');
-    channelListRequested = true;
-    chat.newMessage('console', data);
     return;
   }
 
@@ -1806,6 +1812,14 @@ function handleMiscMessage(data: any) {
     mexamineRequested = mexamineGame;
     return;
   }
+  
+  match = msg.match(/^\s*\d+ players displayed \(of \d+\)\. \(\*\) indicates system administrator\./m);
+  if(match && userListRequested) {
+    userListRequested = false;
+    userList = parseUserList(msg);
+    chat.updateUserList(userList);
+    return;
+  }
 
   match = msg.match(/^Starting a game in examine \(scratch\) mode\./m);
   if(match && examineModeRequested)
@@ -1853,6 +1867,7 @@ export function cleanup() {
   channelListRequested = false;
   computerListRequested = false;
   setupBoardPending = false;
+  userListRequested = false;
   examineModeRequested = null;
   mexamineRequested = null;
   gameExitPending = [];
@@ -1863,6 +1878,33 @@ export function cleanup() {
       cleanupGame(game);
   }
   clearInterval(keepAliveTimer);
+}
+
+export function requestUserList() {
+  userListRequested = true;
+  session.send('who');
+}
+
+/**
+ * Parse the result from the server 'who' command into a structured user list 
+ */
+function parseUserList(msg: string): any[] {
+  const users: object[] = [];
+  for(let line of msg.split('\n').slice(0, -2)) {
+    const userStrings = line.split(/ {2,}/);
+    userStrings.forEach((val) => {
+      const match = val.match(/([-+\d]{4})(.)([^(]+)(.*)/);
+      if(match) {
+        users.push({
+          rating: match[1],
+          status: match[2],
+          name: match[3],
+          title: match[4]
+        });
+      }
+    });
+  }
+  return users;
 }
 
 /** *******************************************************
