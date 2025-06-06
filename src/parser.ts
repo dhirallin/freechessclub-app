@@ -402,22 +402,23 @@ export class Parser {
       };
     }
 
-    match = msg.match(/(?:^|\n)The following message was received:\n(\S+) at (\w+) (\w+)\s+(\d+), (\d{2}:\d{2}) (\w+) (\d+): .+/); 
+    match = msg.match(/(?:^|\n)The following message was received:\n(\S+) at (\w+) (\w+)\s+(\d+), (\d{2}):(\d{2}) (\w+) (\d+): (.+)/); 
     if(match) {
       return {
         type: 'message',
         user: match[1],
-        datatime: {
+        datetime: {
           dayOfWeek: match[2],
           month: match[3],
           day: match[4],
-          time: match[5],
-          timezone: match[6],
-          year: match[7]
+          hour: match[5],
+          minute: match[6],
+          timezone: match[7],
+          year: match[8]
         },
-        message: match[8],
+        message: match[9],
         raw: msg
-      }
+      };
     }
 
     // offers info (seekinfo and pendinfo)

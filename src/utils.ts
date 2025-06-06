@@ -10,6 +10,87 @@ export const enum SizeCategory {
   Large
 }
 
+const timeZoneOffsets = {
+  UTC: 0,
+  GMT: 0,
+  BZLFST: -2,
+  BZLFDT: -2,
+  BZLEST: -3,
+  BZLEDT: -2,
+  BZLWST: -4,
+  BZLWDT: -3,
+  BZLAST: -5,
+  BZLADT: -4,
+  CHLEST: -4,    
+  CHLEDT: -3,
+  CHLEST_ISLAND: -6,
+  CHLEDT_ISLAND: -5,
+  NST: -3.5, 
+  NDT: -2.5,
+  AST: -4,
+  ADT: -3,
+  EST: -5,
+  EDT: -4,
+  CST: -6,
+  CDT: -5,
+  MST: -7,
+  MDT: -6,
+  PST: -8,
+  PDT: -7,
+  AKST: -9,
+  AKDT: -8,
+  YST: -9,
+  YDT: -8,
+  HST: -10,
+  HAST: -10,
+  HADT: -9,
+  BERSST: -11,
+  CUBCST: -5,
+  CUBCDT: -4,
+  NZST: 12,
+  NZDT: 13,
+  AUSEST: 10,
+  AUSEDT: 11,
+  AUSCST: 9.5,
+  AUSWST: 8,
+  CHNCST: 8,
+  CHNCDT: 9,
+  JST: 9,
+  KST: 9,
+  KDT: 10,
+  SST: 8,    
+  HKT: 8,    
+  IRNIST: 3.5,
+  IRNIDT: 4.5,
+  IST: 2,   
+  IDT: 3,
+  EET: 2,
+  EETDST: 3,
+  BST: 1,    
+  MET: 1,   
+  METDST: 2,
+  CET: 1,
+  EURCST: 1,
+  WET: 0,
+  WETDST: 1
+};
+
+export async function convertToLocalDateTime(dateTime: any) {
+  const { DateTime } = await import('luxon');
+
+  const offset = timeZoneOffsets[dateTime.timezone];
+  const timezone = `UTC${offset > 0 ? '+' : ''}${offset}`;
+  
+  const inDateTime = DateTime.fromObject({
+      year: dateTime.year,
+      month: Number.isInteger(Number(dateTime.month)) ? dateTime.month : DateTime.fromFormat(dateTime.month, 'MMM').month,
+      day: dateTime.day,
+      hour: dateTime.hour,
+      minute: dateTime.minute,
+    }, { zone: timezone });
+  return inDateTime.setZone('local');
+}
+
 /**
  * Is this a Capacitor app?
  */
