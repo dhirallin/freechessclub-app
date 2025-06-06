@@ -4,7 +4,7 @@
 
 import { autoLink } from 'autolink-js';
 import { load as loadEmojis, parse as parseEmojis } from 'gh-emoji';
-import { createTooltip, safeScrollTo, isSmallWindow } from './utils';
+import { createTooltip, safeScrollTo, isSmallWindow, convertToLocalDateTime, getMonthShortName } from './utils';
 import { setGameWithFocus, maximizeGame, scrollToBoard } from './index';
 import { settings } from './settings';
 import { storage, awaiting } from './storage';
@@ -21,8 +21,8 @@ const channels = {
   6:      'Interfaces Help',
   7:      'Online Tours',
   20:     'Forming Team games',
-  21:     'Playing Team games',
-  22:     'Playing Team games',
+  21:     'Playing Team games 1',
+  22:     'Playing Team games 2',
   23:     'Forming Simuls',
   30:     'Books & Knowledge',
   31:     'Computer Games',
@@ -93,6 +93,7 @@ let maximized = false;
 export class Chat {
   private user: string;
   private userRE: RegExp;
+  private timezone: string;
   private tabData: object;
   private emojisLoaded: boolean;
   private maximized: boolean;
@@ -280,14 +281,12 @@ export class Chat {
       const bname = tags.Black;
       let wrating = tags.WhiteElo || '?';
       let brating = tags.BlackElo || '?';
-      let match = wname.match(/Guest[A-Z]{4}/);
-      if(match)
+      if(/^Guest[A-Z]{4}$/.test(wname))
         wrating = '++++';
       else if(wrating === '-')
         wrating = '----';
 
-      match = bname.match(/Guest[A-Z]{4}/);
-      if(match)
+      if(/^Guest[A-Z]{4}$/.test(bname))
         brating = '++++';
       else if(brating === '-')
         brating = '----';
@@ -390,9 +389,9 @@ export class Chat {
       if(channels[name] !== undefined)
         chName = channels[name];
      
-      match = chName.match(/^Game (\d+)/);
       let tooltip = '';
       let infoBar: JQuery<HTMLElement>;
+      match = chName.match(/^Game (\d+)/);
       if(match && match.length > 1) {
         const game = games.findGame(+match[1]);
         if(game) {
@@ -519,14 +518,14 @@ export class Chat {
       }
     }
 
-    if(showTab) {
-      const tabs = $('#tabs button').filter(function() {
-        return $(this).attr('id') === `tab-${from}`;
-      });
-      tabs.first().tab('show');
-    }
+    if(showTab) 
+      this.showTab(from);
  
     return this.tabData[from];
+  }
+
+  public showTab(name: string) {
+    $(`#tab-${name.toLowerCase().replace(/\s/g, '-')}`).tab('show');
   }
 
   public fixScrollPosition() {
@@ -681,9 +680,24 @@ export class Chat {
       },
     })}${suffix}</br>`;
 
-    const timestamp = settings.timestampToggle
-      ? `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `
-      : '';
+    let timestamp = settings.timestampToggle 
+        ? `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `
+        : '';
+
+    // 'message' instead of tell
+    if(data.datetime) {
+      if(!settings.chattabsToggle)
+        return;
+
+      const dateTime = await convertToLocalDateTime(data.datetime);
+      const now = new Date();
+      let dateStr = '';
+      if(dateTime.month !== now.getMonth() || dateTime.day !== now.getDate() || dateTime.year !== now.getFullYear())
+        dateStr += `${getMonthShortName(dateTime.month)} ${dateTime.day} ` 
+      if(dateTime.year !== now.getFullYear())
+        dateStr += `${dateTime.year} `;
+      timestamp = `<span class="timestamp">[${dateStr}${now.toLocaleTimeString()}]</span> `;
+    }
 
     tab.messages = tab.messages.concat(`${timestamp}${who}${text}`);
     if(tab.scrollerStarted)
@@ -691,7 +705,7 @@ export class Chat {
 
     const tabheader = $(`#tab-${from.toLowerCase().replace(/\s/g, '-')}`);
 
-    if(this.user !== data.user)
+    if(this.user !== data.user || from.toLowerCase() === this.user.toLowerCase())
       this.updateViewedState(tabheader, false, data.type !== 'whisper');
   }
 
