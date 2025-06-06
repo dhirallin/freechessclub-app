@@ -402,6 +402,22 @@ export class Parser {
       };
     }
 
+    match = msg.match(/(?:^|\n)The following message was received:\n(\S+) at (\w+) (\w+)\s+(\d+), (\d{2}:\d{2}) (\w+) (\d+): .+/); 
+    if(match) {
+      return {
+        type: 'message',
+        user: match[1],
+        dayOfWeek: match[2],
+        month: match[3],
+        day: match[4],
+        time: match[5],
+        timezone: match[6],
+        year: match[7],
+        message: match[8],
+        output: msg
+      }
+    }
+
     // offers info (seekinfo and pendinfo)
     const index = msg.search(/^<(pt|pf|pr|s|sc|sn|sr)>/m)
     if(index !== -1) {
