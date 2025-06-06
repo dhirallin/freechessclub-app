@@ -407,14 +407,16 @@ export class Parser {
       return {
         type: 'message',
         user: match[1],
-        dayOfWeek: match[2],
-        month: match[3],
-        day: match[4],
-        time: match[5],
-        timezone: match[6],
-        year: match[7],
+        datatime: {
+          dayOfWeek: match[2],
+          month: match[3],
+          day: match[4],
+          time: match[5],
+          timezone: match[6],
+          year: match[7]
+        },
         message: match[8],
-        output: msg
+        raw: msg
       }
     }
 
