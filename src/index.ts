@@ -1414,6 +1414,12 @@ function handleMiscMessage(data: any) {
     match = msg.match(/^You are muted./m);
   if(!match)
     match = msg.match(/^Only registered players may whisper to others' games./m);
+  if(!match) 
+    match = msg.match(/^\S+ message box is full./m);
+  if(!match)
+    match = msg.match(/^You cannot send any more messages to \S+ at present \(24hr limit reached \)./m);
+  if(!match)
+    match = msg.match(/^A message cannot be received as your message box is full./m);
   if(!match)
     match = msg.match(/^Notification: .*/m);
   if(match && match.length > 0) {
@@ -1837,14 +1843,6 @@ function handleMiscMessage(data: any) {
     chat.updateUserList(userList);
     return;
   }
-
-  // You cannot send any more messages to Drad at present (24hr limit reached).
-
-  /*
-  Drad's message box is full.
-
-A message cannot be received as your message box is full.
- */
 
   match = msg.match(/^Starting a game in examine \(scratch\) mode\./m);
   if(match && examineModeRequested)
