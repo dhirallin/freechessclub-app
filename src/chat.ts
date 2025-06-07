@@ -642,8 +642,12 @@ export class Chat {
   public async newMessage(from: string, data: any, html = false) {
     const tabName = settings.chattabsToggle ? from : 'console';
 
+    console.log('message displayed 1');
+
     if(!/^[\w- ]+$/.test(from))
       return;
+
+    console.log('test 2');
 
     const tab = await this.createTab(tabName);
     let who = '';
@@ -709,6 +713,8 @@ export class Chat {
 
     if(this.user !== data.user)
       this.updateViewedState(tabheader, false, data.type !== 'whisper');
+
+    console.log('tab: ' + JSON.stringify(tab));
   }
 
   private ignoreUnviewed(from: string) {

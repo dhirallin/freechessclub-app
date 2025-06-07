@@ -1299,11 +1299,16 @@ function handleMiscMessage(data: any) {
     if(index !== -1) {
       const tell = pendingTells.splice(index, 1)[0];
       const message = Utils.splitText(Utils.unicodeToHTMLEncoding(tell.message), 997)[0]; // HTMLEncode message and truncate to max 997 chars
+      
+      const okHandler = () => {
+        session.send(`message ${tell.recipient} ${message}`);
+        chat.newNotification('Message sent.')
+      };
       const headerTitle = 'Send as message';
       const bodyText = `${tell.recipient} is not logged in. Send as message instead?`;
-      const button1 = [`message ${tell.recipient} ${message}`, 'Yes'];
+      const button1 = [okHandler, 'Yes'];
       const button2 = ['', 'No'];
-      Dialogs.showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, useSessionSend: true});
+      Dialogs.showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1});
       return;
     }
   }
@@ -6331,8 +6336,17 @@ $('#input-form').on('submit', (event) => {
       const xcmd = game && game.role === Role.OBSERVING ? 'xwhisper' : 'xkibitz';
       text = `${xcmd} ${gameNum} ${val}`;
     }
-    else if(val.startsWith('m;')) 
-      text = `message ${tab} ${val.substring(2).trim()}`;
+    else if(val.startsWith('m;')) {
+      // Display message in chat tab
+      const recipient = tab;
+      const msg = val.substring(2).trim();
+      chat.newMessage(recipient, {
+        type: MessageType.PrivateTell,
+        user: session.getUser(),
+        message: msg,
+      });
+      text = `message ${tab} ${msg}`;
+    }
     else
       text = `t ${tab} ${val}`;
   }
