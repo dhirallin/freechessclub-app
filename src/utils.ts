@@ -10,7 +10,7 @@ export const enum SizeCategory {
   Large
 }
 
-const timeZoneOffsets = {
+const timezoneOffsets = {
   UTC: 0,
   GMT: 0,
   BZLFST: -2,
@@ -75,12 +75,21 @@ const timeZoneOffsets = {
   WETDST: 1
 };
 
+let defaultTimezone = 'UTC';
+export function setDefaultTimezone(timezone: string) {
+  const offset = Number.isInteger(+timezone)
+      ? +timezone
+      : timezoneOffsets[timezone] || 0;
+
+  defaultTimezone = `UTC${offset > 0 ? '+' : ''}${offset !== 0 ? offset : ''}`;
+}
+
 export async function convertToLocalDateTime(dateTime: any) {
   const { DateTime } = await import('luxon');
 
-  const offset = timeZoneOffsets[dateTime.timezone];
-  const timezone = `UTC${offset > 0 ? '+' : ''}${offset}`;
-  
+  const offset = timezoneOffsets[dateTime.timezone];
+  const timezone = offset !== undefined ? `UTC${offset > 0 ? '+' : ''}${offset}` : defaultTimezone;
+
   const inDateTime = DateTime.fromObject({
       year: dateTime.year,
       month: Number.isInteger(Number(dateTime.month)) ? dateTime.month : DateTime.fromFormat(dateTime.month, 'MMM').month,

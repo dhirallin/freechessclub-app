@@ -47,6 +47,8 @@ let gamesRequested = false;
 let lobbyRequested = false;
 let channelListRequested = false;
 let computerListRequested = false;
+let userVariablesRequested = false;
+export let userVariables: any = {};
 let userListRequested = false;
 let userList: any[];
 let setupBoardPending = false;
@@ -571,6 +573,8 @@ function messageHandler(data: any) {
         channelListRequested = true;
         session.send('=computer'); // get Computers list, to augment names in Observe panel
         computerListRequested = true;
+        session.send('variables'); // Get user's variables (mostly for tzone)
+        userVariablesRequested = true;
 
         if($('#pills-observe').hasClass('active'))
           initObservePane();
@@ -1706,7 +1710,20 @@ function handleMiscMessage(data: any) {
     computerList = match[1].split(/\s+/);
     return;
   }
-
+  
+  match = msg.match(/(?:^|\n)Variable settings of \S+\s+((?:\w+=\w+\s+)+)/);
+  if(match && userVariablesRequested) {
+    const varStrings = match[1].split(/\s+/);
+    userVariables = Object.fromEntries(varStrings.map(val => val.split('='))); 
+    Utils.setDefaultTimezone(userVariables.tzone);
+    return;
+  }
+  match = msg.match(/^Interface: /m);
+  if(match && userVariablesRequested) {
+    userVariablesRequested = false;
+    return;
+  }
+  
   // Suppress messages when 'moves' command issued internally
   match = msg.match(/^You're at the (?:beginning|end) of the game\./m);
   if(match) {
@@ -1821,6 +1838,14 @@ function handleMiscMessage(data: any) {
     return;
   }
 
+  // You cannot send any more messages to Drad at present (24hr limit reached).
+
+  /*
+  Drad's message box is full.
+
+A message cannot be received as your message box is full.
+ */
+
   match = msg.match(/^Starting a game in examine \(scratch\) mode\./m);
   if(match && examineModeRequested)
     return;
@@ -1866,6 +1891,8 @@ export function cleanup() {
   lobbyRequested = false;
   channelListRequested = false;
   computerListRequested = false;
+  userVariablesRequested = false;
+  userVariables = {};
   setupBoardPending = false;
   userListRequested = false;
   examineModeRequested = null;

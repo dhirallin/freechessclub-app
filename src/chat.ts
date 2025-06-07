@@ -93,6 +93,7 @@ let maximized = false;
 export class Chat {
   private user: string;
   private userRE: RegExp;
+  private timezone: string;
   private tabData: object;
   private emojisLoaded: boolean;
   private maximized: boolean;
@@ -686,20 +687,18 @@ export class Chat {
 
     // 'message' instead of tell
     if(data.datetime) {
-      if(settings.chattabsToggle) {
-        const dateTime = await convertToLocalDateTime(data.datetime);
-        const now = new Date();
-        let dateStr = '';
-        if(dateTime.month !== now.getMonth() || dateTime.day !== now.getDate() || dateTime.year !== now.getFullYear())
-          dateStr += `${getMonthShortName(dateTime.month)} ${dateTime.day} ` 
-        if(dateTime.year !== now.getFullYear())
-          dateStr += `${dateTime.year} `;
-        timestamp = `<span class="timestamp">[${dateStr}${now.toLocaleTimeString()}]</span> `;
-      }
-      else {
-        who = '';
-        text = data.raw;
-      }
+      this.newMessage('console', { message: data.raw });
+      if(!settings.chattabsToggle)
+        return;
+
+      const dateTime = await convertToLocalDateTime(data.datetime);
+      const now = new Date();
+      let dateStr = '';
+      if(dateTime.month !== now.getMonth() || dateTime.day !== now.getDate() || dateTime.year !== now.getFullYear())
+        dateStr += `${getMonthShortName(dateTime.month)} ${dateTime.day} ` 
+      if(dateTime.year !== now.getFullYear())
+        dateStr += `${dateTime.year} `;
+      timestamp = `<span class="timestamp">[${dateStr}${now.toLocaleTimeString()}]</span> `;
     }
 
     tab.messages = tab.messages.concat(`${timestamp}${who}${text}`);

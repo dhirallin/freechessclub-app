@@ -402,7 +402,7 @@ export class Parser {
       };
     }
 
-    match = msg.match(/(?:^|\n)The following message was received:\n(\S+) at (\w+) (\w+)\s+(\d+), (\d{2}):(\d{2}) (\w+) (\d+): (.+)/); 
+    match = msg.match(/(?:^|\n)The following message was received:\n(\S+) at (\w+) (\w+)\s+(\d+), (\d{2}):(\d{2}) ([\w\?]+) (\d+): (.+)/); 
     if(match) {
       return {
         type: 'message',
