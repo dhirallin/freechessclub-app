@@ -1283,19 +1283,17 @@ function handleMiscMessage(data: any) {
     return;
   }
 
-  match = msg.match(/^\((told|kibitzed) (\w+)\)/m);
+  match = msg.match(/^\(told (.+)\)/m);
   if(match) {
-    if(match[1] === 'told') {
-      const index = pendingTells.findIndex(item => item.recipient === match[2]);
-      if(index !== -1) 
-        pendingTells.splice(index, 1);
-    }
+    const index = pendingTells.findIndex(item => item.recipient.toLowerCase() === match[2].trim().toLowerCase());
+    if(index !== -1) 
+      pendingTells.splice(index, 1);
     return;
   }
 
   match = msg.match(/^(\w+) is not logged in./m);
   if(match) {
-    const index = pendingTells.findIndex(item => item.recipient === match[1]);
+    const index = pendingTells.findIndex(item => item.recipient.toLowerCase() === match[1].toLowerCase());
     if(index !== -1) {
       const tell = pendingTells.splice(index, 1)[0];
       const message = Utils.splitText(Utils.unicodeToHTMLEncoding(tell.message), 997)[0]; // HTMLEncode message and truncate to max 997 chars
@@ -6336,11 +6334,10 @@ $('#input-form').on('submit', (event) => {
       const xcmd = game && game.role === Role.OBSERVING ? 'xwhisper' : 'xkibitz';
       text = `${xcmd} ${gameNum} ${val}`;
     }
-    else if(val.startsWith('m;')) {
+    else if(val.startsWith('m;') && !/^\d+$/.test(tab)) { // Use "m;" prefix to send message
       // Display message in chat tab
-      const recipient = tab;
       const msg = val.substring(2).trim();
-      chat.newMessage(recipient, {
+      chat.newMessage(tab, {
         type: MessageType.PrivateTell,
         user: session.getUser(),
         message: msg,

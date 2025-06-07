@@ -372,7 +372,7 @@ export class Parser {
     }
 
     // channel tell
-    match = msg.match(/(?:^|\n)([a-zA-Z]+)(?:\([A-Z\*]+\))*\(([0-9]+)\):\s+([\s\S]*)/s);
+    match = msg.match(/(?:^|\n)([a-zA-Z]+)(?:\([A-Z\*]+\))*\(([0-9]+)\):\s+([ \S]*)/s);
     if (match != null && match.length > 3) {
       return {
         channel: match[2],
