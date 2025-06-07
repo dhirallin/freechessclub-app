@@ -6304,6 +6304,9 @@ $('#input-form').on('submit', (event) => {
       const xcmd = game && game.role === Role.OBSERVING ? 'xwhisper' : 'xkibitz';
       text = `${xcmd} ${gameNum} ${val}`;
     }
+    else if(val.startsWith('m;')) {
+      text = `message ${tab} ${val.substring(2).trim()}`;
+    }
     else
       text = `t ${tab} ${val}`;
   }
@@ -6390,6 +6393,8 @@ function updateInputText() {
     maxLength = 1024;
   else if(tab === 'console')
     maxLength = 1023;
+  else if(val.startsWith('m;'))
+    maxLength = 999;
   else if(!session.isRegistered()) // Guests are limited to half the tell length
     maxLength = 200;
   else
