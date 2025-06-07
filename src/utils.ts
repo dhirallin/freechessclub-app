@@ -88,7 +88,20 @@ export async function convertToLocalDateTime(dateTime: any) {
       hour: dateTime.hour,
       minute: dateTime.minute,
     }, { zone: timezone });
-  return inDateTime.setZone('local');
+
+  const outDateTime = inDateTime.setZone('local');
+  return {
+    year: outDateTime.year,
+    month: outDateTime.month - 1,
+    day: outDateTime.day,
+    hour: outDateTime.hour,
+    minute: outDateTime.minute
+  };
+}
+
+export function getMonthShortName(month: number) {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return monthNames[month]; 
 }
 
 /**

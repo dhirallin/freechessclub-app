@@ -408,7 +408,7 @@ export class Parser {
         type: 'message',
         user: match[1],
         datetime: {
-          dayOfWeek: match[2],
+          weekday: match[2],
           month: match[3],
           day: match[4],
           hour: match[5],

@@ -4,7 +4,7 @@
 
 import { autoLink } from 'autolink-js';
 import { load as loadEmojis, parse as parseEmojis } from 'gh-emoji';
-import { createTooltip, safeScrollTo, isSmallWindow, convertToLocalDateTime } from './utils';
+import { createTooltip, safeScrollTo, isSmallWindow, convertToLocalDateTime, getMonthShortName } from './utils';
 import { setGameWithFocus, maximizeGame, scrollToBoard, requestUserList } from './index';
 import { settings } from './settings';
 import { storage } from './storage';
@@ -680,13 +680,27 @@ export class Chat {
       },
     })}${suffix}</br>`;
 
-    let timestamp = '';
-    if(data.datetime) { // server message instead of tell
-      const localDateTime = await convertToLocalDateTime(data.datetime);
-      //<span class="timestamp">[${new Date().toLocaleTimeString()}]</span>
+    let timestamp = settings.timestampToggle 
+        ? `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `
+        : '';
+
+    // 'message' instead of tell
+    if(data.datetime) {
+      if(settings.chattabsToggle) {
+        const dateTime = await convertToLocalDateTime(data.datetime);
+        const now = new Date();
+        let dateStr = '';
+        if(dateTime.month !== now.getMonth() || dateTime.day !== now.getDate() || dateTime.year !== now.getFullYear())
+          dateStr += `${getMonthShortName(dateTime.month)} ${dateTime.day} ` 
+        if(dateTime.year !== now.getFullYear())
+          dateStr += `${dateTime.year} `;
+        timestamp = `<span class="timestamp">[${dateStr}${now.toLocaleTimeString()}]</span> `;
+      }
+      else {
+        who = '';
+        text = data.raw;
+      }
     }
-    else if(settings.timestampToggle) 
-      timestamp = `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> `;
 
     tab.messages = tab.messages.concat(`${timestamp}${who}${text}`);
     if(tab.scrollerStarted)
