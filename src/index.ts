@@ -51,6 +51,7 @@ let userVariablesRequested = false;
 export let userVariables: any = {};
 let userListRequested = false;
 let userList: any[];
+let pendingTells: any[] = [];
 let setupBoardPending = false;
 let gameExitPending = [];
 let examineModeRequested: Game | null = null;
@@ -1282,6 +1283,31 @@ function handleMiscMessage(data: any) {
     return;
   }
 
+  match = msg.match(/^\((told|kibitzed) (\w+)\)/m);
+  if(match) {
+    if(match[1] === 'told') {
+      const index = pendingTells.findIndex(item => item.recipient === match[2]);
+      if(index !== -1) 
+        pendingTells.splice(index, 1);
+    }
+    return;
+  }
+
+  match = msg.match(/^(\w+) is not logged in./m);
+  if(match) {
+    const index = pendingTells.findIndex(item => item.recipient === match[1]);
+    if(index !== -1) {
+      const tell = pendingTells.splice(index, 1)[0];
+      const message = Utils.splitText(Utils.unicodeToHTMLEncoding(tell.message), 997)[0]; // HTMLEncode message and truncate to max 997 chars
+      const headerTitle = 'Send as message';
+      const bodyText = `${tell.recipient} is not logged in. Send as message instead?`;
+      const button1 = [`message ${tell.recipient} ${message}`, 'Yes'];
+      const button2 = ['', 'No'];
+      Dialogs.showFixedDialog({type: headerTitle, msg: bodyText, btnFailure: button2, btnSuccess: button1, useSessionSend: true});
+      return;
+    }
+  }
+
   match = msg.match(/^Game (\d+): (\S+) has lagged for 30 seconds\./m);
   if(match) {
     const game = games.findGame(+match[1]);
@@ -1893,6 +1919,7 @@ export function cleanup() {
   userVariables = {};
   setupBoardPending = false;
   userListRequested = false;
+  pendingTells = [];
   examineModeRequested = null;
   mexamineRequested = null;
   gameExitPending = [];
@@ -6304,9 +6331,8 @@ $('#input-form').on('submit', (event) => {
       const xcmd = game && game.role === Role.OBSERVING ? 'xwhisper' : 'xkibitz';
       text = `${xcmd} ${gameNum} ${val}`;
     }
-    else if(val.startsWith('m;')) {
+    else if(val.startsWith('m;')) 
       text = `message ${tab} ${val.substring(2).trim()}`;
-    }
     else
       text = `t ${tab} ${val}`;
   }
@@ -6338,6 +6364,11 @@ $('#input-form').on('submit', (event) => {
   }
 
   if(chatCmd) {
+    const isPrivateTell = ('xtell'.startsWith(chatCmd) || 'tell'.startsWith(chatCmd)) && !/^\d+$/.test(recipient);
+
+    if(isPrivateTell) 
+      pendingTells.push({ recipient, message });
+
     const maxLength = (session.isRegistered() ? 400 : 200);
     if(message.length > maxLength)
       message = message.slice(0, maxLength);
@@ -6346,7 +6377,7 @@ $('#input-form').on('submit', (event) => {
     const messages = Utils.splitText(message, maxLength); // if message is now bigger than maxLength chars due to html encoding split it
 
     for(const msg of messages) {
-      if(('xtell'.startsWith(chatCmd) || 'tell'.startsWith(chatCmd)) && !/^\d+$/.test(recipient)) {
+      if(isPrivateTell) {
         chat.newMessage(recipient, {
           type: MessageType.PrivateTell,
           user: session.getUser(),

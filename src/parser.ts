@@ -220,7 +220,6 @@ export class Parser {
       this.session.send(String.fromCharCode(...[0x02, 0x39]), false);
       return '';
     });
-    msg = msg.replace(/\((?:told|kibitzed) .+\)/g, '');
     msg = msg.replace(/\u0007/g, '');
     msg = msg.replace(/\x00/g, '');
     msg = msg.replace(/\x01/g, '');
