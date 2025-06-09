@@ -67,6 +67,7 @@ let lastComputerGame = null; // Attributes of the last game played against the C
 let partnerGameId = null;
 let lastPointerCoords = {x: 0, y: 0}; // Stores the pointer coordinates from the last touch/mouse event
 let credential: CredentialStorage = null; // The persistently stored username/password
+let gameListVirtualScroller = null;
 const mainBoard: any = createBoard($('#main-board-area').children().first().find('.board'));
 
 /**
@@ -5108,10 +5109,10 @@ function updateGameFromMetatags(game: Game) {
  * Display the game list when game list dropdown button clicked. The game list button is displayed when
  * multiple games are opened from PGN(s) at once.
  */
-$('#game-list-button').on('show.bs.dropdown', () => {
+$('#game-list-button').on('show.bs.dropdown', async () => {
   const game = games.focused;
   if(game.historyList.length > 1) {
-    $('#game-list-filter').val(game.gameListFilter);
+    $('#game-list-filter').val(game.gameListFilter);  
     addGameListItems(game);
   }
 });
@@ -5131,16 +5132,28 @@ $('#game-list-filter').on('input', gameListFilterHandler);
 /**
  * Create the game list dropdown
  */
-function addGameListItems(game: Game) {
-  $('#game-list-menu').closest('li').remove();
-  let listElements = '';
+async function addGameListItems(game: Game) {
+  let listItems = [];
   for(let i = 0; i < game.historyList.length; i++) {
     const h = game.historyList[i];
     const description = getGameListDescription(h, true);
     if(description.toLowerCase().includes(game.gameListFilter.toLowerCase()))
-      listElements += `<li style="width: max-content;" class="game-list-item"><a class="dropdown-item" data-index="${i}">${description}</a></li>`
+      listItems.push([i, description]);
   }
-  $('#game-list-dropdown').append(`<li><ul id="game-list-menu">${listElements}</ul></li>`);
+
+  if(!gameListVirtualScroller) {
+    const { default: VirtualScroller } = await import('virtual-scroller/dom');
+    gameListVirtualScroller = new VirtualScroller($('#game-list-menu')[0], listItems, (item: [number, string]) => {
+      const elem = $(`<li style="width: max-content;" class="game-list-item"><a class="dropdown-item" data-index="${item[0]}">${item[1]}</a></li>`);
+      return elem[0];
+    }, {
+      scrollableContainer: $('#game-list-scroll-container')[0],
+    });
+  }
+  else {
+    gameListVirtualScroller.setItems(listItems);
+    $('#game-list-scroll-container')[0].scrollTop = 0;
+  }
 }
 
 /**
@@ -5197,10 +5210,11 @@ function getGameListDescription(history: History, longDescription = false) {
 }
 
 /**
- * Clear the game list after it's closed, since it can take up a lot of memory, e.g. if it contains
- * 10000s of games. In future this should probably be displayed using a virtual scrolling library
+ * Clear the game list after it's closed
  */
 $('#game-list-button').on('hidden.bs.dropdown', () => {
+  gameListVirtualScroller?.stop();
+  gameListVirtualScroller = null;
   $('#game-list-menu').html('');
 });
 
