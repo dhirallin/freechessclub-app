@@ -16,7 +16,7 @@ import { Game, GameData, Role, NewVariationMode, games } from './game';
 import { History, HEntry } from './history';
 import { GetMessageType, MessageType, Session } from './session';
 import * as Sounds from './sounds';
-import { storage, CredentialStorage } from './storage';
+import { storage, CredentialStorage, awaiting } from './storage';
 import { settings } from './settings';
 import { Reason } from './parser';
 import './ui';
@@ -39,22 +39,12 @@ let chat: Chat;
 let engine: Engine | null;
 let evalEngine: EvalEngine | null;
 let playEngine: Engine | null;
-let pingRequested = false;
-let historyRequested = 0;
-let obsRequested = 0;
-let allobsRequested = 0;
-let gamesRequested = false;
-let lobbyRequested = false;
-let channelListRequested = false;
-let computerListRequested = false;
-let setupBoardPending = false;
 let gameExitPending = [];
 let examineModeRequested: Game | null = null;
 let mexamineRequested: Game | null = null;
 let mexamineGame: Game | null = null;
 let computerList = [];
 let numPVs = 1;
-let matchRequested = 0;
 let prevSizeCategory = null;
 let layout = Layout.Desktop;
 let keepAliveTimer; // Stop FICS auto-logout after 60 minutes idle
@@ -566,9 +556,9 @@ function messageHandler(data: any) {
         session.send('iset pendinfo 1'); // Receive detailed match request info (both that we send and receive)
         session.send('iset ms 1'); // Style12 receives clock times with millisecond precision
         session.send('=ch');
-        channelListRequested = true;
+        awaiting.set('channel-list');
         session.send('=computer'); // get Computers list, to augment names in Observe panel
-        computerListRequested = true;
+        awaiting.set('computer-list');
 
         if($('#pills-observe').hasClass('active'))
           initObservePane();
@@ -582,7 +572,7 @@ function messageHandler(data: any) {
         }
 
         keepAliveTimer = setInterval(() => {
-          pingRequested = true;
+          awaiting.set('ping');
           session.send('ping');  
         }, 59 * 60 * 1000);
 
@@ -635,11 +625,6 @@ function messageHandler(data: any) {
 }
 
 function gameMove(data: any) {
-  if(timeSet)
-    console.timeEnd('premove time');
-  console.time('premove time');
-  timeSet = true;
-
   if(gameExitPending.includes(data.id))
     return;
 
@@ -800,20 +785,20 @@ function gameStart(game: Game) {
 
   if(game.role !== Role.PLAYING_COMPUTER && game.role !== Role.NONE) {
     session.send(`allobs ${game.id}`);
-    allobsRequested++;
+    awaiting.set('allobs');
     if(game.isPlaying()) {
       game.watchersInterval = setInterval(() => {
         const time = game.color === 'b' ? game.btime : game.wtime;
         if (time > 20000) {
           session.send(`allobs ${game.id}`);
-          allobsRequested++;
+          awaiting.set('allobs');
         }
       }, 30000);
     }
     else {
       game.watchersInterval = setInterval(() => {
         session.send(`allobs ${game.id}`);
-        allobsRequested++;
+        awaiting.set('allobs');
       }, 5000);
     }
   }
@@ -904,8 +889,7 @@ function gameStart(game: Game) {
   }
   else {
     if(game.isExamining()) {
-      if(setupBoardPending) {
-        setupBoardPending = false;
+      if(awaiting.resolve('setup-board')) {
         setupBoard(game, true);
       }
 
@@ -1011,7 +995,7 @@ function handleOffers(offers: any[]) {
 
   // Add seeks to the lobby
   const seeks = offers.filter((item) => item.type === 's');
-  if(seeks.length && lobbyRequested) {
+  if(seeks.length && awaiting.has('lobby')) {
     seeks.forEach((item) => {
       if(!settings.lobbyShowComputersToggle && item.title === 'C')
         return;
@@ -1036,8 +1020,7 @@ function handleOffers(offers: any[]) {
     && !$(`.sent-offer[data-offer-id="${item.id}"]`).length);
   
   sentOffers.forEach((item) => {
-    if(matchRequested)
-      matchRequested--;
+    awaiting.resolve('match');
     if(item.adjourned)
       removeAdjournNotification(item.opponent);
   });
@@ -1228,18 +1211,15 @@ function handleMiscMessage(data: any) {
 
   let match = msg.match(/^No one is observing game (\d+)\./m);
   if(match != null && match.length > 1) {
-    if(allobsRequested) {
-      allobsRequested--;
+    if(awaiting.resolve('allobs')) 
       return;
-    }
     chat.newMessage('console', data);
     return;
   }
 
   match = msg.match(/^(?:Observing|Examining)\s+(\d+) [\(\[].+[\)\]]: (.+) \(\d+ users?\)/m);
   if (match != null && match.length > 1) {
-    if (allobsRequested) {
-      allobsRequested--;
+    if(awaiting.resolve('allobs')) {
       const game = games.findGame(+match[1]);
       if(!game)
         return;
@@ -1273,9 +1253,8 @@ function handleMiscMessage(data: any) {
   }
 
   match = msg.match(/(?:^|\n)\s*\d+\s+(\(Exam\.\s+)?[0-9\+]+\s\w+\s+[0-9\+]+\s\w+\s*(\)\s+)?\[[\w\s]+\]\s+[\d:]+\s*\-\s*[\d:]+\s\(\s*\d+\-\s*\d+\)\s+[BW]:\s+\d+\s*\d+ games displayed/);
-  if(match != null && match.length > 0 && gamesRequested) {
+  if(match != null && match.length > 0 && awaiting.resolve('games')) {
     showGames(msg);
-    gamesRequested = false;
     return;
   }
 
@@ -1293,9 +1272,8 @@ function handleMiscMessage(data: any) {
 
   match = msg.match(/^History for (\w+):.*/m);
   if(match != null && match.length > 1) {
-    if(historyRequested) {
-      historyRequested--;
-      if(!historyRequested) {
+    if(awaiting.resolve('history')) {
+      if(!awaiting.has('history')) {
         $('#history-username').val(match[1]);
         showHistory(match[1], data.message);
       }
@@ -1344,31 +1322,27 @@ function handleMiscMessage(data: any) {
     match = msg.match(/^Your opponent has no partner for bughouse\./m);
   if(!match)
     match = msg.match(/^You have no partner for bughouse\./m);
-  if(match && (historyRequested || obsRequested || matchRequested || allobsRequested)) {
+  if(match && (awaiting.has('history') || awaiting.has('obs') || awaiting.has('match') || awaiting.has('allobs'))) {
     let status: JQuery<HTMLElement>;
-    if(historyRequested)
+    if(awaiting.has('history'))
       status = $('#history-pane-status');
-    else if(obsRequested)
+    else if(awaiting.has('obs'))
       status = $('#observe-pane-status');
-    else if(matchRequested)
+    else if(awaiting.has('match'))
       status = $('#pairing-pane-status');
 
-    if(historyRequested) {
-      historyRequested--;
-      if(historyRequested)
+    if(awaiting.resolve('history')) {
+      if(awaiting.has('history'))
         return;
 
       $('#history-table').html('');
     }
-    else if(obsRequested) {
-      obsRequested--;
-      if(obsRequested)
+    else if(awaiting.resolve('obs')) {
+      if(awaiting.has('obs'))
         return;
     }
-    else if(matchRequested)
-      matchRequested--;
-    else if(allobsRequested && match[0] === 'There is no such game.')
-      allobsRequested--;
+    else if(!awaiting.resolve('match') && match[0] === 'There is no such game.')
+      awaiting.resolve('allobs');
 
     if(status) {
       if(match[0].startsWith('Ambiguous name'))
@@ -1448,8 +1422,7 @@ function handleMiscMessage(data: any) {
 
   match = msg.match(/^You are now observing game \d+\./m);
   if(match) {
-    if(obsRequested) {
-      obsRequested--;
+    if(awaiting.resolve('obs')) {
       $('#observe-pane-status').hide();
       return;
     }
@@ -1459,7 +1432,7 @@ function handleMiscMessage(data: any) {
   }
 
   match = msg.match(/^(Issuing match request since the seek was set to manual\.)/m);
-  if(match && match.length > 1 && lobbyRequested) {
+  if(match && match.length > 1 && awaiting.has('lobby')) {
     $('#lobby-pane-status').text(match[1]);
     $('#lobby-pane-status').show();
   }
@@ -1679,19 +1652,17 @@ function handleMiscMessage(data: any) {
 
   match = msg.match(/(?:^|\n)-- channel list: \d+ channels --\s*([\d\s]*)/);
   if(match !== null && match.length > 1) {
-    if(!channelListRequested)
+    if(!awaiting.resolve('channel-list'))
       chat.newMessage('console', data);
 
-    channelListRequested = false;
     return chat.addChannels(match[1].split(/\s+/).sort((a, b) => a - b));
   }
 
   match = msg.match(/(?:^|\n)-- computer list: \d+ names --([\w\s]*)/);
   if(match !== null && match.length > 1) {
-    if(!computerListRequested)
+    if(!awaiting.resolve('computer-list'))
       chat.newMessage('console', data);
 
-    computerListRequested = false;
     computerList = match[1].split(/\s+/);
     return;
   }
@@ -1699,7 +1670,7 @@ function handleMiscMessage(data: any) {
   match = msg.match(/^\[\d+\] (?:added to|removed from) your channel list\./m);
   if(match != null && match.length > 0) {
     session.send('=ch');
-    channelListRequested = true;
+    awaiting.set('channel-list');
     chat.newMessage('console', data);
     return;
   }
@@ -1735,7 +1706,7 @@ function handleMiscMessage(data: any) {
         setupBoard(game, true);
     }
     else
-      setupBoardPending = true; // user issued 'bsetup' before 'examine'
+      awaiting.set('setup-board'); // user issued 'bsetup' before 'examine'
   }
   // Leave setup mode when server (other user or us) issues 'bsetup done' command
   match = msg.match(/^Game is validated - entering examine mode\./m);
@@ -1821,10 +1792,8 @@ function handleMiscMessage(data: any) {
     return;
 
   match = msg.match(/^Average ping time for \S+ is \d+ms\./m);
-  if(match && pingRequested) {
-    pingRequested = false;
+  if(match && awaiting.resolve('ping')) 
     return;
-  }
 
   if (
     msg === 'Style 12 set.' ||
@@ -1847,15 +1816,8 @@ function handleMiscMessage(data: any) {
 }
 
 export function cleanup() {
+  awaiting.clearAll();
   partnerGameId = null;
-  historyRequested = 0;
-  obsRequested = 0;
-  allobsRequested = 0;
-  gamesRequested = false;
-  lobbyRequested = false;
-  channelListRequested = false;
-  computerListRequested = false;
-  setupBoardPending = false;
   examineModeRequested = null;
   mexamineRequested = null;
   gameExitPending = [];
@@ -2334,12 +2296,8 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
     }
   }
 
-  if(game.isPlayingOnline() && prevHEntry.turnColor === game.color) {
+  if(game.isPlayingOnline() && prevHEntry.turnColor === game.color) 
     sendMove(move);
-    if(timeSet)
-      console.timeEnd('premove time');
-    timeSet = false;
-  }
 
   if(game.isExamining()) {
     let nextMoveMatches = false;
@@ -2369,7 +2327,6 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
   showTab($('#pills-game-tab'));
 }
 
-let timeSet = false;
 function movePieceAfter(game: Game, move: any, fen?: string) {
   // go to current position if user is looking at earlier move in the move list
   if((game.isPlaying() || game.isObserving()) && game.history.current() !== game.history.last())
@@ -3877,7 +3834,7 @@ function initPairingPane() {
 }
 
 function clearMatchRequests() {
-  matchRequested = 0;
+  awaiting.remove('match');
   $('#sent-offers-status').html('');
   $('#sent-offers-status').hide();
 }
@@ -3906,7 +3863,7 @@ function getGame(min: number, sec: number) {
   else if(colorName === 'Black')
     color = 'B ';
 
-  matchRequested++;
+  awaiting.set('match');
 
   const cmd: string = (opponent !== '') ? `match ${opponent}` : 'seek';
   const mainGame = games.getPlayingExaminingGame();
@@ -3997,7 +3954,7 @@ function initLobbyPane() {
     $('#lobby').show();
     $('#lobby-table').html('');
     lobbyScrolledToBottom = true;
-    lobbyRequested = true;
+    awaiting.set('lobby');
     lobbyEntries.clear();
     session.send('iset seekremove 1');
     session.send('iset seekinfo 1');
@@ -4009,10 +3966,8 @@ $(document).on('hidden.bs.tab', 'button[data-bs-target="#pills-lobby"]', () => {
 });
 
 function leaveLobbyPane() {
-  if(lobbyRequested) {
+  if(awaiting.resolve('lobby')) {
     $('#lobby-table').html('');
-    lobbyRequested = false;
-
     if(session && session.isConnected()) {
       session.send('iset seekremove 0');
       session.send('iset seekinfo 0');
@@ -4046,7 +4001,7 @@ function formatLobbyEntry(seek: any): string {
 }
 
 (window as any).acceptSeek = (id: number) => {
-  matchRequested++;
+  awaiting.set('match');
   session.send(`play ${id}`);
 };
 
@@ -4059,10 +4014,10 @@ $(document).on('shown.bs.tab', 'button[data-bs-target="#pills-observe"]', () => 
 });
 
 function initObservePane() {
-  obsRequested = 0;
+  awaiting.remove('obs');
   $('#games-table').html('');
   if(session && session.isConnected()) {
-    gamesRequested = true;
+    awaiting.set('games');
     session.send('games');
   }
 }
@@ -4085,7 +4040,7 @@ function observe(id?: string) {
     $('#observe-username').val(id);
   }
   if(id.length > 0) {
-    obsRequested++;
+    awaiting.set('obs');
     session.send(`obs ${id}`);
   }
 }
@@ -4128,7 +4083,7 @@ $(document).on('shown.bs.tab', 'button[data-bs-target="#pills-history"]', () => 
 });
 
 function initHistoryPane() {
-  historyRequested = 0;
+  awaiting.remove('history');
   $('#history-table').html('');
   let username = Utils.getValue('#history-username');
   if(!username && session) {
@@ -4152,7 +4107,7 @@ function getHistory(user: string) {
     if(user.length === 0)
       user = session.getUser();
     $('#history-username').val(user);
-    historyRequested++;
+    awaiting.set('history');
     session.send(`hist ${user}`);
   }
 }
