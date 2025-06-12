@@ -16,7 +16,7 @@ html, body {
 
 body {
   padding-top: var(--safe-area-inset-top);
-  padding-bottom: var(--safe-area-inset-bottom);
+  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom));
 }
 
 .feature3 {

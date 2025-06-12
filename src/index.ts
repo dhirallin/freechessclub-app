@@ -2393,7 +2393,7 @@ export function scrollToBoard(game?: Game) {
         return;
       }
       const windowHeight = window.visualViewport ? window.visualViewport.height : $(window).height();
-      Utils.safeScrollTo($('#right-panel-header').offset().top + $('#right-panel-header').outerHeight() - windowHeight);
+      Utils.safeScrollTo($('#right-panel-header').offset().top + $('#right-panel-header').outerHeight() + parseFloat($('body').css('padding-bottom')) - windowHeight);
     }
     else
       Utils.safeScrollTo(game.element.offset().top);
