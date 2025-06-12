@@ -554,7 +554,7 @@ function messageHandler(data: any) {
   const type = GetMessageType(data);
   switch (type) {
     case MessageType.Control:
-      if(!session.isConnected() && data.command === 1) { // Connected
+      if(data.command === 1 && !session.isConnected()) { // Connected
         session.setUser(data.control);
         chat.setUser(data.control);
         session.send('set seek 0');
@@ -599,6 +599,9 @@ function messageHandler(data: any) {
       }
       else if(data.command === 3) // Disconnected
         cleanup();
+      else if(data.command === 4) { // Connecting
+        $('#game-requests').empty();
+      }
       break;
     case MessageType.ChannelTell:
       chat.newMessage(data.channel, data);
