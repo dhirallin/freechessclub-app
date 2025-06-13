@@ -87,6 +87,51 @@ const channels = {
   100:    'Trivia',
 };
 
+const basicEmojiMap = {
+  ':)': '😊',
+  ':-)': '😊',
+  ':D': '😄',
+  ':-D': '😄',
+  ':(': '☹️',
+  ':-(': '☹️',
+  ';)': '😉',
+  ';-)': '😉',
+  ':P': '😛',
+  ':-P': '😛',
+  ':p': '😛',
+  ':-p': '😛',
+  ':/': '😕',
+  ':-/': '😕',
+  ':\\': '😕',
+  ':-\\': '😕',
+  ':O': '😲',
+  ':-O': '😲',
+  ':o': '😲',
+  ':-o': '😲',
+  'B)': '😎',
+  'B-)': '😎',
+  '>:(': '😠',
+  '>:-(': '😠',
+  ':|': '😐',
+  ':-|': '😐',
+  '<3': '❤️',
+  '</3': '💔',
+  'O:)': '😇',
+  'O:-)': '😇',
+  ':-*': '😘',
+  ':*': '😘',
+  ':-X': '🤐',
+  ':-x': '🤐',
+  'XD': '😆',
+  'xD': '😆',
+  'T_T': '😭',
+  '-_-': '😑',
+  '^_^': '😊',
+  ':3': '😺',
+  ':$': '😳',
+  ':-$': '😳',
+};
+
 let maximized = false;
 
 export class Chat {
@@ -710,8 +755,7 @@ export class Chat {
     if(!html)
       text = this.escapeHTML(text);
 
-    const emoji = await this.emojiPromise;
-    text = emoji.emojify(text);
+    text = await this.emojify(text);
 
     text = text.replace(this.userRE, `<strong class="mention">${this.user}</strong>`);
 
@@ -966,6 +1010,23 @@ export class Chat {
         $('#start-chat-matching-channels').toggle(!!matchingChannels.length);
       }
     }
+  }
+
+  public async emojify(text: string) {
+    const emoji = await this.emojiPromise;
+    text = emoji.emojify(text);
+    text = this.replaceBasicEmojis(text);    
+    return text;
+  }
+
+  public replaceBasicEmojis(text: string) {
+    const regex = new RegExp(
+      Object.keys(basicEmojiMap)
+        .map(k => k.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1'))
+        .join('|'),
+      'g'
+    );
+    return text.replace(regex, match => basicEmojiMap[match] || match);
   }
 }
 
