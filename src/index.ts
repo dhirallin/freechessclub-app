@@ -3795,7 +3795,7 @@ function playComputer(params: any) {
 }
 
 function getPlayComputerEngineOptions(game: Game): object {
-  const skillLevels = [0, 1, 2, 3, 5, 7, 9, 11, 13, 15]; // Skill Level for each difficulty level
+  const skillLevels = [0, 1, 2, 3, 5, 7, 9, 11, 13, 15, 17, 20]; // Skill Level for each difficulty level
 
   const engineOptions = {
     ...(game.category === 'wild/fr' && { UCI_Chess960: true }),
@@ -3809,7 +3809,7 @@ function getPlayComputerEngineOptions(game: Game): object {
 function getPlayComputerMoveParams(game: Game): string {
   // Max nodes for each difficulty level. This is also used to limit the engine's thinking time
   // but in a way that keeps the difficulty the same across devices
-  const maxNodes = [100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000];
+  const maxNodes = [100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000, 1000000, 1000000];
   const moveParams = `nodes ${maxNodes[game.difficulty - 1]}`;
 
   return moveParams;
@@ -3868,6 +3868,8 @@ async function getComputerMove(game: Game) {
       { slope: 0.2, shift: 3.0 }, // 8
       { slope: 0.2, shift: 3.5 }, // 9
       { slope: 0.2, shift: 4.0 }, // 10
+      { slope: 0.2, shift: 4.0 }, // 11
+      { slope: 0.2, shift: 4.0 }, // 12
     ];
     const a = coolDownParams[game.difficulty - 1].slope;
     const b = coolDownParams[game.difficulty - 1].shift;
