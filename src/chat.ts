@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 import { autoLink } from 'autolink-js';
-import { load as loadEmojis, parse as parseEmojis } from 'gh-emoji';
 import { createTooltip, safeScrollTo, isSmallWindow, convertToLocalDateTime, getMonthShortName, removeWithTooltips } from './utils';
 import { setGameWithFocus, maximizeGame, scrollToBoard } from './index';
 import { settings } from './settings';
@@ -95,10 +94,10 @@ export class Chat {
   private userRE: RegExp;
   private timezone: string;
   private tabData: object;
-  private emojisLoaded: boolean;
   private maximized: boolean;
   private unviewedNum: number;
   private virtualScrollerPromise: Promise<typeof import('virtual-scroller/dom')>;
+  private emojiPromise: Promise<typeof import('node-emoji')>;
   private subscribedChannels: string[];
   private userList: any[];
   private userListRequested: boolean = false;
@@ -110,19 +109,7 @@ export class Chat {
     settings.timestampToggle = (storage.get('timestamp') !== 'false');
     settings.chattabsToggle = (storage.get('chattabs') !== 'false');
     this.virtualScrollerPromise = import('virtual-scroller/dom');
-
-    // load emojis
-    this.emojisLoaded = false;
-    const suppressUnhandledRejection = (event) => { 
-      // This is to get around bug in gh-emoji where it throws an 'Uncaught (in promise) Type Error' when 
-      // it fails to fetch the emojis due to being offline etc.
-      event.preventDefault(); 
-    };
-    window.addEventListener('unhandledrejection', suppressUnhandledRejection, { once: true });
-    loadEmojis().then(() => {
-      this.emojisLoaded = true;
-      window.removeEventListener('unhandledrejection', suppressUnhandledRejection);
-    });
+    this.emojiPromise = import('node-emoji');
 
     // initialize tabs
     this.tabData = {};
@@ -722,8 +709,9 @@ export class Chat {
     let text = data.message;
     if(!html)
       text = this.escapeHTML(text);
-    if(this.emojisLoaded)
-      text = parseEmojis(text);
+
+    const emoji = await this.emojiPromise;
+    text = emoji.emojify(text);
 
     text = text.replace(this.userRE, `<strong class="mention">${this.user}</strong>`);
 
