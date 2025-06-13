@@ -1503,7 +1503,7 @@
     estree-walker "^2.0.2"
     picomatch "^4.0.2"
 
-"@sindresorhus/is@^4.0.0", "@sindresorhus/is@^4.6.0":
+"@sindresorhus/is@^4.0.0":
   version "4.6.0"
   resolved "https://registry.npmjs.org/@sindresorhus/is/-/is-4.6.0.tgz"
   integrity sha512-t09vSN3MdfsyCHoFcTRCH/iUtG7OJ0CsjzB8cjAmKc/va/kIgeDI/TxsigdncE/4be734m0cvIYwNaV4i2XqAw==
@@ -2862,11 +2862,6 @@ chalk@2.4.2:
     escape-string-regexp "^1.0.5"
     supports-color "^5.3.0"
 
-char-regex@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/char-regex/-/char-regex-1.0.2.tgz"
-  integrity sha512-kWWXztvZ5SBQV+eRgKFeh8q5sLuZY2+8WUIzlxWVTg+oGwY14qylx1KbKzHd8P6ZYkAg0xyIDU9JMHhyJMZ1jw==
-
 cheerio-select@^2.1.0:
   version "2.1.0"
   resolved "https://registry.npmjs.org/cheerio-select/-/cheerio-select-2.1.0.tgz"
@@ -4135,6 +4130,16 @@ elementtree@^0.1.7:
   dependencies:
     sax "1.1.4"
 
+emoji-mart@^5.6.0:
+  version "5.6.0"
+  resolved "https://registry.npmjs.org/emoji-mart/-/emoji-mart-5.6.0.tgz"
+  integrity sha512-eJp3QRe79pjwa+duv+n7+5YsNhRcMl812EcFVwrnRvYKoNPoQb5qxU8DG6Bgwji0akHdp6D4Ln6tYLG58MFSow==
+
+emoji-picker-element@^1.26.3:
+  version "1.26.3"
+  resolved "https://registry.npmjs.org/emoji-picker-element/-/emoji-picker-element-1.26.3.tgz"
+  integrity sha512-fOMG44d/3OqTe1pPqlu5H4ZtWg7gK4Le6Bt24JTKtDyce5+EO3Mo8WA95cKHbPSsSsg7ehM12M1x3Y6U6fgvTQ==
+
 emoji-regex@^8.0.0:
   version "8.0.0"
   resolved "https://registry.npmjs.org/emoji-regex/-/emoji-regex-8.0.0.tgz"
@@ -4145,10 +4150,10 @@ emoji-regex@^9.2.2:
   resolved "https://registry.npmjs.org/emoji-regex/-/emoji-regex-9.2.2.tgz"
   integrity sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg==
 
-emojilib@^2.4.0:
-  version "2.4.0"
-  resolved "https://registry.npmjs.org/emojilib/-/emojilib-2.4.0.tgz"
-  integrity sha512-5U0rVMU5Y2n2+ykNLQqMoqklN9ICBT/KsvC1Gz6vqHbz2AXXGkG+Pm5rMWk/8Vjrr/mY9985Hi8DYzn1F09Nyw==
+emojibase@^6.1.0:
+  version "6.1.0"
+  resolved "https://registry.npmjs.org/emojibase/-/emojibase-6.1.0.tgz"
+  integrity sha512-1GkKJPXP6tVkYJHOBSJHoGOr/6uaDxZ9xJ6H7m6PfdGXTmQgbALHLWaVRY4Gi/qf5x/gT/NUXLPuSHYLqtLtrQ==
 
 emojis-list@^3.0.0:
   version "3.0.0"
@@ -6687,16 +6692,6 @@ node-api-version@^0.2.0:
   dependencies:
     semver "^7.3.5"
 
-node-emoji@^2.2.0:
-  version "2.2.0"
-  resolved "https://registry.npmjs.org/node-emoji/-/node-emoji-2.2.0.tgz"
-  integrity sha512-Z3lTE9pLaJF47NyMhd4ww1yFTAP8YhYI8SleJiHzM46Fgpm5cnNzSl9XfzFNqbaz+VlJrIj3fXQ4DeN1Rjm6cw==
-  dependencies:
-    "@sindresorhus/is" "^4.6.0"
-    char-regex "^1.0.2"
-    emojilib "^2.4.0"
-    skin-tone "^2.0.0"
-
 node-fetch@2.7.0:
   version "2.7.0"
   resolved "https://registry.npmjs.org/node-fetch/-/node-fetch-2.7.0.tgz"
@@ -7103,6 +7098,13 @@ pend@~1.2.0:
   version "1.2.0"
   resolved "https://registry.npmjs.org/pend/-/pend-1.2.0.tgz"
   integrity sha512-F3asv42UuXchdzt+xXqfW1OGlVBe+mxa2mqI0pg5yAHZPvFmY3Y6drSf/GQ1A86WgWEN9Kzh/WrgKa6iGcHXLg==
+
+picmo@^5.8.5:
+  version "5.8.5"
+  resolved "https://registry.npmjs.org/picmo/-/picmo-5.8.5.tgz"
+  integrity sha512-7I8jfuHALF9lkt3d+XCZGP+IwH7g91vYZv6XtRnJ99IDjnm92zel0L5DEo2FX0oaHUwRMBD/kn2knTZqwItudQ==
+  dependencies:
+    emojibase "^6.1.0"
 
 picocolors@^1.0.0, picocolors@^1.1.1:
   version "1.1.1"
@@ -8111,13 +8113,6 @@ sisteransi@^1.0.5:
   resolved "https://registry.npmjs.org/sisteransi/-/sisteransi-1.0.5.tgz"
   integrity sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==
 
-skin-tone@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.npmjs.org/skin-tone/-/skin-tone-2.0.0.tgz"
-  integrity sha512-kUMbT1oBJCpgrnKoSr0o6wPtvRWT9W9UKvGLwfJYO2WuahZRHOpEyL1ckyMGgMWh0UdpmaoFqKKD29WTomNEGA==
-  dependencies:
-    unicode-emoji-modifier-base "^1.0.0"
-
 slash@^3.0.0:
   version "3.0.0"
   resolved "https://registry.npmjs.org/slash/-/slash-3.0.0.tgz"
@@ -8965,11 +8960,6 @@ unicode-canonical-property-names-ecmascript@^2.0.0:
   version "2.0.1"
   resolved "https://registry.npmjs.org/unicode-canonical-property-names-ecmascript/-/unicode-canonical-property-names-ecmascript-2.0.1.tgz"
   integrity sha512-dA8WbNeb2a6oQzAQ55YlT5vQAWGV9WXOsi3SskE3bcCdM0P4SDd+24zS/OCacdRq5BkdsRj9q3Pg6YyQoxIGqg==
-
-unicode-emoji-modifier-base@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.npmjs.org/unicode-emoji-modifier-base/-/unicode-emoji-modifier-base-1.0.0.tgz"
-  integrity sha512-yLSH4py7oFH3oG/9K+XWrz1pSi3dfUrWEnInbxMfArOfc1+33BlGPQtLsOYwvdMy11AwUBetYuaRxSPqgkq+8g==
 
 unicode-match-property-ecmascript@^2.0.0:
   version "2.0.0"

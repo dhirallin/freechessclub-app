@@ -8,6 +8,7 @@ import { setGameWithFocus, maximizeGame, scrollToBoard } from './index';
 import { settings } from './settings';
 import { storage, awaiting } from './storage';
 import { games } from './game';
+import { Database as EmojiDatabase } from 'emoji-picker-element';
 
 // list of channels
 const channels = {
@@ -142,11 +143,12 @@ export class Chat {
   private maximized: boolean;
   private unviewedNum: number;
   private virtualScrollerPromise: Promise<typeof import('virtual-scroller/dom')>;
-  private emojiPromise: Promise<typeof import('node-emoji')>;
+  //private emojiPromise: Promise<typeof import('node-emoji')>;
   private subscribedChannels: string[];
   private userList: any[];
   private userListRequested: boolean = false;
   private inChannelTimer: any = null;
+  private emoji: any = null;
 
   constructor() {
     this.unviewedNum = 0;
@@ -154,7 +156,8 @@ export class Chat {
     settings.timestampToggle = (storage.get('timestamp') !== 'false');
     settings.chattabsToggle = (storage.get('chattabs') !== 'false');
     this.virtualScrollerPromise = import('virtual-scroller/dom');
-    this.emojiPromise = import('node-emoji');
+    this.emoji = new EmojiDatabase();
+    //this.emojiPromise = import('node-emoji');
 
     // initialize tabs
     this.tabData = {};
@@ -1012,19 +1015,45 @@ export class Chat {
     }
   }
 
-  public async unemojify(text: string) {
-    const emoji = await this.emojiPromise;   
-    return emoji.unemojify(text); 
+  public async unemojify(text: string): Promise<string> {
+    const parts: string[] = [];
+    let lastIndex = 0;
+    const regex = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(text)) !== null) {
+      const start = match.index;
+      const end = regex.lastIndex;
+      const char = match[0];
+      parts.push(text.slice(lastIndex, start));
+      const emoji = await this.emoji.getEmojiByUnicodeOrName(char);
+      parts.push(emoji ? `:${emoji.shortcodes[0]}:` : char);
+      lastIndex = end;
+    }
+    parts.push(text.slice(lastIndex));
+    return parts.join('');
   }
 
-  public async emojify(text: string) {
-    const emoji = await this.emojiPromise;
-    text = emoji.emojify(text);
-    text = this.replaceBasicEmojis(text);    
-    return text;
-  }
+  public async emojify(text: string): Promise<string> {
+    const parts: string[] = [];
+    let lastIndex = 0;
+    const regex = /:([a-zA-Z0-9_+-]+):/g;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(text)) !== null) {
+      const start = match.index;
+      const end = regex.lastIndex;
+      const shortcode = match[1];
+      parts.push(text.slice(lastIndex, start));
+      const emoji = await this.emoji.getEmojiByShortcode(shortcode);
+      parts.push(emoji ? emoji.unicode : match[0]);
+      lastIndex = end;
+    }
+    parts.push(text.slice(lastIndex));
+    text = parts.join('');
 
-  public replaceBasicEmojis(text: string): string {
+    return this.basicEmojify(text);
+  }
+ 
+  public basicEmojify(text: string) {
     const regex = new RegExp(
       Object.keys(basicEmojiMap)
         .map(k => k.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1'))
