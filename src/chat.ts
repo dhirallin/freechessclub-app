@@ -1012,6 +1012,11 @@ export class Chat {
     }
   }
 
+  public async unemojify(text: string) {
+    const emoji = await this.emojiPromise;   
+    return emoji.unemojify(text); 
+  }
+
   public async emojify(text: string) {
     const emoji = await this.emojiPromise;
     text = emoji.emojify(text);
@@ -1019,7 +1024,7 @@ export class Chat {
     return text;
   }
 
-  public replaceBasicEmojis(text: string) {
+  public replaceBasicEmojis(text: string): string {
     const regex = new RegExp(
       Object.keys(basicEmojiMap)
         .map(k => k.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1'))

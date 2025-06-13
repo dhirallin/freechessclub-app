@@ -1353,7 +1353,7 @@ function handleMiscMessage(data: any) {
     if(index !== -1) {
       // User has tried to send a tell to an offline user. Ask if they want to send it as a message isntead
       const tell = pendingTells.splice(index, 1)[0];
-      const message = Utils.splitText(Utils.unicodeToHTMLEncoding(tell.message), 997)[0]; // HTMLEncode message and truncate to max 997 chars
+      const message = tell.message; 
       const okHandler = () => {
         session.send(`message ${tell.recipient} ${message}`);
       };
@@ -6378,7 +6378,7 @@ $('#smartmove-toggle').on('click', () => {
  * CONSOLE/CHAT INPUT FUNCTIONS *
  ********************************/
 
-$('#input-form').on('submit', (event) => {
+$('#input-form').on('submit', async (event) => {
   event.preventDefault();
   let text: string;
   let val = Utils.getValue('#input-text');
@@ -6450,13 +6450,13 @@ $('#input-form').on('submit', (event) => {
 
     if(isPrivateTell && session.getUser().toLowerCase() !== recipient.toLowerCase() 
         && session.isRegistered() && !/^Guest[A-Z]{4}$/i.test(recipient)) 
-      pendingTells.push({ recipient, message });
+      pendingTells.push({ recipient, message: Utils.splitText(await plainText(message), 997)[0] });
 
     const maxLength = (session.isRegistered() ? 400 : 200);
     if(message.length > maxLength)
       message = message.slice(0, maxLength);
 
-    message = Utils.unicodeToHTMLEncoding(message);
+    message = await plainText(message);
     const messages = Utils.splitText(message, maxLength); // if message is now bigger than maxLength chars due to html encoding split it
 
     for(const msg of messages) {
@@ -6471,11 +6471,16 @@ $('#input-form').on('submit', (event) => {
     }
   }
   else
-    session.send(Utils.unicodeToHTMLEncoding(text));
+    session.send(await plainText(text));
 
   $('#input-text').val('');
   updateInputText();
 });
+
+async function plainText(text: string) {
+  text = await chat.unemojify(text);
+  return Utils.unicodeToHTMLEncoding(text);
+}
 
 $('#input-text').on('input', () => {
   updateInputText();
