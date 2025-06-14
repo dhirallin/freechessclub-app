@@ -170,13 +170,22 @@ body {
   overflow-x: hidden;
   padding-right: 2.3rem;
 }
-#emoji-button {
+#emoji-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: absolute; 
   right: 0; 
   bottom: 0;
   z-index: 5;
   font-size: 1.3rem;
-  line-height: 1.5rem;
+  height: 2.375rem;   
+  border: 1px solid black;
+}
+#emoji-button {
+  font-size: 1.3rem;
+  line-height: 1;
+  border: 1px solid white;
 }
 
 .counter-number {
