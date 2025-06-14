@@ -8,7 +8,7 @@ import { setGameWithFocus, maximizeGame, scrollToBoard } from './index';
 import { settings } from './settings';
 import { storage, awaiting } from './storage';
 import { games } from './game';
-import { Database as EmojiDatabase } from 'emoji-picker-element';
+import { Database as EmojiDatabase, Picker as EmojiPicker } from 'emoji-picker-element';
 
 // list of channels
 const channels = {
@@ -149,6 +149,7 @@ export class Chat {
   private userListRequested: boolean = false;
   private inChannelTimer: any = null;
   private emoji: any = null;
+  private emojiPickerElement: any = null;
 
   constructor() {
     this.unviewedNum = 0;
@@ -276,6 +277,7 @@ export class Chat {
     });
 
     this.initStartChatMenu();
+    this.initEmojis();
   }
 
   public init(user: string): void {
@@ -1061,6 +1063,32 @@ export class Chat {
       'g'
     );
     return text.replace(regex, match => basicEmojiMap[match] || match);
+  }
+
+  public initEmojis() {
+    this.emojiPickerElement = new EmojiPicker();
+    // Temporarily append to body in order to pre-load the element
+    const elem = $(this.emojiPickerElement);
+    elem.css('display', 'none');
+    $('body').append(elem);
+    elem[0].offsetHeight;
+    elem.remove();
+    elem.css('display', '');
+
+    $('#emoji-button').on('click', function() {
+      $(this).popover('toggle');
+    });
+    $(document).on('click', (e) => {
+      if(!$('#emoji-button')[0].contains(e.target) && !$('.emoji-popover')[0]?.contains(e.target)) 
+        $('#emoji-button').popover('hide');
+    });
+
+    $('#emoji-button').popover({
+      customClass: 'emoji-popover',
+      trigger: 'manual',
+      html: true,
+      content: this.emojiPickerElement,
+    });
   }
 }
 

@@ -89,14 +89,6 @@ jQuery(() => {
   }
 });
 
-$('#emoji-button').on('click', function() {
-  $(this).popover('toggle');
-});
-$(document).on('click', (e) => {
-  if(!$('#emoji-button')[0].contains(e.target) && !$('.emoji-popover')[0]?.contains(e.target)) 
-    $('#emoji-button').popover('hide');
-});
-
 async function onDeviceReady() {
   cleanup();
 
@@ -121,12 +113,6 @@ async function onDeviceReady() {
 
   // Initialize popovers
   $('[data-bs-toggle="popover"]').popover();
-  const popover = new bootstrap.Popover($('#emoji-button')[0], {
-    customClass: 'emoji-popover',
-    trigger: 'manual',
-    html: true,
-    content: () => { return document.createElement('emoji-picker') }
-  });
 
   if(Utils.isSmallWindow()) {
     $('#collapse-chat').collapse('hide');
