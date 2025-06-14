@@ -1087,7 +1087,6 @@ export class Chat {
     });
 
     $(document).on('emoji-click', (e) => {
-      console.log('UNICODE: ' + (e as any).detail.unicode);
       insertAtCursor($('#input-text'), (e as any).detail.unicode);
       $('#input-text').trigger('focus');
     });
