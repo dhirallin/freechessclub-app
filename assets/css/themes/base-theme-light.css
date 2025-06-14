@@ -294,3 +294,7 @@ cg-board {
   background: color-mix(in srgb, var(--bg-color) 90%, black 10%);
   border-color: #6c757d;
 }
+
+#emoji-button {
+  color: dodgerblue;
+}

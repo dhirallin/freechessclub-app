@@ -168,6 +168,15 @@ body {
 #input-text {
   resize: none;
   overflow-x: hidden;
+  padding-right: 2.3rem;
+}
+#emoji-button {
+  position: absolute; 
+  right: 0; 
+  bottom: 0;
+  z-index: 5;
+  font-size: 1.3rem;
+  line-height: 1.5rem;
 }
 
 .counter-number {

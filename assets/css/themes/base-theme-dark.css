@@ -405,3 +405,7 @@ a {
   background: color-mix(in srgb, var(--bg-color) 90%, white 10%);
   border-color: #AAAAAA;
 }
+
+#emoji-button {
+  color: dodgerblue;
+}
