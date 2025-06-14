@@ -9,6 +9,7 @@ import { settings } from './settings';
 import { storage, awaiting } from './storage';
 import { games } from './game';
 import { Database as EmojiDatabase, Picker as EmojiPicker } from 'emoji-picker-element';
+import { Picker, SearchIndex, init } from 'emoji-mart'
 
 // list of channels
 const channels = {
@@ -149,6 +150,8 @@ export class Chat {
   private inChannelTimer: any = null;
   private emoji: any = null;
   private emojiPickerElement: any = null;
+  private emojiShortcodesToUnicode = new Map();
+  private emojiUnicodeToShortcodes = new Map();
 
   constructor() {
     this.unviewedNum = 0;
@@ -758,7 +761,7 @@ export class Chat {
     if(!html)
       text = this.escapeHTML(text);
 
-    text = await this.emojify(text);
+    text = this.emojify(text);
 
     text = text.replace(this.userRE, `<strong class="mention">${this.user}</strong>`);
 
@@ -1015,29 +1018,31 @@ export class Chat {
     }
   }
 
-  public async unemojify(text: string): Promise<string> {
+  public unemojify(text: string): string {
     const parts: string[] = [];
     const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
     const graphemes = Array.from(segmenter.segment(text), s => s.segment);
     for(const char of graphemes) {
-      const emoji = await this.emoji.getEmojiByUnicodeOrName(char);
-      parts.push(emoji ? `:${emoji.shortcodes[0]}:` : char);
+      //const emoji = await this.emoji.getEmojiByUnicodeOrName(char);
+      const shortcodes = this.emojiUnicodeToShortcodes.get(char);
+      parts.push(shortcodes || char);
     }
     return parts.join('');
   }
 
-  public async emojify(text: string): Promise<string> {
+  public emojify(text: string): string {
     const parts: string[] = [];
     let lastIndex = 0;
-    const regex = /:([a-zA-Z0-9_+-]+):/g;
+    const regex = /(\:[^\:]+\:(?:\:skin-tone-\d\:)?)/g;
     let match: RegExpExecArray | null;
     while ((match = regex.exec(text)) !== null) {
       const start = match.index;
       const end = regex.lastIndex;
       const shortcode = match[1];
       parts.push(text.slice(lastIndex, start));
-      const emoji = await this.emoji.getEmojiByShortcode(shortcode);
-      parts.push(emoji ? emoji.unicode : match[0]);
+      //const emoji = await this.emoji.getEmojiByShortcode(shortcode);
+      const unicode = this.emojiShortcodesToUnicode.get(shortcode);
+      parts.push(unicode || match[0]);
       lastIndex = end;
     }
     parts.push(text.slice(lastIndex));
@@ -1074,7 +1079,18 @@ export class Chat {
     $('emoji-picker').css('visibility', 'hidden');
   }
 
-  public initEmojis() {
+  public async initEmojis() {
+    const response = await fetch('https://cdn.jsdelivr.net/npm/@emoji-mart/data');
+    const data = await response.json();
+    await init({ data });
+
+    for(const emoji of Object.values(data.emojis) as any[]) {
+      for(const skin of emoji.skins) {
+        this.emojiShortcodesToUnicode.set(skin.shortcodes, skin.native);
+        this.emojiUnicodeToShortcodes.set(skin.native, skin.shortcodes);
+      }
+    }
+
     $('#emoji-button').on('click', () => {
       if($('emoji-picker').css('visibility') === 'visible') 
         this.hideEmojiPicker();

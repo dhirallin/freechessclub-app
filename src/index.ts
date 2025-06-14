@@ -6478,7 +6478,7 @@ $('#input-form').on('submit', async (event) => {
 });
 
 async function plainText(text: string) {
-  text = await chat.unemojify(text);
+  text = chat.unemojify(text);
   return Utils.unicodeToHTMLEncoding(text);
 }
 
