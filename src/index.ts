@@ -6497,7 +6497,7 @@ $(document).on('shown.bs.tab', '#tabs button[data-bs-toggle="tab"]', () => {
   updateInputText();
 });
 
-function updateInputText() {
+async function updateInputText() {
   const element = $('#input-text')[0] as HTMLTextAreaElement;
   const start = element.selectionStart;
   const end = element.selectionEnd;
@@ -6519,8 +6519,12 @@ function updateInputText() {
   else
     maxLength = 400;
 
+  // Convert emoji unicode chars to shortcodes in order to test the length then convert them back
+  // Note: as a side effect of this, it will convert shortcodes typed in the input in real time
+  val = await chat.unemojify(val);
   if(val.length > maxLength)
-    val = val.substring(0, maxLength);
+    val = Utils.splitText(val, maxLength)[0];
+  val = await chat.emojify(val);
 
   if(val !== element.value as string) {
     element.value = val;

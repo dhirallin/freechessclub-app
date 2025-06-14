@@ -627,7 +627,7 @@ export function splitText(text: string, maxLength: number): string[] {
   const result = [];
   let currentMessage = '';
   let currentLength = 0;
-  const regex = /\:[^\:]+\:(?:\:skin-tone-\d\:)?|&#\d+;|./g; // Emoji shortcodes or HTML entities or any character
+  const regex = /\:[^\:]+\:(?:\:tone\d\:)?|&#\d+;|./g; // Emoji shortcodes or HTML entities or any character
 
   text.replace(regex, (match) => {
     const matchLength = match.length;
