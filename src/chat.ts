@@ -1017,19 +1017,12 @@ export class Chat {
 
   public async unemojify(text: string): Promise<string> {
     const parts: string[] = [];
-    let lastIndex = 0;
-    const regex = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu;
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(text)) !== null) {
-      const start = match.index;
-      const end = regex.lastIndex;
-      const char = match[0];
-      parts.push(text.slice(lastIndex, start));
+    const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+    const graphemes = Array.from(segmenter.segment(text), s => s.segment);
+    for(const char of graphemes) {
       const emoji = await this.emoji.getEmojiByUnicodeOrName(char);
       parts.push(emoji ? `:${emoji.shortcodes[0]}:` : char);
-      lastIndex = end;
     }
-    parts.push(text.slice(lastIndex));
     return parts.join('');
   }
 
@@ -1094,6 +1087,7 @@ export class Chat {
     });
 
     $(document).on('emoji-click', (e) => {
+      console.log('UNICODE: ' + (e as any).detail.unicode);
       insertAtCursor($('#input-text'), (e as any).detail.unicode);
       $('#input-text').trigger('focus');
     });
