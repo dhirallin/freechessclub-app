@@ -186,8 +186,13 @@ body {
 }
 .emoji-popover {
   --bs-popover-max-width: fit-content;
-  --bs-popover-body-padding-x: 0.25rem;
-  --bs-popover-body-padding-y: 0.25rem;
+  --bs-popover-body-padding-x: 0.125rem;
+  --bs-popover-body-padding-y: 0.125rem;
+}
+emoji-picker {
+  position: absolute;
+  visibility: hidden;
+  top: -9999px;
 }
 
 .counter-number {
@@ -616,12 +621,6 @@ body {
   height: 10px;
   display: inline-block;
   position: relative;
-}
-
-.gh-emoji {
-  margin-top: -5px;
-  width: 18px;
-  height: 18px;
 }
 
 #textsize-range {

@@ -1064,8 +1064,6 @@ export class Chat {
   }
 
   public initEmojis() {
-    this.emojiPickerElement = new EmojiPicker();
-
     // Temporarily append to body in order to pre-load the element
     /*const elem = $(this.emojiPickerElement);
     elem.css({
@@ -1088,21 +1086,37 @@ export class Chat {
         $('#emoji-button').popover('hide');
     });
 
+    $('#emoji-button').on('hide.bs.popover', () => {
+      const elem = $('emoji-picker');
+      elem.css({
+        position: '',
+        visibility: '',
+        top: ''
+      })
+      $('emoji-picker').appendTo('#emoji-button-container');
+    });
+
     $('#emoji-button').popover({
       customClass: 'emoji-popover',
       trigger: 'manual',
       html: true,
       content: () => {
+        const elem = $('emoji-picker');
         const colorScheme = getComputedStyle(document.documentElement).getPropertyValue('--color-scheme').trim();
         if(colorScheme === 'dark') {
-          this.emojiPickerElement.classList.remove('light');
-          this.emojiPickerElement.classList.add('dark');
+          elem.removeClass('light');
+          elem.addClass('dark');
         }
         else {
-          this.emojiPickerElement.classList.remove('dark');
-          this.emojiPickerElement.classList.add('light');
+          elem.removeClass('dark');
+          elem.addClass('light');
         }
-        return this.emojiPickerElement;
+        elem.css({
+          visibility: 'visible',
+          position: 'static',
+          top: 'auto'
+        });
+        return elem[0];
       } 
     });
   }
