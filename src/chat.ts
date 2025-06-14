@@ -1022,13 +1022,9 @@ export class Chat {
     for(const char of graphemes) {
       if(/\p{Extended_Pictographic}/u.test(char)) {
         const skinToneRegex = /[\u{1F3FB}-\u{1F3FF}]/u;
-        const lastModifierIndex = char.search(skinToneRegex);
-        const base = lastModifierIndex !== -1 
-            ? char.slice(0, lastModifierIndex)
-            : char;
-        const skinTone = lastModifierIndex !== -1
-            ? char.slice(lastModifierIndex)
-            : null;
+        const skinToneIndex = char.search(skinToneRegex);
+        const base = skinToneIndex !== -1 ? char.slice(0, skinToneIndex) : char;
+        const skinTone = skinToneIndex !== -1 ? char.slice(skinToneIndex) : null;
                   
         let emoji = await this.emoji.getEmojiByUnicodeOrName(base) 
         parts.push(emoji ? `:${emoji.shortcodes[0]}:` : base);  
