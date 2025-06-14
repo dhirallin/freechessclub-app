@@ -1094,7 +1094,6 @@ export class Chat {
     });
 
     $(document).on('emoji-click', (e) => {
-      this.hideEmojiPicker();
       insertAtCursor($('#input-text'), (e as any).detail.unicode);
       $('#input-text').trigger('focus');
     });

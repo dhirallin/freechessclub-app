@@ -128,7 +128,7 @@ async function onDeviceReady() {
     $('#chat-toggle-btn').toggleClass('toggle-btn-selected');
   }
 
-  $('input, textarea').each(function() {
+  $('input, [data-select-on-focus]').each(function() {
     Utils.selectOnFocus($(this));
   });
 
