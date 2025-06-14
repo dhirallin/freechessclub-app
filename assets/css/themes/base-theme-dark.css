@@ -1,5 +1,6 @@
 :root {
   color-scheme: dark;
+  --color-scheme: dark;
   --bg-color: #424242;
   --fg-color: whitesmoke;
   --bs-body-color: var(--fg-color);

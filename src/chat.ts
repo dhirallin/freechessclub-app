@@ -143,7 +143,6 @@ export class Chat {
   private maximized: boolean;
   private unviewedNum: number;
   private virtualScrollerPromise: Promise<typeof import('virtual-scroller/dom')>;
-  //private emojiPromise: Promise<typeof import('node-emoji')>;
   private subscribedChannels: string[];
   private userList: any[];
   private userListRequested: boolean = false;
@@ -158,7 +157,6 @@ export class Chat {
     settings.chattabsToggle = (storage.get('chattabs') !== 'false');
     this.virtualScrollerPromise = import('virtual-scroller/dom');
     this.emoji = new EmojiDatabase();
-    //this.emojiPromise = import('node-emoji');
 
     // initialize tabs
     this.tabData = {};
@@ -1067,13 +1065,20 @@ export class Chat {
 
   public initEmojis() {
     this.emojiPickerElement = new EmojiPicker();
+
     // Temporarily append to body in order to pre-load the element
-    const elem = $(this.emojiPickerElement);
-    elem.css('display', 'none');
+    /*const elem = $(this.emojiPickerElement);
+    elem.css({
+      position: 'absolute',
+      visiblity: 'hidden'
+    });
     $('body').append(elem);
     elem[0].offsetHeight;
     elem.remove();
-    elem.css('display', '');
+    elem.css({
+      position: '',
+      visiblity: ''
+    });*/
 
     $('#emoji-button').on('click', function() {
       $(this).popover('toggle');
@@ -1087,7 +1092,18 @@ export class Chat {
       customClass: 'emoji-popover',
       trigger: 'manual',
       html: true,
-      content: this.emojiPickerElement,
+      content: () => {
+        const colorScheme = getComputedStyle(document.documentElement).getPropertyValue('--color-scheme').trim();
+        if(colorScheme === 'dark') {
+          this.emojiPickerElement.classList.remove('light');
+          this.emojiPickerElement.classList.add('dark');
+        }
+        else {
+          this.emojiPickerElement.classList.remove('dark');
+          this.emojiPickerElement.classList.add('light');
+        }
+        return this.emojiPickerElement;
+      } 
     });
   }
 }

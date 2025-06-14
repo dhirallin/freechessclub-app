@@ -185,7 +185,9 @@ body {
   padding-bottom: 0.375rem;
 }
 .emoji-popover {
-  max-width: fit-content;
+  --bs-popover-max-width: fit-content;
+  --bs-popover-body-padding-x: 0.25rem;
+  --bs-popover-body-padding-y: 0.25rem;
 }
 
 .counter-number {
