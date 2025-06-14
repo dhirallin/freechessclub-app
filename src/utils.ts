@@ -621,13 +621,13 @@ export function removeLine(text: string, searchString: string): string {
 
 /**
  * Splits a string into an array of strings each with the given maxLength.
- * Ensures that splits never occur in the middle of HTML entities.
+ * Ensures that splits never occur in the middle of HTML entities or emoji shortcodes.
  */
 export function splitText(text: string, maxLength: number): string[] {
   const result = [];
   let currentMessage = '';
   let currentLength = 0;
-  const regex = /&#\d+;|./g; // Match HTML entities or any character
+  const regex = /\:[^\:]+\:(?:\:skin-tone-\d\:)?|&#\d+;|./g; // Emoji shortcodes or HTML entities or any character
 
   text.replace(regex, (match) => {
     const matchLength = match.length;
