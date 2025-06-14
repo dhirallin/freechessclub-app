@@ -410,6 +410,6 @@ a {
 #emoji-button {
   color: dodgerblue;
 }
-#emoji-picker-arrow {
-  background: #1F1F1F;
+.emoji-panel-arrow {
+  border-top-color: #222222;
 }

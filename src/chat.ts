@@ -1080,16 +1080,16 @@ export class Chat {
       elem.removeClass('dark');
       elem.addClass('light');
     }
-    elem.css('visibility', 'visible');
+    $('#emoji-panel').css('visibility', 'visible');
   }
 
   public hideEmojiPicker() {
-    $('emoji-picker').css('visibility', 'hidden');
+    $('#emoji-panel').css('visibility', 'hidden');
   }
 
   public initEmojis() {
     $('#emoji-button').on('click', () => {
-      if($('emoji-picker').css('visibility') === 'visible') 
+      if($('#emoji-panel').css('visibility') === 'visible') 
         this.hideEmojiPicker();
       else 
         this.showEmojiPicker();

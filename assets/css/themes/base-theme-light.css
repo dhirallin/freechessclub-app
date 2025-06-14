@@ -299,6 +299,7 @@ cg-board {
 #emoji-button {
   color: dodgerblue;
 }
-#emoji-picker-arrow {
-  background: #DEDEDE;
+.emoji-panel-arrow {
+  border-top-color: #ffffff;
 }
+
