@@ -410,6 +410,6 @@ a {
 #emoji-button {
   color: dodgerblue;
 }
-.emoji-popover {
-  --bs-popover-bg: #1F1F1F
+#emoji-picker-arrow {
+  background: #1F1F1F;
 }

@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 import { autoLink } from 'autolink-js';
-import { createTooltip, safeScrollTo, isSmallWindow, convertToLocalDateTime, getMonthShortName, removeWithTooltips } from './utils';
+import { createTooltip, safeScrollTo, isSmallWindow, convertToLocalDateTime, getMonthShortName, removeWithTooltips, insertAtCursor } from './utils';
 import { setGameWithFocus, maximizeGame, scrollToBoard } from './index';
 import { settings } from './settings';
 import { storage, awaiting } from './storage';
@@ -1063,61 +1063,40 @@ export class Chat {
     return text.replace(regex, match => basicEmojiMap[match] || match);
   }
 
-  public initEmojis() {
-    // Temporarily append to body in order to pre-load the element
-    /*const elem = $(this.emojiPickerElement);
-    elem.css({
-      position: 'absolute',
-      visiblity: 'hidden'
-    });
-    $('body').append(elem);
-    elem[0].offsetHeight;
-    elem.remove();
-    elem.css({
-      position: '',
-      visiblity: ''
-    });*/
+  public showEmojiPicker() {
+    const elem = $('emoji-picker');
+    const colorScheme = getComputedStyle(document.documentElement).getPropertyValue('--color-scheme').trim();
+    if(colorScheme === 'dark') {
+      elem.removeClass('light');
+      elem.addClass('dark');
+    }
+    else {
+      elem.removeClass('dark');
+      elem.addClass('light');
+    }
+    elem.css('visibility', 'visible');
+  }
 
-    $('#emoji-button').on('click', function() {
-      $(this).popover('toggle');
+  public hideEmojiPicker() {
+    $('emoji-picker').css('visibility', 'hidden');
+  }
+
+  public initEmojis() {
+    $('#emoji-button').on('click', () => {
+      if($('emoji-picker').css('visibility') === 'visible') 
+        this.hideEmojiPicker();
+      else 
+        this.showEmojiPicker();
     });
     $(document).on('click', (e) => {
-      if(!$('#emoji-button')[0].contains(e.target) && !$('.emoji-popover')[0]?.contains(e.target)) 
-        $('#emoji-button').popover('hide');
+      if(!$('#emoji-button')[0].contains(e.target) && !$('emoji-picker')[0].contains(e.target)) 
+        this.hideEmojiPicker();
     });
 
-    $('#emoji-button').on('hide.bs.popover', () => {
-      const elem = $('emoji-picker');
-      elem.css({
-        position: '',
-        visibility: '',
-        top: ''
-      })
-      $('emoji-picker').appendTo('#emoji-button-container');
-    });
-
-    $('#emoji-button').popover({
-      customClass: 'emoji-popover',
-      trigger: 'manual',
-      html: true,
-      content: () => {
-        const elem = $('emoji-picker');
-        const colorScheme = getComputedStyle(document.documentElement).getPropertyValue('--color-scheme').trim();
-        if(colorScheme === 'dark') {
-          elem.removeClass('light');
-          elem.addClass('dark');
-        }
-        else {
-          elem.removeClass('dark');
-          elem.addClass('light');
-        }
-        elem.css({
-          visibility: 'visible',
-          position: 'static',
-          top: 'auto'
-        });
-        return elem[0];
-      } 
+    $(document).on('emoji-click', (e) => {
+      this.hideEmojiPicker();
+      insertAtCursor($('#input-text'), (e as any).detail.unicode);
+      $('#input-text').trigger('focus');
     });
   }
 }
