@@ -9,7 +9,7 @@ import { settings } from './settings';
 import { storage, awaiting } from './storage';
 import { games } from './game';
 import { Database as EmojiDatabase, Picker as EmojiPicker } from 'emoji-picker-element';
-import { Picker, SearchIndex, init } from 'emoji-mart'
+import { getEmojiDataFromNative, Picker as emojiPicker, SearchIndex as emojiSearchIndex, init as emojiInit } from 'emoji-mart'
 
 // list of channels
 const channels = {
@@ -1082,7 +1082,15 @@ export class Chat {
   public async initEmojis() {
     const response = await fetch('https://cdn.jsdelivr.net/npm/@emoji-mart/data');
     const data = await response.json();
-    await init({ data });
+    await emojiInit({ data });
+
+    console.log('blah: ' + getEmojiDataFromNative('😆'));
+
+    /*const entries = Object.entries(data.emojis) as [string, any][];
+    for(const [key, emoji] of entries) {
+      if(key === 'laughing')
+        console.log(JSON.stringify(emoji));
+    }*/
 
     for(const emoji of Object.values(data.emojis) as any[]) {
       for(const skin of emoji.skins) {
