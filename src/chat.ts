@@ -1020,8 +1020,25 @@ export class Chat {
     const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
     const graphemes = Array.from(segmenter.segment(text), s => s.segment);
     for(const char of graphemes) {
-      const emoji = await this.emoji.getEmojiByUnicodeOrName(char);
-      parts.push(emoji ? `:${emoji.shortcodes[0]}:` : char);
+      if(/\p{Extended_Pictographic}/u.test(char)) {
+        const skinToneRegex = /[\u{1F3FB}-\u{1F3FF}]/u;
+        const lastModifierIndex = char.search(skinToneRegex);
+        const base = lastModifierIndex !== -1 
+            ? char.slice(0, lastModifierIndex)
+            : char;
+        const skinTone = lastModifierIndex !== -1
+            ? char.slice(lastModifierIndex)
+            : null;
+                  
+        let emoji = await this.emoji.getEmojiByUnicodeOrName(base) 
+        parts.push(emoji ? `:${emoji.shortcodes[0]}:` : base);  
+        if(skinTone) {
+          emoji = await this.emoji.getEmojiByUnicodeOrName(skinTone) 
+          parts.push(emoji ? `:${emoji.shortcodes[0]}:` : skinTone);  
+        }
+      }
+      else
+        parts.push(char);
     }
     return parts.join('');
   }
