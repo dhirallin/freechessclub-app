@@ -1072,53 +1072,41 @@ export class Chat {
   }
 
   public showEmojiPicker() {
-    const elem = $('emoji-picker');
-    const colorScheme = getComputedStyle(document.documentElement).getPropertyValue('--color-scheme').trim();
-    if(colorScheme === 'dark') {
-      elem.removeClass('light');
-      elem.addClass('dark');
-    }
-    else {
-      elem.removeClass('dark');
-      elem.addClass('light');
-    }
+    const picker = new emojiPicker({
+      theme: getComputedStyle(document.documentElement).getPropertyValue('--color-scheme').trim(),
+      onClickOutside: this.hideEmojiPicker,
+      onEmojiSelect: (emoji) => {
+        insertAtCursor($('#input-text'), emoji.native);
+        $('#input-text').trigger('focus');
+      }
+    }) as any;
+    $('#emoji-panel')[0].prepend(picker);
     $('#emoji-panel').css('visibility', 'visible');
   }
 
   public hideEmojiPicker() {
     $('#emoji-panel').css('visibility', 'hidden');
+    $('em-emoji-picker').remove();
   }
 
   public async initEmojis() {
     const response = await fetch('https://cdn.jsdelivr.net/npm/@emoji-mart/data');
     const data = await response.json();
-    const picker = new emojiPicker({ data }) as any;
-    $('#emoji-panel')[0].prepend(picker);
+    await emojiInit({ data });
 
-    for(const [id, emoji] of Object.entries(data.emojis) as [string, any][]) {
-      console.log(JSON.stringify(emoji));
+    for(const [id, emoji] of Object.entries(data.emojis) as [string, any][]) 
       this.emojiUnicodeToShortcode.set(emoji.skins[0].native, id);
-    }
     this.emojiUnicodeToShortcode.set('\u{1F3FB}', 'skin-tone-2');
     this.emojiUnicodeToShortcode.set('\u{1F3FC}', 'skin-tone-3');
     this.emojiUnicodeToShortcode.set('\u{1F3FD}', 'skin-tone-4');
     this.emojiUnicodeToShortcode.set('\u{1F3FE}', 'skin-tone-5');
     this.emojiUnicodeToShortcode.set('\u{1F3FF}', 'skin-tone-6');
 
-    $('#emoji-button').on('click', () => {
-      if($('#emoji-panel').css('visibility') === 'visible') 
-        this.hideEmojiPicker();
-      else 
+    $('#emoji-button').on('click', (e) => {
+      if($('#emoji-panel').css('visibility') === 'hidden') {
+        e.stopPropagation();
         this.showEmojiPicker();
-    });
-    $(document).on('click', (e) => {
-      if(!$('#emoji-button')[0].contains(e.target) && !$('em-emoji-picker')[0].contains(e.target)) 
-        this.hideEmojiPicker();
-    });
-
-    $(document).on('emoji-click', (e) => {
-      insertAtCursor($('#input-text'), (e as any).detail.unicode);
-      $('#input-text').trigger('focus');
+      }
     });
   }
 }
