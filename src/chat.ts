@@ -150,6 +150,7 @@ export class Chat {
   private inChannelTimer: any = null;
   private emoji: any = null;
   private emojiPickerElement: any = null;
+  private emojiUnicodeToShortcode = new Map();
 
   constructor() {
     this.unviewedNum = 0;
