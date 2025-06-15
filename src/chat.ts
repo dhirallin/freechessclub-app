@@ -277,7 +277,6 @@ export class Chat {
     });
 
     this.initStartChatMenu();
-    this.initEmojis();
   }
 
   public init(user: string): void {
@@ -760,7 +759,7 @@ export class Chat {
     if(!html)
       text = this.escapeHTML(text);
 
-    text = await this.emojify(text);
+    text = this.emojify(text);
 
     text = text.replace(this.userRE, `<strong class="mention">${this.user}</strong>`);
 
@@ -1017,7 +1016,7 @@ export class Chat {
     }
   }
 
-  public async unemojify(text: string): Promise<string> {
+  public unemojify(text: string): string {
     const parts: string[] = [];
     const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
     const graphemes = Array.from(segmenter.segment(text), s => s.segment);
@@ -1028,10 +1027,10 @@ export class Chat {
         const base = skinToneIndex !== -1 ? char.slice(0, skinToneIndex) : char;
         const skinTone = skinToneIndex !== -1 ? char.slice(skinToneIndex) : null;
                   
-        let emoji = await this.emoji.getEmojiByUnicodeOrName(base) 
+        let emoji = this.emojiUnicodeToShortcode.get(base); 
         parts.push(emoji ? `:${emoji.shortcodes[0]}:` : base);  
         if(skinTone) {
-          emoji = await this.emoji.getEmojiByUnicodeOrName(skinTone) 
+          emoji = this.emojiUnicodeToShortcode.get(skinTone); 
           parts.push(emoji ? `:${emoji.shortcodes[0]}:` : skinTone);  
         }
       }
@@ -1041,18 +1040,19 @@ export class Chat {
     return parts.join('');
   }
 
-  public async emojify(text: string): Promise<string> {
+  public emojify(text: string): string {
     const parts: string[] = [];
     let lastIndex = 0;
-    const regex = /:([a-zA-Z0-9_+-]+):/g;
+    const regex = /(?:\:([^\:]+)\:)(?:\:skin-tone-(\d)\:)?/g;
     let match: RegExpExecArray | null;
     while ((match = regex.exec(text)) !== null) {
       const start = match.index;
       const end = regex.lastIndex;
       const shortcode = match[1];
+      const skinsIndex = match[2] ? +match[2] - 2 : 0;
       parts.push(text.slice(lastIndex, start));
-      const emoji = await this.emoji.getEmojiByShortcode(shortcode);
-      parts.push(emoji ? emoji.unicode : match[0]);
+      const emoji = (emojiSearchIndex as any).get(shortcode);
+      parts.push(emoji ? emoji.skins[skinsIndex].native : match[0]);
       lastIndex = end;
     }
     parts.push(text.slice(lastIndex));
@@ -1089,7 +1089,19 @@ export class Chat {
     $('#emoji-panel').css('visibility', 'hidden');
   }
 
-  public initEmojis() {
+  public async initEmojis() {
+    const response = await fetch('https://cdn.jsdelivr.net/npm/@emoji-mart/data');
+    const data = await response.json();
+    await emojiInit({ data });
+
+    for(const [id, emoji] of Object.entries(data.emojis) as [string, any][]) 
+      this.emojiUnicodeToShortcode.set(emoji.skins[0].native, id);
+    this.emojiUnicodeToShortcode.set('\u{1F3FB}', 'skin-tone-2');
+    this.emojiUnicodeToShortcode.set('\u{1F3FC}', 'skin-tone-3');
+    this.emojiUnicodeToShortcode.set('\u{1F3FD}', 'skin-tone-4');
+    this.emojiUnicodeToShortcode.set('\u{1F3FE}', 'skin-tone-5');
+    this.emojiUnicodeToShortcode.set('\u{1F3FF}', 'skin-tone-6');
+
     $('#emoji-button').on('click', () => {
       if($('#emoji-panel').css('visibility') === 'visible') 
         this.hideEmojiPicker();

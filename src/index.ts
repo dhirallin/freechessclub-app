@@ -104,6 +104,7 @@ async function onDeviceReady() {
   }
 
   chat = new Chat();
+  chat.initEmojis();
 
   const game = createGame();
   game.role = Role.NONE;
@@ -6378,7 +6379,7 @@ $('#smartmove-toggle').on('click', () => {
  * CONSOLE/CHAT INPUT FUNCTIONS *
  ********************************/
 
-$('#input-form').on('submit', async (event) => {
+$('#input-form').on('submit', (event) => {
   event.preventDefault();
   let text: string;
   let val = Utils.getValue('#input-text');
@@ -6450,13 +6451,13 @@ $('#input-form').on('submit', async (event) => {
 
     if(isPrivateTell && session.getUser().toLowerCase() !== recipient.toLowerCase() 
         && session.isRegistered() && !/^Guest[A-Z]{4}$/i.test(recipient)) 
-      pendingTells.push({ recipient, message: Utils.splitText(await plainText(message), 997)[0] });
+      pendingTells.push({ recipient, message: Utils.splitText(plainText(message), 997)[0] });
 
     const maxLength = (session.isRegistered() ? 400 : 200);
     if(message.length > maxLength)
       message = message.slice(0, maxLength);
 
-    message = await plainText(message);
+    message = plainText(message);
     const messages = Utils.splitText(message, maxLength); // if message is now bigger than maxLength chars due to html encoding split it
 
     for(const msg of messages) {
@@ -6471,14 +6472,14 @@ $('#input-form').on('submit', async (event) => {
     }
   }
   else
-    session.send(await plainText(text));
+    session.send(plainText(text));
 
   $('#input-text').val('');
   updateInputText();
 });
 
-async function plainText(text: string) {
-  text = await chat.unemojify(text);
+function plainText(text: string) {
+  text = chat.unemojify(text);
   return Utils.unicodeToHTMLEncoding(text);
 }
 
@@ -6497,7 +6498,7 @@ $(document).on('shown.bs.tab', '#tabs button[data-bs-toggle="tab"]', () => {
   updateInputText();
 });
 
-async function updateInputText() {
+function updateInputText() {
   const element = $('#input-text')[0] as HTMLTextAreaElement;
   const start = element.selectionStart;
   const end = element.selectionEnd;
@@ -6521,10 +6522,10 @@ async function updateInputText() {
 
   // Convert emoji unicode chars to shortcodes in order to test the length then convert them back
   // Note: as a side effect of this, it will convert shortcodes typed in the input in real time
-  val = await chat.unemojify(val);
+  val = chat.unemojify(val);
   if(val.length > maxLength)
     val = Utils.splitText(val, maxLength)[0];
-  val = await chat.emojify(val);
+  val = chat.emojify(val);
 
   if(val !== element.value as string) {
     element.value = val;
