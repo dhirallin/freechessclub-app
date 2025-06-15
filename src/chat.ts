@@ -9,6 +9,7 @@ import { settings } from './settings';
 import { storage, awaiting } from './storage';
 import { games } from './game';
 import { Database as EmojiDatabase, Picker as EmojiPicker } from 'emoji-picker-element';
+import { Picker as emojiPicker, SearchIndex as emojiSearchIndex, init as emojiInit } from 'emoji-mart'
 
 // list of channels
 const channels = {

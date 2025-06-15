@@ -6461,7 +6461,7 @@ $('#input-form').on('submit', async (event) => {
 
     for(const msg of messages) {
       if(isPrivateTell) {
-        await chat.newMessage(recipient, {
+        chat.newMessage(recipient, {
           type: MessageType.PrivateTell,
           user: session.getUser(),
           message: msg,
