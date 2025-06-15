@@ -1027,11 +1027,11 @@ export class Chat {
         const base = skinToneIndex !== -1 ? char.slice(0, skinToneIndex) : char;
         const skinTone = skinToneIndex !== -1 ? char.slice(skinToneIndex) : null;
                   
-        let emoji = this.emojiUnicodeToShortcode.get(base); 
-        parts.push(emoji ? `:${emoji.shortcodes[0]}:` : base);  
+        let shortcode = this.emojiUnicodeToShortcode.get(base); 
+        parts.push(shortcode ? `:${shortcode}:` : base);  
         if(skinTone) {
-          emoji = this.emojiUnicodeToShortcode.get(skinTone); 
-          parts.push(emoji ? `:${emoji.shortcodes[0]}:` : skinTone);  
+          shortcode = this.emojiUnicodeToShortcode.get(skinTone); 
+          parts.push(shortcode ? `:${shortcode}:` : skinTone);  
         }
       }
       else
@@ -1049,7 +1049,7 @@ export class Chat {
       const start = match.index;
       const end = regex.lastIndex;
       const shortcode = match[1];
-      const skinsIndex = match[2] ? +match[2] - 2 : 0;
+      const skinsIndex = match[2] ? +match[2] - 1 : 0;
       parts.push(text.slice(lastIndex, start));
       const emoji = (emojiSearchIndex as any).get(shortcode);
       parts.push(emoji ? emoji.skins[skinsIndex].native : match[0]);
@@ -1094,8 +1094,10 @@ export class Chat {
     const data = await response.json();
     await emojiInit({ data });
 
-    for(const [id, emoji] of Object.entries(data.emojis) as [string, any][]) 
+    for(const [id, emoji] of Object.entries(data.emojis) as [string, any][]) {
+      console.log(JSON.stringify(emoji));
       this.emojiUnicodeToShortcode.set(emoji.skins[0].native, id);
+    }
     this.emojiUnicodeToShortcode.set('\u{1F3FB}', 'skin-tone-2');
     this.emojiUnicodeToShortcode.set('\u{1F3FC}', 'skin-tone-3');
     this.emojiUnicodeToShortcode.set('\u{1F3FD}', 'skin-tone-4');
