@@ -8,8 +8,6 @@ import { setGameWithFocus, maximizeGame, scrollToBoard } from './index';
 import { settings } from './settings';
 import { storage, awaiting } from './storage';
 import { games } from './game';
-import { Database as EmojiDatabase, Picker as EmojiPicker } from 'emoji-picker-element';
-import { Picker as emojiPicker, SearchIndex as emojiSearchIndex, init as emojiInit } from 'emoji-mart'
 
 // list of channels
 const channels = {
@@ -148,9 +146,8 @@ export class Chat {
   private userList: any[];
   private userListRequested: boolean = false;
   private inChannelTimer: any = null;
-  private emoji: any = null;
-  private emojiPickerElement: any = null;
   private emojiUnicodeToShortcode = new Map();
+  private emoji: typeof import('emoji-mart');
 
   constructor() {
     this.unviewedNum = 0;
@@ -158,7 +155,6 @@ export class Chat {
     settings.timestampToggle = (storage.get('timestamp') !== 'false');
     settings.chattabsToggle = (storage.get('chattabs') !== 'false');
     this.virtualScrollerPromise = import('virtual-scroller/dom');
-    this.emoji = new EmojiDatabase();
 
     // initialize tabs
     this.tabData = {};
@@ -1051,7 +1047,7 @@ export class Chat {
       const shortcode = match[1];
       const skinsIndex = match[2] ? +match[2] - 1 : 0;
       parts.push(text.slice(lastIndex, start));
-      const emoji = (emojiSearchIndex as any).get(shortcode);
+      const emoji = (this.emoji.SearchIndex as any).get(shortcode);
       parts.push(emoji ? emoji.skins[skinsIndex].native : match[0]);
       lastIndex = end;
     }
@@ -1072,7 +1068,7 @@ export class Chat {
   }
 
   public showEmojiPicker() {
-    const picker = new emojiPicker({
+    const picker = new this.emoji.Picker({
       theme: getComputedStyle(document.documentElement).getPropertyValue('--color-scheme').trim(),
       onClickOutside: this.hideEmojiPicker,
       onEmojiSelect: (emoji) => {
@@ -1092,7 +1088,9 @@ export class Chat {
   public async initEmojis() {
     const response = await fetch('https://cdn.jsdelivr.net/npm/@emoji-mart/data');
     const data = await response.json();
-    await emojiInit({ data });
+    this.emoji = await import('emoji-mart');
+    
+    await this.emoji.init({ data });
 
     for(const [id, emoji] of Object.entries(data.emojis) as [string, any][]) 
       this.emojiUnicodeToShortcode.set(emoji.skins[0].native, id);
