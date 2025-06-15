@@ -1092,7 +1092,8 @@ export class Chat {
   public async initEmojis() {
     const response = await fetch('https://cdn.jsdelivr.net/npm/@emoji-mart/data');
     const data = await response.json();
-    await emojiInit({ data });
+    const picker = new emojiPicker({ data }) as any;
+    $('#emoji-panel')[0].prepend(picker);
 
     for(const [id, emoji] of Object.entries(data.emojis) as [string, any][]) {
       console.log(JSON.stringify(emoji));
@@ -1111,7 +1112,7 @@ export class Chat {
         this.showEmojiPicker();
     });
     $(document).on('click', (e) => {
-      if(!$('#emoji-button')[0].contains(e.target) && !$('emoji-picker')[0].contains(e.target)) 
+      if(!$('#emoji-button')[0].contains(e.target) && !$('em-emoji-picker')[0].contains(e.target)) 
         this.hideEmojiPicker();
     });
 
