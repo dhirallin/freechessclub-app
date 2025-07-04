@@ -158,7 +158,7 @@ $(window).on('load', async () => {
   $('#left-panel-header').css('visibility', 'visible');
   $('#right-panel-header').css('visibility', 'visible');
 
-  if('serviceWorker' in navigator) {
+  if('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
     navigator.serviceWorker.register(`./service-worker.js?env=${Utils.isCapacitor() || Utils.isElectron() ? 'app' : 'web'}`)
       .then((registration) => {  
         if(navigator.serviceWorker.controller) { // Check this is an update and not first time install
