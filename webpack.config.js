@@ -34,7 +34,7 @@ module.exports = (env, argv) => {
     entry: "./src/js/index.ts",
     output: {
       path: outputDir,
-      filename: "assets/js/" + isProd ? "bundle.[contenthash].js" : "bundle.js",
+      filename: "assets/js/" + (isProd ? "bundle.[contenthash].js" : "bundle.js"),
       clean: true,
     },
     externals: {
@@ -57,7 +57,6 @@ module.exports = (env, argv) => {
         { test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, use: "url-loader?limit=10000&mimetype=application/octet-stream" },
         { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, use: "file-loader" },
         { test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, use: "url-loader?limit=10000&mimetype=image/svg+xml" },
-        { test: /\.html$/, use: 'raw', exclude: /node_modules/},
         { test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9=&.]+)?$/, use: 'file-loader' },
         { test: /\.m?js/, resolve: { fullySpecified: false } },
         { test: /\.wasm$/, use: "file-loader?name=[name].[ext]" }
