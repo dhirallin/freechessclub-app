@@ -16,13 +16,12 @@ module.exports = (env, argv) => {
     output: {
       filename: 'service-worker.js',
       path: outputDir,
-      clean: true,
     },
     plugins: [
       {
         apply: (compiler) => {
           compiler.hooks.done.tap('RunAfterBuildPlugin', () => {
-            exec(`node "${__dirname}/src/js/inject-manifest.js"`, (err, stdout, stderr) => {
+            exec(`node "${path.resolve(inputDir, 'js/inject-manifest.js')}`, (err, stdout, stderr) => {
               if (stdout) console.log(stdout);
               if (stderr) console.error(stderr);
             });
@@ -66,6 +65,7 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new webpack.optimize.AggressiveMergingPlugin(),
+      new CleanWebpackPlugin(), 
       new HtmlWebpackPlugin({
         template: path.resolve(inputDir, 'play.html'),
         filename: "play.html",

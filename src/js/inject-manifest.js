@@ -1,11 +1,12 @@
 const workboxBuild = require("workbox-build");
+const path = require('path');
 
 workboxBuild.injectManifest({
   swSrc: "./www/service-worker.js",
   swDest: "./www/service-worker.js",
-  globDirectory: process.cwd(),
+  globDirectory: path.resolve(process.cwd(), 'www'),
   globPatterns: [
-    "www/play.html",
-    "www/assets/**/*.{html,js,wasm,css,png,jpg,svg,json,bin,tsv,ico}",
+    "play.html",
+    "assets/**/*.{html,js,wasm,css,png,jpg,svg,json,bin,tsv,ico}",
   ],
 });
