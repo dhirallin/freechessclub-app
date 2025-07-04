@@ -1,21 +1,25 @@
 const webpack = require('webpack');
 const { exec } = require('child_process');
+const path = require('path');
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = (env, argv) => {
   const isProd = argv.mode === 'production';
+  const outputDir = path.resolve(__dirname, 'www');
+
   const serviceWorker = {
     name: 'service-worker',
-    entry: './src/service-worker.js',
+    entry: './src/js/service-worker.js',
     target: 'webworker',
     output: {
       filename: 'service-worker.js',
-      path: __dirname,
+      path: outputDir,
     },
     plugins: [
       {
         apply: (compiler) => {
           compiler.hooks.done.tap('RunAfterBuildPlugin', () => {
-            exec(`node "${__dirname}/src/inject-manifest.js"`, (err, stdout, stderr) => {
+            exec(`node "${__dirname}/src/js/inject-manifest.js"`, (err, stdout, stderr) => {
               if (stdout) console.log(stdout);
               if (stderr) console.error(stderr);
             });
@@ -27,14 +31,15 @@ module.exports = (env, argv) => {
 
   const bundle = {
     name: 'bundle',
-    entry: "./src/index.ts",
+    entry: "./src/js/index.ts",
     output: {
-      path: __dirname + "/assets/js/",
-      filename: "bundle.js"
+      path: outputDir,
+      filename: "assets/js/" + isProd ? "bundle.[contenthash].js" : "bundle.js",
+      clean: true,
     },
     externals: {
       $: 'jquery',
-	  d3: 'd3',
+	    d3: 'd3',
       '@popperjs/core': 'Popper',
       bootstrap: 'Bootstrap'
     },
@@ -60,6 +65,11 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new webpack.optimize.AggressiveMergingPlugin(),
+      new HtmlWebpackPlugin({
+        template: "./src/play.html",
+        filename: "play.html",
+        inject: "body",
+      }),
     ],
     optimization: {
       minimize: true,
@@ -75,7 +85,7 @@ module.exports = (env, argv) => {
         writeToDisk: true,
       },
       static: {
-        directory: __dirname,
+        directory: outputDir,
       },
       historyApiFallback: {
         rewrites: [
