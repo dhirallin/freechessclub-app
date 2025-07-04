@@ -78,10 +78,28 @@ module.exports = (env, argv) => {
             from: path.resolve(inputDir, 'assets'),
             to: path.resolve(outputDir, 'assets'),
             // globOptions: {
-            //  '**/css/application.css',
-            //  '**/css/themes/**'
+            //  ignore: [
+            //    '**/css/application.css',
+            //    '**/css/themes/**'
+            //  ],
             // },
           },
+          {
+            // copy all loose files in the root of src/
+            from: path.resolve(__dirname, 'src'),
+            to: path.resolve(__dirname, 'www'),
+            globOptions: {
+              ignore: ['**/play.html'],
+            },
+            filter: (resourcePath) => {
+              if(!resourcePath) return false;
+              const relativePath = path.relative(path.resolve(__dirname, 'src'), resourcePath);
+              return (
+                relativePath &&
+                !relativePath.includes(path.sep) 
+              );
+            },
+          }
         ],
       }),
     ],

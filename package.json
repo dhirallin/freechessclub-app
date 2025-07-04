@@ -32,13 +32,13 @@
     "publish": [
       "github"
     ],
-    "files": [
-      "play.html",
-      "service-worker.js",
-      "manifest.json",
+    "filter": [
+      "www/play.html",
+      "www/service-worker.js",
+      "www/manifest.json",
+      "www/assets/**",
       "src/app.js",
       "src/preload.js",
-      "assets/**",
       "node_modules/**"
     ],
     "mac": {
