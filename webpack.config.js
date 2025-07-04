@@ -59,7 +59,7 @@ module.exports = (env, argv) => {
         { test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, use: "url-loader?limit=10000&mimetype=image/svg+xml" },
         { test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9=&.]+)?$/, use: 'file-loader' },
         { test: /\.m?js/, resolve: { fullySpecified: false } },
-        { test: /\.wasm$/, use: "file-loader?name=[name].[ext]" }
+        { test: /\.wasm$/, type: "asset/resource", generator: { filename: "assets/js/[name][ext]" } },
       ]
     },
     plugins: [
@@ -68,10 +68,11 @@ module.exports = (env, argv) => {
         template: "./src/play.html",
         filename: "play.html",
         inject: "body",
+        minify: isProd,
       }),
     ],
     optimization: {
-      minimize: true,
+      minimize: isProd,
     },
     experiments: {
       asyncWebAssembly: true,
