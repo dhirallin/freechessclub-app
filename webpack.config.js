@@ -2,14 +2,16 @@ const webpack = require('webpack');
 const { exec } = require('child_process');
 const path = require('path');
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = (env, argv) => {
   const isProd = argv.mode === 'production';
+  const inputDir = path.resolve(__dirname, 'src');
   const outputDir = path.resolve(__dirname, 'www');
 
   const serviceWorker = {
     name: 'service-worker',
-    entry: './src/js/service-worker.js',
+    entry: path.resolve(inputDir, 'js/service-worker.js'),
     target: 'webworker',
     output: {
       filename: 'service-worker.js',
@@ -31,7 +33,7 @@ module.exports = (env, argv) => {
 
   const bundle = {
     name: 'bundle',
-    entry: "./src/js/index.ts",
+    entry: path.resolve(inputDir, 'js/index.ts'),
     output: {
       path: outputDir,
       filename: "assets/js/" + (isProd ? "bundle.[contenthash].js" : "bundle.js"),
@@ -65,10 +67,22 @@ module.exports = (env, argv) => {
     plugins: [
       new webpack.optimize.AggressiveMergingPlugin(),
       new HtmlWebpackPlugin({
-        template: "./src/play.html",
+        template: path.resolve(inputDir, 'play.html'),
         filename: "play.html",
         inject: "body",
         minify: isProd,
+      }), 
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: path.resolve(inputDir, 'assets'),
+            to: path.resolve(outputDir, 'assets'),
+            // globOptions: {
+            //  '**/css/application.css',
+            //  '**/css/themes/**'
+            // },
+          },
+        ],
       }),
     ],
     optimization: {
