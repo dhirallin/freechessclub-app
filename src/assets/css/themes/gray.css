@@ -1,0 +1,7 @@
+:root {
+  --bg-color: #424242;
+}
+
+cg-board {
+  background-image: url('../images/board/gray.svg');
+}
