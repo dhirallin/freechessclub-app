@@ -16,6 +16,7 @@ module.exports = (env, argv) => {
     output: {
       filename: 'service-worker.js',
       path: outputDir,
+      clean: true,
     },
     plugins: [
       {
@@ -37,7 +38,6 @@ module.exports = (env, argv) => {
     output: {
       path: outputDir,
       filename: "assets/js/" + (isProd ? "bundle.[contenthash].js" : "bundle.js"),
-      clean: true,
     },
     externals: {
       $: 'jquery',
