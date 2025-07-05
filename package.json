@@ -3,9 +3,9 @@
   "version": "3.7.3",
   "license": "MIT",
   "description": "Free Chess Club: A modern web interface for FICS.",
-  "main": "./app.js",
+  "main": "./dist/js/app.js",
   "scripts": {
-    "app": "tsc src/js/app.ts && electron src/app.js",
+    "app": "tsc src/js/app.ts && electron src/js/app.js",
     "lint": "eslint -c .eslintrc.js --ext .ts src",
     "bundle": "webpack --mode production",
     "pack": "webpack --config electron.webpack.js && electron-builder --dir",
@@ -33,8 +33,8 @@
       "github"
     ],
     "files": [
-      { "from": "www", "to": "." },
-      { "from": "dist/js", "to": ".", "filter": ["app.js", "preload.js"] },
+      "dist/js/**",
+      "www/**",
       "package.json",
       "!node_modules/**"
     ],
