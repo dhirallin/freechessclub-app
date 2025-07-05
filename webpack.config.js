@@ -6,14 +6,14 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 module.exports = (env, argv) => {
   const isProd = argv.mode === 'production';
-  const inputDir = path.resolve(__dirname, 'src');
-  const outputDir = path.resolve(__dirname, 'www');
+  const inputDir = 'src';
+  const outputDir = 'www';
 
   const bundle = {
     name: 'bundle',
-    entry: path.resolve(inputDir, 'js/index.ts'),
+    entry: path.resolve(__dirname, inputDir, 'js/index.ts'),
     output: {
-      path: outputDir,
+      path: path.resolve(__dirname, outputDir),
       filename: "assets/js/" + (isProd ? "bundle.[contenthash].js" : "bundle.js"),
       clean: true,
     },
@@ -45,7 +45,7 @@ module.exports = (env, argv) => {
     plugins: [
       new webpack.optimize.AggressiveMergingPlugin(),
       new HtmlWebpackPlugin({
-        template: path.resolve(inputDir, 'play.html'),
+        template: path.resolve(__dirname, inputDir, 'play.html'),
         filename: "play.html",
         inject: "body",
         minify: isProd,
@@ -53,29 +53,16 @@ module.exports = (env, argv) => {
       new CopyWebpackPlugin({
         patterns: [
           {
-            from: path.resolve(inputDir, 'assets'),
-            to: path.resolve(outputDir, 'assets'),
-            // globOptions: {
-            //  ignore: [
-            //    '**/css/application.css',
-            //    '**/css/themes/**'
-            //  ],
-            // },
-          },
-          {
-            // copy all loose files in the root of src/
-            from: path.resolve(__dirname, 'src'),
-            to: path.resolve(__dirname, 'www'),
+            // copy all static assets
+            from: path.resolve(__dirname, inputDir),
+            to: path.resolve(__dirname, outputDir),
             globOptions: {
-              ignore: ['**/play.html'],
-            },
-            filter: (resourcePath) => {
-              if(!resourcePath) return false;
-              const relativePath = path.relative(path.resolve(__dirname, 'src'), resourcePath);
-              return (
-                relativePath &&
-                !relativePath.includes(path.sep) 
-              );
+              ignore: [
+                inputDir + '/play.html',
+                inputDir + '/js/**',
+                // inputDir + '/css/application.css',
+                // inmputDir + '/css/themes/**'
+              ],
             },
           }
         ],
@@ -111,17 +98,17 @@ module.exports = (env, argv) => {
     name: 'service-worker',
     dependencies: ['bundle'],
     stats: 'errors-warnings', 
-    entry: path.resolve(inputDir, 'js/service-worker.js'),
+    entry: path.resolve(__dirname, inputDir, 'js/service-worker.js'),
     target: 'webworker',
     output: {
       filename: 'service-worker.js',
-      path: outputDir,
+      path: path.resolve(__dirname, outputDir),
     },
     plugins: [
       {
         apply: (compiler) => {
           compiler.hooks.done.tap('RunAfterBuildPlugin', () => {
-            exec(`node "${path.resolve(inputDir, 'js/inject-manifest.js')}`, (err, stdout, stderr) => {
+            exec(`node "${path.resolve(__dirname, inputDir, 'js/inject-manifest.js')}`, (err, stdout, stderr) => {
               if (stdout) console.log(stdout);
               if (stderr) console.error(stderr);
             });
