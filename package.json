@@ -3,14 +3,14 @@
   "version": "3.7.3",
   "license": "MIT",
   "description": "Free Chess Club: A modern web interface for FICS.",
-  "main": "src/app.js",
+  "main": "app.js",
   "scripts": {
-    "app": "tsc src/app.ts && node src/copy-app-files.js && electron src/app.js",
+    "app": "tsc src/js/app.ts && node src/copy-app-files.js && electron src/app.js",
     "lint": "eslint -c .eslintrc.js --ext .ts src",
     "bundle": "webpack --mode production",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "build": "node src/copy-app-files.js && electron-builder -mwl --x64 --arm64 -p always",
+    "pack": "tsc src/js/app.ts && electron-builder --dir",
+    "dist": "tsc src/js/app.ts && electron-builder",
+    "build": "tsc src/js/app.ts && node src/copy-app-files.js && electron-builder -mwl --x64 --arm64 -p always",
     "release": "yarn build",
     "postinstall": "electron-builder install-app-deps",
     "android": "node src/copy-app-files.js && npx cap run android",
@@ -32,14 +32,11 @@
     "publish": [
       "github"
     ],
-    "filter": [
-      "www/play.html",
-      "www/service-worker.js",
-      "www/manifest.json",
-      "www/assets/**",
-      "src/app.js",
-      "src/preload.js",
-      "node_modules/**"
+    "files": [
+      { "from": "www", "to": "." },
+      { "from": "src/js", "to": ".", "filter": ["app.js", "preload.js"] },
+      "node_modules/**",
+      "package.json"
     ],
     "mac": {
       "category": "public.app-category.board-games",

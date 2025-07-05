@@ -244,7 +244,7 @@ function createWindow() {
     center: true,
     resizable: true,
     title: app.getName(),
-    icon: path.join(__dirname, '../assets/img/tfcc-small.png'),
+    icon: path.join(__dirname, 'assets/img/tfcc-small.png'),
     webPreferences: {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
@@ -254,7 +254,7 @@ function createWindow() {
   const ur = url.format({
     protocol: 'file',
     slashes: true,
-    pathname: path.join(__dirname, '../play.html'),
+    pathname: path.join(__dirname, 'play.html'),
   });
 
   mainWindow.loadURL(ur);
