@@ -5,16 +5,16 @@
   "description": "Free Chess Club: A modern web interface for FICS.",
   "main": "app.js",
   "scripts": {
-    "app": "tsc src/js/app.ts && node src/copy-app-files.js && electron src/app.js",
+    "app": "tsc src/js/app.ts && node scripts/copy-app-files.js && electron src/app.js",
     "lint": "eslint -c .eslintrc.js --ext .ts src",
     "bundle": "webpack --mode production",
     "pack": "tsc src/js/app.ts && electron-builder --dir",
     "dist": "tsc src/js/app.ts && electron-builder",
-    "build": "tsc src/js/app.ts && node src/copy-app-files.js && electron-builder -mwl --x64 --arm64 -p always",
+    "build": "tsc src/js/app.ts && node scripts/copy-app-files.js && electron-builder -mwl --x64 --arm64 -p always",
     "release": "yarn build",
     "postinstall": "electron-builder install-app-deps",
-    "android": "node src/copy-app-files.js && npx cap run android",
-    "ios": "node src/copy-app-files.js && npx cap run ios",
+    "android": "node scripts/copy-app-files.js && npx cap run android",
+    "ios": "node scripts/copy-app-files.js && npx cap run ios",
     "start": "webpack-dev-server --config webpack.config.js"
   },
   "repository": {

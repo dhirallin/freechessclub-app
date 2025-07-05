@@ -108,7 +108,7 @@ module.exports = (env, argv) => {
       {
         apply: (compiler) => {
           compiler.hooks.done.tap('RunAfterBuildPlugin', () => {
-            exec(`node "${path.resolve(__dirname, inputDir, 'js/inject-manifest.js')}`, (err, stdout, stderr) => {
+            exec(`node "${path.resolve(__dirname, 'scripts/inject-sw-manifest.js')}`, (err, stdout, stderr) => {
               if (stdout) console.log(stdout);
               if (stderr) console.error(stderr);
             });
