@@ -9,34 +9,13 @@ module.exports = (env, argv) => {
   const inputDir = path.resolve(__dirname, 'src');
   const outputDir = path.resolve(__dirname, 'www');
 
-  const serviceWorker = {
-    name: 'service-worker',
-    entry: path.resolve(inputDir, 'js/service-worker.js'),
-    target: 'webworker',
-    output: {
-      filename: 'service-worker.js',
-      path: outputDir,
-    },
-    plugins: [
-      {
-        apply: (compiler) => {
-          compiler.hooks.done.tap('RunAfterBuildPlugin', () => {
-            exec(`node "${path.resolve(inputDir, 'js/inject-manifest.js')}`, (err, stdout, stderr) => {
-              if (stdout) console.log(stdout);
-              if (stderr) console.error(stderr);
-            });
-          });
-        }
-      }
-    ]
-  };
-
   const bundle = {
     name: 'bundle',
     entry: path.resolve(inputDir, 'js/index.ts'),
     output: {
       path: outputDir,
       filename: "assets/js/" + (isProd ? "bundle.[contenthash].js" : "bundle.js"),
+      clean: true,
     },
     externals: {
       $: 'jquery',
@@ -65,7 +44,6 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new webpack.optimize.AggressiveMergingPlugin(),
-      new CleanWebpackPlugin(), 
       new HtmlWebpackPlugin({
         template: path.resolve(inputDir, 'play.html'),
         filename: "play.html",
@@ -129,5 +107,29 @@ module.exports = (env, argv) => {
     }
   };
 
-  return [serviceWorker, bundle];
+  const serviceWorker = {
+    name: 'service-worker',
+    dependencies: ['bundle'],
+    stats: 'errors-warnings', 
+    entry: path.resolve(inputDir, 'js/service-worker.js'),
+    target: 'webworker',
+    output: {
+      filename: 'service-worker.js',
+      path: outputDir,
+    },
+    plugins: [
+      {
+        apply: (compiler) => {
+          compiler.hooks.done.tap('RunAfterBuildPlugin', () => {
+            exec(`node "${path.resolve(inputDir, 'js/inject-manifest.js')}`, (err, stdout, stderr) => {
+              if (stdout) console.log(stdout);
+              if (stderr) console.error(stderr);
+            });
+          });
+        }
+      }
+    ]
+  };
+
+  return [bundle, serviceWorker];
 }
