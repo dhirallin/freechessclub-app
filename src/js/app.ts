@@ -117,6 +117,51 @@ const template = [{
   }],
 }];
 
+function setupAutoUpdater() {
+  const menu = Menu.getApplicationMenu();
+
+  autoUpdater.on('checking-for-update', () => {
+    updateMenuLabel(menu, 'checkingForUpdate', 'Checking for Update...');
+  });
+
+  autoUpdater.on('update-available', () => {
+    updateMenuLabel(menu, 'checkingForUpdate', 'Update available...');
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    updateMenuLabel(menu, 'checkingForUpdate', 'No update available');
+  });
+
+  autoUpdater.on('error', (error) => {
+    updateMenuLabel(menu, 'checkingForUpdate', `Update error: ${error == null ? "unknown" : (error.message || error.toString())}`);
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    updateMenuLabel(menu, 'checkingForUpdate', 'Update ready to install');
+    updateMenuVisibility(menu, 'restartToUpdate', true);
+  });
+}
+
+function updateMenuLabel(menu, key, label) {
+  const item = findMenuItem(menu, key);
+  if (item) item.label = label;
+}
+
+function updateMenuVisibility(menu, key, visible) {
+  const item = findMenuItem(menu, key);
+  if (item) item.visible = visible;
+}
+
+function findMenuItem(menu, key) {
+  for (const item of menu.items) {
+    if (item.submenu) {
+      const match = item.submenu.items.find(i => i.key === key);
+      if (match) return match;
+    }
+  }
+  return null;
+}
+
 function addUpdateMenuItems(items, position) {
   if (process.mas) {
     return;
@@ -129,6 +174,7 @@ function addUpdateMenuItems(items, position) {
   }, {
     label: 'Checking for Update',
     enabled: false,
+    visible: true,
     key: 'checkingForUpdate',
   }, {
     label: 'Check for Update',
@@ -271,6 +317,7 @@ function createWindow() {
   const menu = Menu.buildFromTemplate(template as any);
   Menu.setApplicationMenu(menu);
   mainWindow.show();
+  setupAutoUpdater();
 }
 
 app.on('browser-window-created', () => {
@@ -291,7 +338,10 @@ if (process.platform === 'darwin') {
   });
 }
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+  createWindow();
+  autoUpdater.checkForUpdatesAndNotify();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
