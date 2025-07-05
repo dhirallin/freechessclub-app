@@ -35,8 +35,9 @@
     "files": [
       { "from": "www", "to": "." },
       { "from": "src/js", "to": ".", "filter": ["app.js", "preload.js"] },
-      "node_modules/**",
-      "package.json"
+      "package.json",
+      "!node_modules/@capacitor*/**",
+      "!node_modules/capacitor*/**"  
     ],
     "mac": {
       "category": "public.app-category.board-games",
