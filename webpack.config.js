@@ -7,10 +7,11 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 module.exports = (env, argv) => {
   const isProd = argv.mode === 'production';
   const inputDir = 'src';
-  const outputDir = 'www';
+  const outputDir = isProd ? 'www' : 'dev';
 
   const bundle = {
     name: 'bundle',
+    mode: isProd ? 'production' : 'development',
     entry: path.resolve(__dirname, inputDir, 'js/index.ts'),
     output: {
       path: path.resolve(__dirname, outputDir),
@@ -97,6 +98,7 @@ module.exports = (env, argv) => {
   const serviceWorker = {
     name: 'service-worker',
     dependencies: ['bundle'],
+    mode: isProd ? 'production' : 'development',
     stats: 'errors-warnings', 
     entry: path.resolve(__dirname, inputDir, 'js/service-worker.js'),
     target: 'webworker',
@@ -118,5 +120,5 @@ module.exports = (env, argv) => {
     ]
   };
 
-  return [bundle, serviceWorker];
+  return isProd ? [bundle, serviceWorker] : [bundle];
 }
