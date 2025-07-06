@@ -9,7 +9,7 @@ import { autoUpdater } from 'electron-updater'
 
 let mainWindow = null;
 
-const template = [{
+const template: any = [{
   label: 'Edit',
   submenu: [{
     label: 'Undo',
@@ -118,48 +118,56 @@ const template = [{
 }];
 
 function setupAutoUpdater() {
-  const menu = Menu.getApplicationMenu();
-
   autoUpdater.on('checking-for-update', () => {
-    updateMenuLabel(menu, 'checkingForUpdate', 'Checking for Update...');
+    updateMenuLabel('checkingForUpdate', 'Checking for Update...');
   });
 
   autoUpdater.on('update-available', () => {
-    updateMenuLabel(menu, 'checkingForUpdate', 'Update available...');
+    updateMenuLabel('checkingForUpdate', 'Update available...');
   });
 
   autoUpdater.on('update-not-available', () => {
-    updateMenuLabel(menu, 'checkingForUpdate', 'No update available');
+    updateMenuLabel('checkingForUpdate', 'No update available');
   });
 
   autoUpdater.on('error', (error) => {
-    updateMenuLabel(menu, 'checkingForUpdate', `Update error: ${error == null ? "unknown" : (error.message || error.toString())}`);
+    updateMenuLabel('checkingForUpdate', `Update error: ${error == null ? "unknown" : (error.message || error.toString())}`);
   });
 
   autoUpdater.on('update-downloaded', () => {
-    updateMenuLabel(menu, 'checkingForUpdate', 'Update ready to install');
-    updateMenuVisibility(menu, 'restartToUpdate', true);
+    updateMenuLabel('checkingForUpdate', 'Update ready to install');
+    updateMenuVisibility('restartToUpdate', true);
   });
 }
 
-function updateMenuLabel(menu, key, label) {
-  const item = findMenuItem(menu, key);
-  if (item) item.label = label;
+function updateMenuVisibility(key, visible) {
+  const match = findMenuItem(key);
+  if (match) {
+    match.visible = visible;
+    refreshMenu();
+  }
 }
 
-function updateMenuVisibility(menu, key, visible) {
-  const item = findMenuItem(menu, key);
-  if (item) item.visible = visible;
+function updateMenuLabel(key, newLabel) {
+  const match = findMenuItem(key);
+  if (match) {
+    match.label = newLabel;
+    refreshMenu();
+  }
 }
 
-function findMenuItem(menu, key) {
-  for (const item of menu.items) {
-    if (item.submenu) {
-      const match = item.submenu.items.find(i => i.key === key);
-      if (match) return match;
-    }
+function findMenuItem(key) {
+  for (const item of template) {
+    const match = item.submenu?.find(i => i.key === key);
+    if (match)
+      return match;
   }
   return null;
+}
+
+function refreshMenu() {
+  const updatedMenu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(updatedMenu);
 }
 
 function addUpdateMenuItems(items, position) {
