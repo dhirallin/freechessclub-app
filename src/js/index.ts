@@ -12,6 +12,7 @@ import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
 import * as Utils from './utils';
 import * as ChessHelper from './chess-helper';
 import * as Dialogs from './dialogs';
+import Tournaments from './tournaments';
 import Chat from './chat';
 import { Clock } from './clock';
 import { Engine, EvalEngine } from './engine';
@@ -39,6 +40,7 @@ const SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonst
 
 let session: Session;
 let chat: Chat;
+let tournaments: Tournaments;
 let engine: Engine | null;
 let evalEngine: EvalEngine | null;
 let playEngine: Engine | null;
@@ -112,6 +114,7 @@ async function onDeviceReady() {
   }
 
   chat = new Chat();
+  tournaments = new Tournaments();
 
   const game = createGame();
   game.role = Role.NONE;
@@ -618,7 +621,10 @@ function messageHandler(data: any) {
         awaiting.set('computer-list');
         session.send('variables'); // Get user's variables (mostly for tzone)
         awaiting.set('user-variables');
+        session.send('date'); // Get the server's timezone for time conversions
+        awaiting.set('date');
         chat.connected(data.control);
+        tournaments.connected(session);
 
         if($('#pills-observe').hasClass('active'))
           initObservePane();
@@ -1074,6 +1080,8 @@ function gameEnd(data: any) {
 }
 
 function handleOffers(offers: any[]) {
+  tournaments.handleOffers(offers);
+
   // Clear the lobby
   if(offers[0].type === 'sc')
     $('#lobby-table').html('');
@@ -1197,6 +1205,9 @@ function handleOffers(offers: any[]) {
       $(`.sent-offer[data-offer-id="${id}"]`).remove(); // If offer, match request or seek was sent by us, remove it from the Play pane
       $(`.lobby-entry[data-offer-id="${id}"]`).remove(); // Remove seek from lobby
     });
+    if(item.type === 'sr' && !item.ids.length) // remove all seeks
+      $('.sent-offer[data-offer-type="sn"]').remove();
+      
     if(!$('#sent-offers-status').children().length)
       $('#sent-offers-status').hide();
   });
@@ -1625,20 +1636,6 @@ function handleMiscMessage(data: any) {
     return;
   }
 
-  match = msg.match(/^Your seeks have been removed\./m);
-  if(!match)
-    match = msg.match(/^Your seek (\d+) has been removed\./m);
-  if(match) {
-    if(match.length > 1) // delete seek by id
-      $(`.sent-offer[data-offer-id="${match[1]}"]`).remove();
-    else  // Remove all seeks
-      $('.sent-offer[data-offer-type="sn"]').remove();
-
-    if(!$('#sent-offers-status').children().length)
-      $('#sent-offers-status').hide();
-    return;
-  }
-
   match = msg.match(/(?:^|\n)\s*Movelist for game (\d+):\s+(\S+) \((\d+|UNR)\) vs\. (\S+) \((\d+|UNR)\)[^\n]+\s+(\w+) (\S+) match, initial time: (\d+) minutes, increment: (\d+) seconds\./);
   if (match != null && match.length > 9) {
     const game = games.findGame(+match[1]);
@@ -1871,6 +1868,12 @@ function handleMiscMessage(data: any) {
   if(variablesReceived)
     return;
 
+  match = msg.match(/^Server time[^:]+:\d+\s+(\w+)/m);
+  if(match && awaiting.resolve('date')) {
+    Utils.setServerTimezone(match[1]);
+    return;
+  }
+
   if(msg.startsWith('Formula unset.'))
     $('#formula-toggle').prop('disabled', true);
   if(msg.startsWith('Formula set to'))
@@ -2019,6 +2022,9 @@ function handleMiscMessage(data: any) {
   ) {
     return;
   }
+
+  if(tournaments.handleMessage(msg))
+    return;
 
   chat.newMessage('console', data);
 }

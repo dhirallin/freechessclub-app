@@ -107,16 +107,82 @@ export function setDefaultTimezone(timezone: string) {
       : timezoneOffsets[timezone] || 0;
 }
 
-export function convertToLocalDateTime(dateTime: any) {
-  const offset = timezoneOffsets[dateTime.timezone] !== undefined
+export function convertToLocalDateTime(dateTime: any, serverTime = false) {
+  let offset = defaultTimezone;
+  if(serverTime)
+    offset = serverTimezone;
+  else if(Number.isInteger(dateTime.timezone))
+    offset = dateTime.timezone;
+  else {
+    offset = timezoneOffsets[dateTime.timezone] !== undefined
       ? timezoneOffsets[dateTime.timezone] 
       : defaultTimezone; 
+  }
 
   const timezone = timezoneOffsetToHHMM(offset);
   const month = Number.isInteger(Number(dateTime.month)) ? dateTime.month : monthShortNameToNumber(dateTime.month)?.toString().padStart(2, "0");
   const day = dateTime.day.padStart(2, '0');
   const dateTimeStr = `${dateTime.year}-${month}-${day}T${dateTime.hour}:${dateTime.minute}:${dateTime.second || '00'}${timezone}`;
   return new Date(dateTimeStr);
+}
+
+let serverTimezone = -5; // Default to EST
+export function setServerTimezone(timezone: string) {
+  serverTimezone = Number.isInteger(+timezone)
+    ? +timezone
+    : timezoneOffsets[timezone] || -5;
+}
+
+export function convertToServerDateTime(localDT: any, nextWeekDay?: string) { 
+  // Adjust current date/time to get server time
+  const serverTime = new Date(localDT.getTime() + serverTimezone * 60 * 60 * 1000);
+
+  const weekdayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const targetDay = weekdayMap[nextWeekDay];
+  if(targetDay !== undefined) {
+    const currentDay = serverTime.getUTCDay(); 
+    let daysToAdd = (targetDay - serverTime.getUTCDay() + 7) % 7;
+    serverTime.setUTCDate(serverTime.getUTCDate() + daysToAdd);
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC', // trick: treat adjusted serverTime as UTC so we extract the right parts
+    hour12: false,
+    year: 'numeric'
+  });
+
+  const parts = formatter.formatToParts(serverTime);
+  const getPart = (type) => parts.find(p => p.type === type)?.value;
+
+  return {
+    weekday: getPart('weekday'), // e.g. "Tue"
+    month: getPart('month'),     // e.g. "Jul"
+    day: getPart('day'),         // e.g. "30"
+    hour: getPart('hour'),       // e.g. "22"
+    minute: getPart('minute'),   // e.g. "15"
+    timezone: serverTimezone,    // e.g. "-5"
+    year: getPart('year')        // e.g. "2025"
+  };
+}
+
+export function getDiffDays(date: Date, now = new Date()) {
+  const options = { month: 'short', day: 'numeric' };
+  const dateYear = date.getFullYear();
+  const nowYear = now.getFullYear();
+
+  // Normalize times for comparison (midnight)
+  const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const d1 = startOfDay(now);
+  const d2 = startOfDay(date);
+
+  const diffDays = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+  return diffDays;
 }
 
 /**
