@@ -214,6 +214,8 @@ export class Parser {
       return null;
     }
 
+    console.log(msg);
+
     msg = msg.replace(/\[G\]\0/g, () => {
       this.session.send(String.fromCharCode(...[0x02, 0x39]), false);
       return '';
@@ -527,6 +529,19 @@ export class Parser {
       return {
         offers,
       }
+    }
+
+    match = msg.match(/^Your seeks have been removed\./m);
+    if(!match)
+      match = msg.match(/^Your seek (\d+) has been removed\./m);
+    if(match) {     
+      const ids = match.length > 1 ? [match[1]] : [];
+      return {
+        offers: [{
+          type: 'sr',
+          ids: ids
+        }]
+      };
     }
 
     return { message: msg };
