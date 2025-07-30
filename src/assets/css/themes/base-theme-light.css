@@ -314,3 +314,21 @@ cg-board {
 .emoji-panel-arrow {
   border-top-color: #ffffff;
 }
+
+.tournaments-unviewed {
+  --bs-nav-link-color: tomato;
+}
+.tournament-group-title {
+  color: 	#3E5866;
+}
+.card.tournament-card {
+  --bs-card-bg: #DDDDDD;
+  --bs-card-border-color: #A0A0A0;
+}
+.card.tournament-card-active {
+  --bs-card-bg: #F3D9D9;
+  --bs-card-border-color: #C28D8D;
+}
+.card.tournament-card-label {
+  color: #BBC7D4;
+}

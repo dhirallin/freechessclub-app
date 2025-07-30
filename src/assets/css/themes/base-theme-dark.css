@@ -428,3 +428,19 @@ a {
   color: #ff6b6b;
 }
 
+.tournaments-unviewed {
+  --bs-nav-link-color: tomato;
+}
+.tournament-group-title {
+  color: 	#9CB8CA;
+}
+.card.tournament-card {
+  --bs-card-bg: #555555;
+  --bs-card-border-color: #777777;
+}
+.card.tournament-card-active {
+  --bs-card-bg: #704646;
+}
+.card.tournament-card-label {
+  color: #BBC7D4;
+}

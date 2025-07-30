@@ -968,9 +968,6 @@ input[type="number"]:focus {
   overflow-x: hidden;
 }
 
-.tournaments-unviewed {
-  --bs-nav-link-color: tomato;
-}
 .tournament-group {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
@@ -984,7 +981,6 @@ input[type="number"]:focus {
 .tournament-group-title {
   display: inline-block;
   font-weight: bold;
-  color: 	#9CB8CA;
 }
 .tournament-group-cards {
   display: flex;
@@ -999,16 +995,7 @@ input[type="number"]:focus {
 }
 .card.tournament-card {
   --bs-card-color: var(--fg-color);
-  --bs-card-bg: #555555;
-  --bs-card-border-color: #777777;
 }
-.card.tournament-card-active {
-  --bs-card-bg: #704646;
-}
-.tournament-card-label {
-  color: #BBC7D4;
-}
-
 #tournaments-pane-status {
   position: sticky;
   top: 0;
