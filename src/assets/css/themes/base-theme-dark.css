@@ -441,6 +441,6 @@ a {
 .card.tournament-card-active {
   --bs-card-bg: #704646;
 }
-.card.tournament-card-label {
+.tournament-card-label {
   color: #BBC7D4;
 }

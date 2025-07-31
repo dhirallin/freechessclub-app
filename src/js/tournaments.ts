@@ -53,6 +53,14 @@ export class Tournaments {
     if(!session || !session.isConnected())
       return;
     
+    this.addTournament({
+      eventid: 5,
+      title: 'The Nightly 5 0',
+      type: '5 0 r SS\\5',
+      date: 'daily',
+      time: '22:00'
+    });
+
     this.tdVariables = {};
 
     $('#tournaments-pane-status').hide();
@@ -70,15 +78,7 @@ export class Tournaments {
     awaiting.set('td-set');
     this.session.send('td set height 24');
 
-    /*
-    awaiting.set('td-schedule');
-    session.send('set height 240');
-    session.send('td help schedule');
-    session.send('td next');
-    session.send('td next');
-    session.send('td next');
-    session.send(`set height ${userVariables.height}`);
-    */
+
 
     /*
     awaiting.set('td-events');
@@ -314,25 +314,8 @@ export class Tournaments {
       $('#tournaments-pane-status').show();
       return false;
     }
-  
-    if(msg.startsWith(':') && awaiting.has('td-schedule')) {
-      if(/:Use "td next" to see the next page./.test(msg))
-        return true;
-  
-      if(/:Unable to comply. There is no more./.test(msg)) {
-        awaiting.resolve('td-schedule');
-        this.parseTournamentsSchedule(this.tdMessage);
-        return true;
-      }
-  
-      this.tdMessage += msg + '\n';
-      return true;
-    }
-  
-    if(awaiting.has('td-schedule') && msg.startsWith('Height set to'))
-      return true;
   }
-
+  
   public parseTDVariables(msg: string) {
     const lines = msg.split(/[\r\n]+/);
     lines.forEach((line) => {
@@ -340,11 +323,6 @@ export class Tournaments {
       if(match)
         this.tdVariables[match[1]] = match[2];
     });
-  }
-
-  public parseTournamentsSchedule(msg: string) {
-    console.log(msg);
-    return '';
   }
 
   public parseTDListKoTHs(msg: string): any[] {
@@ -366,6 +344,46 @@ export class Tournaments {
       }
     });
     return koths;
+  }
+
+  public addTournament(data: any) {
+    let card = $(`[data-event-id="${data.eventid}"]`);
+    if(!card.length) {
+      card = $(`
+        <div class="card tournament-card" data-tournament-type="tournament" data-event-id="${data.eventid}">
+          <div class="card-body d-flex">
+            <div>
+              <div class="tournament-title" style="font-weight: bold;"></div>
+              <div class="tournament-type" style="white-space: pre;"></div>
+              <div class="tournament-date" style="white-space: pre;"></div>
+            </div>
+            <div class="d-flex flex-grow-1" style="justify-content: end; align-items: center">
+              <div class="btn-group-vertical" style="gap: 10px">
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-join" title="Join" style="display: none">Join</button>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-withdraw" title="Withdraw" style="display: none">Withdraw</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+      card.data('tournament-data', {});
+      this.addTournamentCard(card, 'tournament');
+    }
+
+    const tourney = card.data('tournament-data');
+    Object.assign(tourney, data);
+
+    card.find('.tournament-title').text(`${tourney.title}`);
+    const typeStr = `<span class="tournament-card-label">Type:</span>  ${tourney.type}`; 
+    card.find('.tournament-type').html(typeStr);
+    const dateStr = `<span class="tournament-card-label">Date:</span>  ${tourney.date === 'daily' ? 'Every day' : tourney.date} ${tourney.time}`;
+    card.find('.tournament-date').html(dateStr);
+    if(data.id !== undefined) {
+      card.find('.tournament-join').attr('onclick', `sessionSend('td join ${tourney.id}')`);
+      card.find('.tournament-withdraw').attr('onclick', `sessionSend('td withdraw ${tourney.id}')`);
+    }
+    card.find('.tournament-join').toggle(data.id !== undefined);
+    card.find('.tournament-withdraw').toggle(data.id !== undefined);
   }
 
   public addKoTH(data: any) {
@@ -492,7 +510,7 @@ export class Tournaments {
       group = $(`
         <div class="tournament-group" data-group-name="${groupName}">
           <div class="tournament-group-header d-flex align-items-center">
-            <span class="tournament-group-title"></span>
+            <span class="tournament-group-title">Tournaments</span>
             <button type="button" class="tournament-more-options ms-auto btn btn-outline-secondary btn-sm btn-transparent dropdown-toggle hide-caret position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More options">
               <div class="tooltip-overlay" data-tooltip-hover-only data-bs-toggle="tooltip" title="More options"></div>
               <span class="fa-solid fa-ellipsis-vertical" aria-hidden="false"></span>
@@ -508,7 +526,10 @@ export class Tournaments {
       `);
       group.appendTo('#pills-tournaments');
      
-      if(groupName === 'koth') {
+      if(groupName === 'tournament') {
+
+      }
+      else if(groupName === 'koth') {
         let checkMark = group.find('.show-notifications .checkmark');
         checkMark.toggleClass('invisible', !this.kothShowNotifications);
         group.find('.show-notifications').on('click', (e) => {

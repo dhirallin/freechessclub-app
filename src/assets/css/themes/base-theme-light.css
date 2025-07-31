@@ -329,6 +329,6 @@ cg-board {
   --bs-card-bg: #F6E2E2;
   --bs-card-border-color: #C28D8D;
 }
-.card.tournament-card-label {
+.tournament-card-label {
   color: #BBC7D4;
 }
