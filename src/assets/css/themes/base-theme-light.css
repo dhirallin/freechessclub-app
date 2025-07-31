@@ -322,11 +322,11 @@ cg-board {
   color: 	#3E5866;
 }
 .card.tournament-card {
-  --bs-card-bg: #DDDDDD;
+  --bs-card-bg: var(--bg-color);
   --bs-card-border-color: #A0A0A0;
 }
 .card.tournament-card-active {
-  --bs-card-bg: #F3D9D9;
+  --bs-card-bg: #F6E2E2;
   --bs-card-border-color: #C28D8D;
 }
 .card.tournament-card-label {
