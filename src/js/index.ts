@@ -621,6 +621,8 @@ function messageHandler(data: any) {
         awaiting.set('computer-list');
         session.send('variables'); // Get user's variables (mostly for tzone)
         awaiting.set('user-variables');
+        session.send('date'); // Get the server's timezone for time conversions
+        awaiting.set('date');
         chat.connected(data.control);
         tournaments.connected(session);
 
@@ -1863,6 +1865,12 @@ function handleMiscMessage(data: any) {
   }
   if(variablesReceived)
     return;
+
+  match = msg.match(/^Server time[^:]+:\d+\s+(\w+)/m);
+  if(match && awaiting.resolve('date')) {
+    Utils.setServerTimezone(match[1]);
+    return;
+  }
 
   if(msg.startsWith('Formula unset.'))
     $('#formula-toggle').prop('disabled', true);

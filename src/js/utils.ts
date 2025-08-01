@@ -119,6 +119,42 @@ export function convertToLocalDateTime(dateTime: any) {
   return new Date(dateTimeStr);
 }
 
+let serverTimezone = -5; // Default to EST
+export function setServerTimezone(timezone: string) {
+  serverTimezone = Number.isInteger(+timezone)
+    ? +timezone
+    : timezoneOffsets[timezone] || -5;
+}
+
+export function convertToServerDateTime(localDT: any) {
+  // Adjust current date/time to get server time
+  const serverTime = new Date(localDT.getTime() + serverTimezone * 60 * 60 * 1000);
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC', // trick: treat adjusted serverTime as UTC so we extract the right parts
+    hour12: false,
+    year: 'numeric'
+  });
+
+  const parts = formatter.formatToParts(serverTime);
+  const getPart = (type) => parts.find(p => p.type === type)?.value;
+
+  return {
+    weekday: getPart('weekday'), // e.g. "Tue"
+    month: getPart('month'),     // e.g. "Jul"
+    day: getPart('day'),         // e.g. "30"
+    hour: getPart('hour'),       // e.g. "22"
+    minute: getPart('minute'),   // e.g. "15"
+    timezone: serverTimezone,    // e.g. "-5"
+    year: getPart('year')        // e.g. "2025"
+  };
+}
+
 /**
  * Is this a Capacitor app?
  */

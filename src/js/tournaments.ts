@@ -4,6 +4,7 @@
 
 import { awaiting, storage } from './storage';
 import { createNotification, removeNotification } from './dialogs';
+import { convertToServerDateTime, convertToLocalDateTime } from './utils';
 
 export class Tournaments {
   private tdMessage = ''; // Stores messages from td (tournament bot)
@@ -376,7 +377,14 @@ export class Tournaments {
     card.find('.tournament-title').text(`${tourney.title}`);
     const typeStr = `<span class="tournament-card-label">Type:</span>  ${tourney.type}`; 
     card.find('.tournament-type').html(typeStr);
-    const dateStr = `<span class="tournament-card-label">Date:</span>  ${tourney.date === 'daily' ? 'Every day' : tourney.date} ${tourney.time}`;
+    
+    let serverDT = convertToServerDateTime(new Date());
+    serverDT.hour = tourney.time.split(':')[0];
+    serverDT.minute = tourney.time.split(':')[1];
+    const localDT = convertToLocalDateTime(serverDT);
+    const timeStr = localDT.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    const dateStr = `<span class="tournament-card-label">Date:</span>  ${tourney.date === 'daily' ? 'Every day' : tourney.date} ${timeStr}`;
     card.find('.tournament-date').html(dateStr);
     if(data.id !== undefined) {
       card.find('.tournament-join').attr('onclick', `sessionSend('td join ${tourney.id}')`);
