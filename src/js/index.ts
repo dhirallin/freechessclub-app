@@ -1566,9 +1566,11 @@ function handleMiscMessage(data: any) {
   if(!match)
     match = msg.match(/^Notification: .*/m);
   if(match && match.length > 0) {
-    if(/^The following message was emailed to/m.test(msg) && chat.currentTab() !== 'console') {
-      chat.newNotification(`${match[0]} Message sent as email.`);
-      return
+    if(/^The following message was emailed to/m.test(msg)) {
+      if(chat.currentTab() !== 'console')
+        chat.newNotification(`${match[0]} Message sent as email.`);
+      chat.newMessage('console', data);
+      return;
     }
     chat.newNotification(match[0]);
     return;
