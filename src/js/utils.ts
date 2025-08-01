@@ -108,9 +108,14 @@ export function setDefaultTimezone(timezone: string) {
 }
 
 export function convertToLocalDateTime(dateTime: any) {
-  const offset = timezoneOffsets[dateTime.timezone] !== undefined
+  let offset = defaultTimezone;
+  if(Number.isInteger(dateTime.timezone))
+    offset = dateTime.timezone;
+  else {
+    offset = timezoneOffsets[dateTime.timezone] !== undefined
       ? timezoneOffsets[dateTime.timezone] 
       : defaultTimezone; 
+  }
 
   const timezone = timezoneOffsetToHHMM(offset);
   const month = Number.isInteger(Number(dateTime.month)) ? dateTime.month : monthShortNameToNumber(dateTime.month)?.toString().padStart(2, "0");

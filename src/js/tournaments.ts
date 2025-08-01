@@ -384,7 +384,7 @@ export class Tournaments {
     const localDT = convertToLocalDateTime(serverDT);
     const timeStr = localDT.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-    const dateStr = `<span class="tournament-card-label">Date:</span>  ${tourney.date === 'daily' ? 'Every day' : tourney.date} ${timeStr}`;
+    const dateStr = `<span class="tournament-card-label">When:</span>  ${tourney.date === 'daily' ? 'Every day' : tourney.date}, ${timeStr}`;
     card.find('.tournament-date').html(dateStr);
     if(data.id !== undefined) {
       card.find('.tournament-join').attr('onclick', `sessionSend('td join ${tourney.id}')`);
