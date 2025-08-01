@@ -14,6 +14,7 @@ export class Tournaments {
   private kothShowNotifications = false;
   private kothReceiveUpdates = false;
   private kothFollowKing = null;
+  private pendingTournaments = [];
 
   constructor() {
     $(document).on('shown.bs.tab', 'button[data-bs-target="#pills-tournaments"]', (e) => {
@@ -54,13 +55,12 @@ export class Tournaments {
     if(!session || !session.isConnected())
       return;
     
-    this.addTournament({
-      eventid: 5,
+    /*this.addTournament({
       title: 'The Nightly 5 0',
       type: '5 0 r SS\\5',
       date: 'daily',
       time: '22:00'
-    });
+    });*/
 
     this.tdVariables = {};
 
@@ -76,15 +76,11 @@ export class Tournaments {
     awaiting.set('td-listkoths');
     this.session.send('td listkoths');
   
+    awaiting.set('td-listtourneys');
+    this.session.send('td listtourneys');
+
     awaiting.set('td-set');
     this.session.send('td set height 24');
-
-
-
-    /*
-    awaiting.set('td-events');
-    session.send('td listevents');
-    */
   }
 
   public leaveTournamentsPane() {
@@ -315,6 +311,41 @@ export class Tournaments {
       $('#tournaments-pane-status').show();
       return false;
     }
+
+    if(msg.startsWith(':mamer\'s tourney list:') && awaiting.resolve('td-listtourneys')) {
+      const tourneys = this.parseTDListTourneys(msg);
+      tourneys.forEach(tourney => { 
+        if(tourney.running) {
+          this.pendingTournaments.push(tourney);
+          awaiting.set('td-players');
+          this.session.send(`td players ${tourney.id}`);
+        }
+      });
+      return true;
+    }
+
+    match = msg.match(/^:Tourney #(\d+)'s player list:/m);
+    if(match && awaiting.resolve('td-players')) {
+      const id = +match[1];
+      const firstLine = msg.split(/[\r\n]+/)[0].trim();
+      const flMatch = firstLine.match(/^:(.*) at ([:\d]+)/);
+      // :Listed: 3 tourneys, none open, none joinable.
+      if(flMatch) {
+        const title = flMatch[1];
+        const time = flMatch[2];
+        for(let i = this.pendingTournaments.length - 1; i >= 0; i--) {
+          const pt = this.pendingTournaments[i];
+          if(pt.id === id) {
+            pt.title = title;
+            pt.time = time;
+            this.addTournament(pt);
+            this.pendingTournaments.splice(i, 1);
+          }
+        }
+      }
+      //const players = this.parseTDPlayers(msg);
+      return true;
+    }
   }
   
   public parseTDVariables(msg: string) {
@@ -347,9 +378,68 @@ export class Tournaments {
     return koths;
   }
 
+  public parseTDListTourneys(msg: string): any[] {
+    const lines = msg.split(/[\r\n]+/);
+    const tourneys: any = [];
+    lines.forEach((line) => {
+      const match = line.match(/^:\|\s+(\d+)\s+\|\s+([>+]*)(\w+)([<*]*)\s+\|\s+(\w+)\s+([^\|]*\S)\s+\|\s+(-+|(\d{4})\.(\d{2})(\d{2})\.(\d{2})(\d{2}))\s+\|/);
+      if(match) {
+        const tourney = {
+          id: +match[1],
+          joined: match[2] === '>',
+          joinable: match[2] === '+',
+          status: match[3],
+          running: match[4] === '<',
+          manager: match[5],
+          type: match[6],
+          datetime: match[7].startsWith('-') ? null : {
+            year: match[8],
+            month: match[9],
+            day: match[10],
+            hour: match[11],
+            minute: match[12],
+          },
+        }
+        tourneys.push(tourney);
+      }
+    });
+    return tourneys;
+  }  
+
+  public parseTDPlayers(msg: string) {
+    const lines = msg.split(/[\r\n]+/);
+    const playerList: any = [];
+    lines.forEach((line) => {
+
+    });
+        /*[6:30:55 PM] :The Nightly 5 0 at 22:00
+:
+:Tourney #1's player list:
+:
+:+--------------------------------------------------------------------+
+:| Seed |             Player            |            Status           |
+:|------|-------------------------------|-----------------------------|
+:|    1 | -AsDaGo(TM)(1874)             |    Done                     |
+:|    2 | -kurumim(1864)                |    Done                     |
+:|    3 | -Aromas(1804)                 |    Done                     |
+:|    4 | -RasingWaves(1591)            |    Done                     |
+:+--------------------------------------------------------------------+
+[6:30:55 PM] :.: Idle;
+:%: Requested half-point bye;
+:#: Match request issued.
+:
+:Average rating: 1783
+:Listed:         4 players.
+*/
+  }
+
   public addTournament(data: any) {
-    let card = $(`[data-event-id="${data.eventid}"]`);
-    if(!card.length) {
+    let card = null;
+    if(data.title) 
+      card = $(`[data-tournament-title="${data.title}"]`);
+    else if(data.id)
+      card = $(`[data-tournament-id="${data.id}"]`);
+    if(!card || !card.length) {
       card = $(`
         <div class="card tournament-card" data-tournament-type="tournament" data-event-id="${data.eventid}">
           <div class="card-body d-flex">
@@ -374,7 +464,10 @@ export class Tournaments {
     const tourney = card.data('tournament-data');
     Object.assign(tourney, data);
 
-    card.find('.tournament-title').text(`${tourney.title}`);
+    if(tourney.title) {
+      card.attr('data-tournament-title', tourney.title);
+      card.find('.tournament-title').text(`${tourney.title}`);
+    }
     const typeStr = `<span class="tournament-card-label">Type:</span>  ${tourney.type}`; 
     card.find('.tournament-type').html(typeStr);
     
