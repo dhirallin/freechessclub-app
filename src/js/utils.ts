@@ -131,9 +131,17 @@ export function setServerTimezone(timezone: string) {
     : timezoneOffsets[timezone] || -5;
 }
 
-export function convertToServerDateTime(localDT: any) {
+export function convertToServerDateTime(localDT: any, nextWeekDay?: string) { 
   // Adjust current date/time to get server time
   const serverTime = new Date(localDT.getTime() + serverTimezone * 60 * 60 * 1000);
+
+  const weekdayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const targetDay = weekdayMap[nextWeekDay];
+  if(targetDay !== undefined) {
+    const currentDay = serverTime.getUTCDay(); 
+    let daysToAdd = (targetDay - serverTime.getDay() + 7) % 7;
+    serverTime.setDate(serverTime.getUTCDate() + daysToAdd);
+  }
 
   const formatter = new Intl.DateTimeFormat('en-US', {
     weekday: 'short',

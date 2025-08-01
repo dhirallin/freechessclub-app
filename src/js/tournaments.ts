@@ -58,7 +58,7 @@ export class Tournaments {
       eventid: 5,
       title: 'The Nightly 5 0',
       type: '5 0 r SS\\5',
-      date: 'daily',
+      date: 'Mon',
       time: '22:00'
     });
 
@@ -378,14 +378,22 @@ export class Tournaments {
     const typeStr = `<span class="tournament-card-label">Type:</span>  ${tourney.type}`; 
     card.find('.tournament-type').html(typeStr);
     
-    let serverDT = convertToServerDateTime(new Date());
+    let serverDT = convertToServerDateTime(new Date(), tourney.date);
     serverDT.hour = tourney.time.split(':')[0];
     serverDT.minute = tourney.time.split(':')[1];
     const localDT = convertToLocalDateTime(serverDT);
     const timeStr = localDT.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-    const dateStr = `<span class="tournament-card-label">When:</span>  ${tourney.date === 'daily' ? 'Every day' : tourney.date}, ${timeStr}`;
-    card.find('.tournament-date').html(dateStr);
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    let dateStr = '';
+    if(tourney.date === 'daily')
+      dateStr = 'Every day';
+    else if(weekdays.includes(tourney.date))
+      dateStr = weekdays[localDT.getDay()];
+    else
+      dateStr = localDT.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    
+    const whenStr = `<span class="tournament-card-label">When:</span>  ${dateStr}, ${timeStr}`;
+    card.find('.tournament-date').html(whenStr);
     if(data.id !== undefined) {
       card.find('.tournament-join').attr('onclick', `sessionSend('td join ${tourney.id}')`);
       card.find('.tournament-withdraw').attr('onclick', `sessionSend('td withdraw ${tourney.id}')`);
