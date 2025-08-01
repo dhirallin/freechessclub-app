@@ -314,6 +314,7 @@ export class Tournaments {
 
     if(msg.startsWith(':mamer\'s tourney list:') && awaiting.resolve('td-listtourneys')) {
       const tourneys = this.parseTDListTourneys(msg);
+      // :Listed: 3 tourneys, none open, none joinable.
       tourneys.forEach(tourney => { 
         if(tourney.running) {
           this.pendingTournaments.push(tourney);
@@ -329,7 +330,6 @@ export class Tournaments {
       const id = +match[1];
       const firstLine = msg.split(/[\r\n]+/)[0].trim();
       const flMatch = firstLine.match(/^:(.*) at ([:\d]+)/);
-      // :Listed: 3 tourneys, none open, none joinable.
       if(flMatch) {
         const title = flMatch[1];
         const time = flMatch[2];
