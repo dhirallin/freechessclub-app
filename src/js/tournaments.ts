@@ -58,7 +58,7 @@ export class Tournaments {
       eventid: 5,
       title: 'The Nightly 5 0',
       type: '5 0 r SS\\5',
-      date: 'Mon',
+      date: 'daily',
       time: '22:00'
     });
 
