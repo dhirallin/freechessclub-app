@@ -107,9 +107,11 @@ export function setDefaultTimezone(timezone: string) {
       : timezoneOffsets[timezone] || 0;
 }
 
-export function convertToLocalDateTime(dateTime: any) {
+export function convertToLocalDateTime(dateTime: any, serverTime = false) {
   let offset = defaultTimezone;
-  if(Number.isInteger(dateTime.timezone))
+  if(serverTime)
+    offset = serverTimezone;
+  else if(Number.isInteger(dateTime.timezone))
     offset = dateTime.timezone;
   else {
     offset = timezoneOffsets[dateTime.timezone] !== undefined
@@ -139,8 +141,8 @@ export function convertToServerDateTime(localDT: any, nextWeekDay?: string) {
   const targetDay = weekdayMap[nextWeekDay];
   if(targetDay !== undefined) {
     const currentDay = serverTime.getUTCDay(); 
-    let daysToAdd = (targetDay - serverTime.getDay() + 7) % 7;
-    serverTime.setDate(serverTime.getUTCDate() + daysToAdd);
+    let daysToAdd = (targetDay - serverTime.getUTCDay() + 7) % 7;
+    serverTime.setUTCDate(serverTime.getUTCDate() + daysToAdd);
   }
 
   const formatter = new Intl.DateTimeFormat('en-US', {
