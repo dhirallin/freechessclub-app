@@ -324,7 +324,7 @@ export class Tournaments {
         awaiting.resolve('td-listtourneys');
         const tourneys = this.parseTDListTourneys(this.tdMessage);
         tourneys.forEach(tourney => { 
-          if(tourney.running) {
+          if(tourney.running || true) {
             this.pendingTournaments.push(tourney);
             awaiting.set('td-players');
             this.session.send(`td players ${tourney.id}`);
@@ -336,26 +336,20 @@ export class Tournaments {
     }
 
     pattern = /^:Tourney #(\d+)'s player list:/m;
-    match = msg.match(pattern);
-    if((match || pattern.test(this.tdMessage)) && awaiting.has('td-players')) {
+    if((pattern.test(msg) || pattern.test(this.tdMessage)) && awaiting.has('td-players')) {
       this.tdMessage += msg + '\n';
       if(/:Listed:\s+\d+ players./m.test(msg)) {
         awaiting.resolve('td-players');
+        match = this.tdMessage.match(pattern);
         const id = +match[1];
-        const firstLine = msg.split(/[\r\n]+/)[0].trim();
-        const flMatch = firstLine.match(/^:(.*) at ([:\d]+)/);
-        if(flMatch) {
-          const title = flMatch[1];
-          const time = flMatch[2];
-          //const players = this.parseTDPlayers(msg);
-          for(let i = this.pendingTournaments.length - 1; i >= 0; i--) {
-            const pt = this.pendingTournaments[i];
-            if(pt.id === id) {
-              pt.title = title;
-              pt.time = time;
-              this.addTournament(pt);
-              this.pendingTournaments.splice(i, 1);
-            }
+        const title = this.tdMessage.split(/[\r\n]+/)[0].trim().slice(1);
+        //const players = this.parseTDPlayers(this.tdMessage);
+        for(let i = this.pendingTournaments.length - 1; i >= 0; i--) {
+          const pt = this.pendingTournaments[i];
+          if(pt.id === id) {
+            pt.title = title;
+            this.addTournament(pt);
+            this.pendingTournaments.splice(i, 1);
           }
         }
         this.tdMessage = '';
@@ -377,7 +371,7 @@ export class Tournaments {
     const lines = msg.split(/[\r\n]+/);
     const koths: any = [];
     lines.forEach((line) => {
-      const match = line.match(/^:\|\s+(\d+)\s+\|\s+(\S+)\s+\|\s+([^\|]*\S)\s+\|\s+(\S+)\s+\|\s+(\S+)\s+\|/);
+      const match = line.match(/^:\|\s+(\d+)\s+\|\s+(\S+)\s+\|\s+(.*?)\s+\|\s+(\S+)\s+\|\s+(\S+)\s+\|/);
       if(match) {
         const koth = {
           id: +match[1],
@@ -398,8 +392,9 @@ export class Tournaments {
     const lines = msg.split(/[\r\n]+/);
     const tourneys: any = [];
     lines.forEach((line) => {
-      const match = line.match(/^:\|\s+(\d+)\s+\|\s+([>+]*)(\w+)([<*]*)\s+\|\s+(\w+)\s+([^\|]*\S)\s+\|\s+(-+|(\d{4})\.(\d{2})(\d{2})\.(\d{2})(\d{2}))\s+\|/);
+      const match = line.match(/^:\|\s+(\d+)\s+\|\s+([>+]*)(\w+)([<*]*)\s+\|\s+(\w+)\s+\|\s+(.*?)\s+\|\s+(-+|(\d{4})\.(\d{2})(\d{2})\.(\d{2})(\d{2}))\s+\|/);
       if(match) {
+        console.log('match here: ', match[11]);
         const tourney = {
           id: +match[1],
           joined: match[2] === '>',
@@ -408,13 +403,12 @@ export class Tournaments {
           running: match[4] === '<',
           manager: match[5],
           type: match[6],
-          datetime: match[7].startsWith('-') ? null : {
+          date: match[7].startsWith('-') ? null : {
             year: match[8],
             month: match[9],
             day: match[10],
-            hour: match[11],
-            minute: match[12],
           },
+          time: `${match[11]}:${match[12]}`
         }
         tourneys.push(tourney);
       }
@@ -482,7 +476,9 @@ export class Tournaments {
 
     if(tourney.title) {
       card.attr('data-tournament-title', tourney.title);
-      card.find('.tournament-title').text(`${tourney.title}`);
+      const [title, time] = tourney.title.split(/ at ([:\d]+)$/).filter(Boolean);
+      tourney.time = time || tourney.time;
+      card.find('.tournament-title').text(`${title}`);
     }
     const typeStr = `<span class="tournament-card-label">Type:</span>  ${tourney.type}`; 
     card.find('.tournament-type').html(typeStr);
@@ -655,12 +651,12 @@ export class Tournaments {
           <div class="tournament-group-cards"></div>
         </div>
       `);
-      group.appendTo('#pills-tournaments');
-     
+    
       if(groupName === 'tournament') {
-
+        group.prependTo('#pills-tournaments');
       }
       else if(groupName === 'koth') {
+        group.appendTo('#pills-tournaments');
         let checkMark = group.find('.show-notifications .checkmark');
         checkMark.toggleClass('invisible', !this.kothShowNotifications);
         group.find('.show-notifications').on('click', (e) => {
