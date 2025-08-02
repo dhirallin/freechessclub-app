@@ -91,7 +91,7 @@ export class Tournaments {
   }
 
   public handleMessage(msg: string): boolean {
-    let match;
+    let match, pattern;
   
     match = msg.match(/^:Your (\S+) variable has been set to (\S+)./m);
     if(match) {
@@ -134,15 +134,14 @@ export class Tournaments {
     if(/^:mamer KOTH INFO: The throne of KOTH #\d+, a [^,]+, is still empty./m.test(msg))
       return true;
 
-    if(msg.startsWith(':') && awaiting.has('td-variables')) {
-      if(msg.startsWith(':Variable settings of'))
-        this.tdMessage = '';
-      
+    pattern = ':Variable settings of';
+    if((msg.startsWith(pattern) || this.tdMessage.startsWith(pattern)) && awaiting.has('td-variables')) {    
       this.tdMessage += msg + '\n';
       if(/^:Language:/m.test(msg)) {
         awaiting.resolve('td-variables');
         this.parseTDVariables(this.tdMessage);
         this.kothReceiveUpdates = (this.tdVariables.KOTHInfo === 'On' ? true : false); 
+        this.tdMessage = '';
       }
       return true;
     }
@@ -251,19 +250,24 @@ export class Tournaments {
       return false;
     }
 
-    if(msg.startsWith(':mamer\'s KOTH list:') && awaiting.resolve('td-listkoths')) {
-      const koths = this.parseTDListKoTHs(msg);
-      koths.forEach(koth => { 
-        this.addKoTH(koth);
-        if(koth.king !== '-') {
-          awaiting.set('td-kingstats');
-          this.session.send(`td kingstats ${koth.id}`);
-        }
-        if(koth.game !== '-') {
-          awaiting.set('get-koth-game');
-          this.session.send(`games ${koth.game}`);
-        }
-      });
+    pattern = ':mamer\'s KOTH list:';
+    if((msg.startsWith(pattern) || this.tdMessage.startsWith(pattern)) && awaiting.resolve('td-listkoths')) {
+      this.tdMessage += msg + '\n';
+      if(/:Total: \d+ KOTHs/m.test(msg)) {
+        const koths = this.parseTDListKoTHs(msg);
+        koths.forEach(koth => { 
+          this.addKoTH(koth);
+          if(koth.king !== '-') {
+            awaiting.set('td-kingstats');
+            this.session.send(`td kingstats ${koth.id}`);
+          }
+          if(koth.game !== '-') {
+            awaiting.set('get-koth-game');
+            this.session.send(`games ${koth.game}`);
+          }
+        });
+        this.tdMessage = '';
+      }
       return true;
     }
 
@@ -312,16 +316,21 @@ export class Tournaments {
       return false;
     }
 
-    if(msg.startsWith(':mamer\'s tourney list:') && awaiting.resolve('td-listtourneys')) {
-      const tourneys = this.parseTDListTourneys(msg);
-      // :Listed: 3 tourneys, none open, none joinable.
-      tourneys.forEach(tourney => { 
-        if(tourney.running) {
-          this.pendingTournaments.push(tourney);
-          awaiting.set('td-players');
-          this.session.send(`td players ${tourney.id}`);
-        }
-      });
+    pattern = ':mamer\'s tourney list:';
+    if((msg.startsWith(pattern) || this.tdMessage.startsWith(pattern)) && awaiting.has('td-listtourneys')) {
+      this.tdMessage += msg + '\n';
+      if(/^:Listed: \d+ tourneys/m.test(msg)) {
+        awaiting.resolve('td-listtourneys');
+        const tourneys = this.parseTDListTourneys(this.tdMessage);
+        tourneys.forEach(tourney => { 
+          if(tourney.running) {
+            this.pendingTournaments.push(tourney);
+            awaiting.set('td-players');
+            this.session.send(`td players ${tourney.id}`);
+          }
+        });
+        this.tdMessage = '';
+      }
       return true;
     }
 
