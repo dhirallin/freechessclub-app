@@ -56,7 +56,7 @@ export class Tournaments {
       return;
     
     /*this.addTournament({
-      title: 'The Nightly 5 0',
+      title: 'The Nightly 5 0 at 22:00',
       type: '5 0 r SS\\5',
       date: 'daily',
       time: '22:00'
