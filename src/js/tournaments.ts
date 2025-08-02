@@ -251,9 +251,10 @@ export class Tournaments {
     }
 
     pattern = ':mamer\'s KOTH list:';
-    if((msg.startsWith(pattern) || this.tdMessage.startsWith(pattern)) && awaiting.resolve('td-listkoths')) {
+    if((msg.startsWith(pattern) || this.tdMessage.startsWith(pattern)) && awaiting.has('td-listkoths')) {
       this.tdMessage += msg + '\n';
       if(/:Total: \d+ KOTHs/m.test(msg)) {
+        awaiting.resolve('td-listkoths');
         const koths = this.parseTDListKoTHs(msg);
         koths.forEach(koth => { 
           this.addKoTH(koth);
@@ -334,25 +335,31 @@ export class Tournaments {
       return true;
     }
 
-    match = msg.match(/^:Tourney #(\d+)'s player list:/m);
-    if(match && awaiting.resolve('td-players')) {
-      const id = +match[1];
-      const firstLine = msg.split(/[\r\n]+/)[0].trim();
-      const flMatch = firstLine.match(/^:(.*) at ([:\d]+)/);
-      if(flMatch) {
-        const title = flMatch[1];
-        const time = flMatch[2];
-        for(let i = this.pendingTournaments.length - 1; i >= 0; i--) {
-          const pt = this.pendingTournaments[i];
-          if(pt.id === id) {
-            pt.title = title;
-            pt.time = time;
-            this.addTournament(pt);
-            this.pendingTournaments.splice(i, 1);
+    pattern = /^:Tourney #(\d+)'s player list:/m;
+    match = msg.match(pattern);
+    if((match || pattern.test(this.tdMessage)) && awaiting.has('td-players')) {
+      this.tdMessage += msg + '\n';
+      if(/:Listed:\s+\d+ players./m.test(msg)) {
+        awaiting.resolve('td-players');
+        const id = +match[1];
+        const firstLine = msg.split(/[\r\n]+/)[0].trim();
+        const flMatch = firstLine.match(/^:(.*) at ([:\d]+)/);
+        if(flMatch) {
+          const title = flMatch[1];
+          const time = flMatch[2];
+          //const players = this.parseTDPlayers(msg);
+          for(let i = this.pendingTournaments.length - 1; i >= 0; i--) {
+            const pt = this.pendingTournaments[i];
+            if(pt.id === id) {
+              pt.title = title;
+              pt.time = time;
+              this.addTournament(pt);
+              this.pendingTournaments.splice(i, 1);
+            }
           }
         }
+        this.tdMessage = '';
       }
-      //const players = this.parseTDPlayers(msg);
       return true;
     }
   }
