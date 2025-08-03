@@ -345,13 +345,11 @@ export class Tournaments {
         const matchIDLine = this.tdMessage.match(pattern);
         const id = +matchIDLine[1];
         const title = this.tdMessage.split(/[\r\n]+/)[0].trim().slice(1);
-        const players = this.parseTDPlayers(this.tdMessage);
         for(let i = this.pendingTournaments.length - 1; i >= 0; i--) {
           const pt = this.pendingTournaments[i];
           if(pt.id === id) {
             pt.title = title;
             pt.numPlayers = numPlayers;
-            console.log('PLAYERS:', players);
             this.addTournament(pt);
             this.pendingTournaments.splice(i, 1);
           }
