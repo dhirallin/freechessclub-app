@@ -55,12 +55,12 @@ export class Tournaments {
     if(!session || !session.isConnected())
       return;
     
-    /*this.addTournament({
+    this.addTournament({
       title: 'The Nightly 5 0 at 22:00',
       type: '5 0 r SS\\5',
       date: 'daily',
       time: '22:00'
-    });*/
+    });
 
     this.tdVariables = {};
 
@@ -323,12 +323,20 @@ export class Tournaments {
       if(/^:Listed: \d+ tourneys/m.test(msg)) {
         awaiting.resolve('td-listtourneys');
         const tourneys = this.parseTDListTourneys(this.tdMessage);
+        tourneys.sort((a, b) => {
+          // First: sort by `running` (true before false)
+          if(a.running !== b.running) 
+            return a.running ? -1 : 1;
+          
+          // Then: sort by date (latest first)
+          const dateA = new Date(a.date.year, a.date.month - 1, a.date.day);
+          const dateB = new Date(b.date.year, b.date.month - 1, b.date.day);
+          return dateB.getTime() - dateA.getTime(); 
+        });
         tourneys.forEach(tourney => { 
-          if(tourney.running || true) {
-            this.pendingTournaments.push(tourney);
-            awaiting.set('td-players');
-            this.session.send(`td players ${tourney.id}`);
-          }
+          this.pendingTournaments.push(tourney);
+          awaiting.set('td-players');
+          this.session.send(`td players ${tourney.id}`);
         });
         this.tdMessage = '';
       }
@@ -468,6 +476,21 @@ export class Tournaments {
     }
 
     const tourney = card.data('tournament-data');
+
+    const tourneyDate = tourney.date && typeof tourney.date === 'object' 
+        ? (new Date(tourney.date.year, tourney.date.month - 1, tourney.date.day)).getTime()
+        : 0;
+    const dataDate = data.date && typeof data.date === 'object' 
+        ? (new Date(data.date.year, data.date.month - 1, data.date.day)).getTime()
+        : 0;
+    if(!data.running && (tourney.running || dataDate - tourneyDate < 0))
+      return; 
+
+    if(typeof tourney.date === 'string') {
+      data.date = tourney.date;
+      data.time = tourney.time;
+    }
+
     Object.assign(tourney, data);
 
     if(tourney.title) {
@@ -501,8 +524,14 @@ export class Tournaments {
     const whenStr = `<span class="tournament-card-label">When:</span>  ${dateStr}, ${timeStr}`;
     card.find('.tournament-date').html(whenStr);
     
-    const numPlayersStr = `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}`;
+    const numPlayersStr = tourney.numPlayers && tourney.running
+        ? `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}`
+        : '';
     card.find('.tournament-num-players').html(numPlayersStr);
+    
+    const winnerStr = tourney.winner
+        ? `<span class="tournament-card-label">Winner:</span>  ${tourney.winner}`
+        : '';
     card.find('.tournament-winner').html(tourney.winner);
 
     if(data.id !== undefined) {
@@ -521,6 +550,8 @@ export class Tournaments {
       return 'Today';
     else if(diffDays === 1)
       return 'Tomorrow';
+    else if(diffDays === -1)
+      return 'Yesterday';
     else if (diffDays > 1 && diffDays < 7)
       return date.toLocaleDateString(undefined, { weekday: 'short' }); // e.g., "Wed"
     else {
