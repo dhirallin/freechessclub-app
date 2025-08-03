@@ -4,7 +4,7 @@
 
 import { awaiting, storage } from './storage';
 import { createNotification, removeNotification } from './dialogs';
-import { convertToServerDateTime, convertToLocalDateTime } from './utils';
+import { convertToServerDateTime, convertToLocalDateTime, getDiffDays } from './utils';
 
 export class Tournaments {
   private tdMessage = ''; // Stores messages from td (tournament bot)
@@ -486,11 +486,11 @@ export class Tournaments {
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     let dateStr = '';
     let serverDT: any;
+    const now = new Date();
     if(tourney.date === 'daily' || weekdays.includes(tourney.date)) 
-      serverDT = convertToServerDateTime(new Date(), weekdays.includes(tourney.date) ? tourney.date : undefined);
+      serverDT = convertToServerDateTime(now, weekdays.includes(tourney.date) ? tourney.date : undefined);
     else 
       serverDT = tourney.date;
-    
     serverDT.hour = tourney.time.split(':')[0];
     serverDT.minute = tourney.time.split(':')[1];
     const localDT = convertToLocalDateTime(serverDT, true);
@@ -500,7 +500,7 @@ export class Tournaments {
     else if(weekdays.includes(tourney.date))
       dateStr = weekdays[localDT.getDay()];
     else
-      dateStr = localDT.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      dateStr = this.formatDateRelative(localDT);
 
     const whenStr = `<span class="tournament-card-label">When:</span>  ${dateStr}, ${timeStr}`;
     card.find('.tournament-date').html(whenStr);
@@ -511,6 +511,23 @@ export class Tournaments {
     }
     card.find('.tournament-join').toggle(data.id !== undefined);
     card.find('.tournament-withdraw').toggle(data.id !== undefined);
+  }
+
+  public formatDateRelative(date: Date, now = new Date()) {
+    const options: any = { month: 'short', day: 'numeric' };
+
+    const diffDays = getDiffDays(date, now);
+    if(diffDays === 0)
+      return 'Today';
+    else if(diffDays === 1)
+      return 'Tomorrow';
+    else if (diffDays > 1 && diffDays < 7)
+      return date.toLocaleDateString(undefined, { weekday: 'short' }); // e.g., "Wed"
+    else {
+      if(date.getFullYear() !== now.getFullYear()) 
+        options.year = 'numeric';
+      return date.toLocaleDateString(undefined, options); // e.g., "Sep 13" or "Sep 13, 2025"
+    }
   }
 
   public addKoTH(data: any) {

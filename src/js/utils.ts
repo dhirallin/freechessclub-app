@@ -170,6 +170,21 @@ export function convertToServerDateTime(localDT: any, nextWeekDay?: string) {
   };
 }
 
+export function getDiffDays(date: Date, now = new Date()) {
+  const options = { month: 'short', day: 'numeric' };
+  const dateYear = date.getFullYear();
+  const nowYear = now.getFullYear();
+
+  // Normalize times for comparison (midnight)
+  const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const d1 = startOfDay(now);
+  const d2 = startOfDay(date);
+
+  const diffDays = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
 /**
  * Is this a Capacitor app?
  */
