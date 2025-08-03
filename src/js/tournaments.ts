@@ -58,8 +58,7 @@ export class Tournaments {
     this.addTournament({
       title: 'The Nightly 5 0 at 22:00',
       type: '5 0 r SS\\5',
-      date: 'daily',
-      time: '22:00'
+      recurring: 'daily',
     });
 
     this.tdVariables = {};
@@ -417,8 +416,9 @@ export class Tournaments {
             year: match[8],
             month: match[9],
             day: match[10],
+            hour: match[11],
+            minute: match[12],
           },
-          time: `${match[11]}:${match[12]}`
         }
         tourneys.push(tourney);
       }
@@ -480,26 +480,21 @@ export class Tournaments {
 
     const tourney = card.data('tournament-data');
 
-    const tourneyDate = tourney.date && typeof tourney.date === 'object' 
+    const tourneyDate = tourney.date 
         ? (new Date(tourney.date.year, tourney.date.month - 1, tourney.date.day)).getTime()
         : 0;
-    const dataDate = data.date && typeof data.date === 'object' 
+    const dataDate = data.date 
         ? (new Date(data.date.year, data.date.month - 1, data.date.day)).getTime()
         : 0;
     if(!data.running && (tourney.running || dataDate - tourneyDate < 0))
       return; 
-
-    if(typeof tourney.date === 'string') {
-      data.date = tourney.date;
-      data.time = tourney.time;
-    }
 
     Object.assign(tourney, data);
 
     if(tourney.title) {
       card.attr('data-tournament-title', tourney.title);
       const [title, time] = tourney.title.split(/ at ([:\d]+)$/).filter(Boolean);
-      tourney.time = time || tourney.time;
+      tourney.scheduledTime = time;
       card.find('.tournament-title').text(`${title}`);
     }
     const typeStr = `<span class="tournament-card-label">Type:</span>  ${tourney.type}`; 
@@ -507,22 +502,30 @@ export class Tournaments {
     
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     let dateStr = '';
-    let serverDT: any;
+    let serverDT: any, nextDT: Date, lastDT: Date;
     const now = new Date();
-    if(tourney.date === 'daily' || weekdays.includes(tourney.date)) 
-      serverDT = convertToServerDateTime(now, weekdays.includes(tourney.date) ? tourney.date : undefined);
-    else 
-      serverDT = tourney.date;
-    serverDT.hour = tourney.time.split(':')[0];
-    serverDT.minute = tourney.time.split(':')[1];
-    const localDT = convertToLocalDateTime(serverDT, true);
-    const timeStr = localDT.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-    if(tourney.date === 'daily')
+    if(tourney.recurring === 'daily' || weekdays.includes(tourney.recurring)) {
+      serverDT = convertToServerDateTime(now, weekdays.includes(tourney.recurring) ? tourney.recurring : undefined);
+      if(tourney.scheduledTime) {
+        serverDT.hour = tourney.scheduledTime.split(':')[0];
+        serverDT.minute = tourney.scheduledTime.split(':')[1];
+      }
+      nextDT = convertToLocalDateTime(serverDT, true);
+    }
+
+    if(tourney.date) {
+      lastDT = convertToLocalDateTime(tourney.date, true);
+      if(!nextDT)
+        nextDT = lastDT;
+    }
+
+    const timeStr = nextDT.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    if(tourney.recurring === 'daily')
       dateStr = 'Every day';
-    else if(weekdays.includes(tourney.date))
-      dateStr = weekdays[localDT.getDay()];
+    else if(weekdays.includes(tourney.recurring))
+      dateStr = weekdays[nextDT.getDay()];
     else
-      dateStr = this.formatDateRelative(localDT);
+      dateStr = this.formatDateRelative(nextDT);
 
     const whenStr = `<span class="tournament-card-label">When:</span>  ${dateStr}, ${timeStr}`;
     card.find('.tournament-date').html(whenStr);
@@ -532,7 +535,7 @@ export class Tournaments {
         : '';
     card.find('.tournament-num-players').html(numPlayersStr);
     
-    const ageInDays = getDiffDays(localDT);
+    const ageInDays = lastDT ? getDiffDays(lastDT) : undefined;
     let winnerStr = '';
     if(tourney.winner) {
       winnerStr = ageInDays === 0
