@@ -465,6 +465,7 @@ export class Tournaments {
             <div class="d-flex flex-grow-1" style="justify-content: end; align-items: center">
               <div class="btn-group-vertical" style="gap: 10px">
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-notify" title="Notify Me" style="display: none">Notify Me</button>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-unnotify" title="Stop Notifying" style="display: none">Stop Notifying</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-standings" title="Standings" style="display: none">Standings</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-join" title="Join" style="display: none">Join</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-withdraw" title="Withdraw" style="display: none">Withdraw</button>
@@ -546,6 +547,7 @@ export class Tournaments {
       card.find('.tournament-standings').attr('onclick', `sessionSend('td standings ${tourney.id}')`);
     }
     card.find('.tournament-notify').toggle(!tourney.running);
+    card.find('.tournament-unnotify').toggle(!tourney.running);
     card.find('.tournament-join').toggle(tourney.joinable);
     card.find('.tournament-withdraw').toggle(tourney.joined);
     card.find('.tournament-standings').toggle(!!tourney.winner && ageInDays === 0);
