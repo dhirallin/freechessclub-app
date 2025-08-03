@@ -532,9 +532,12 @@ export class Tournaments {
     card.find('.tournament-num-players').html(numPlayersStr);
     
     const ageInDays = getDiffDays(localDT);
-    const winnerStr = tourney.winner
-        ? `<span class="tournament-card-label">${ageInDays >= 1 ? 'Last Winner:' : 'Winner:'}</span>  ${tourney.winner}`
-        : '';
+    let winnerStr = '';
+    if(tourney.winner) {
+      winnerStr = ageInDays === 0
+          ? `<span class="tournament-card-label">Winner:</span>  ${tourney.winner}`
+          : `<span class="tournament-card-label">Last Winner:</span>  ${tourney.winner}  <a href="javascript:void(0)">Standings</a>`;
+    }
     card.find('.tournament-winner').html(tourney.winner);
 
     if(tourney.id !== undefined) {
