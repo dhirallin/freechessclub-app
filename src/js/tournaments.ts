@@ -551,8 +551,8 @@ export class Tournaments {
     }
     card.find('.tournament-notify').toggle(!tourney.running);
     card.find('.tournament-unnotify').toggle(!tourney.running);
-    card.find('.tournament-join').toggle(tourney.joinable);
-    card.find('.tournament-withdraw').toggle(tourney.joined);
+    card.find('.tournament-join').toggle(!!tourney.joinable);
+    card.find('.tournament-withdraw').toggle(!!tourney.joined);
     card.find('.tournament-standings').toggle(!!tourney.winner && ageInDays === 0);
   }
 
