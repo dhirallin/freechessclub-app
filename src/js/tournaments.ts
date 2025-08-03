@@ -146,9 +146,9 @@ export class Tournaments {
       return true;
     }
 
-    match = msg.match(/^:mamer KOTH INFO: ((\w+) is the new (king|queen) of KOTH #(\d+), a [^!]+!)/m);
+    match = msg.match(/^:mamer KOTH INFO: ((\S+) is the new (king|queen) of KOTH #(\d+), a [^!]+!)/m);
     if(!match)
-      match = msg.match(/^:((\w+), the current (king|queen) of KOTH #(\d+), a [^,]+, defended the title against \w+ and is still the (?:king|queen)!)/m);
+      match = msg.match(/^:((\S+), the current (king|queen) of KOTH #(\d+), a [^,]+, defended the title against \S+ and is still the (?:king|queen)!)/m);
     if(match) {
       const king = match[2];
       const id = +match[4];
@@ -174,7 +174,7 @@ export class Tournaments {
       return false;
     }
 
-    match = msg.match(/^:mamer KOTH INFO: \w+ (?:abdicated|left) as (?:king|queen) of KOTH #(\d+)!/m);
+    match = msg.match(/^:mamer KOTH INFO: \S+ (?:abdicated|left) as (?:king|queen) of KOTH #(\d+)!/m);
     if(match) {
       const id = +match[1];
       this.updateKoTH(id, {
@@ -184,7 +184,7 @@ export class Tournaments {
       return false;
     }
 
-    match = msg.match(/^:mamer KOTH INFO: (\w+), the (?:king|queen) of KOTH #(\d+), has started a game with (\w+)./m);
+    match = msg.match(/^:mamer KOTH INFO: (\S+), the (?:king|queen) of KOTH #(\d+), has started a game with (\S+)./m);
     if(match) {
       const king = match[1];
       const id = +match[2];
@@ -272,7 +272,7 @@ export class Tournaments {
       return true;
     }
 
-    match = msg.match(/^:\w+, the king of KOTH #(\d+), has a record of (\d+) (?:victories|victory), (\d+) (?:loss|losses) and (\d+) draws?./m);
+    match = msg.match(/^:\S+, the king of KOTH #(\d+), has a record of (\d+) (?:victories|victory), (\d+) (?:loss|losses) and (\d+) draws?./m);
     if(match && awaiting.resolve('td-kingstats')) {
       this.updateKoTH(+match[1], {
         kingStats: {
@@ -529,8 +529,9 @@ export class Tournaments {
         : '';
     card.find('.tournament-num-players').html(numPlayersStr);
     
+    const ageInDays = getDiffDays(localDT);
     const winnerStr = tourney.winner
-        ? `<span class="tournament-card-label">Winner:</span>  ${tourney.winner}`
+        ? `<span class="tournament-card-label">${ageInDays >= 1 ? 'Last Winner:' : 'Winner:'}</span>  ${tourney.winner}`
         : '';
     card.find('.tournament-winner').html(tourney.winner);
 
