@@ -338,16 +338,20 @@ export class Tournaments {
     pattern = /^:Tourney #(\d+)'s player list:/m;
     if((pattern.test(msg) || pattern.test(this.tdMessage)) && awaiting.has('td-players')) {
       this.tdMessage += msg + '\n';
-      if(/:Listed:\s+\d+ players./m.test(msg)) {
+      const matchLastLine = msg.match(/:Listed:\s+(\d+) players./m);
+      if(matchLastLine) {
+        const numPlayers = +matchLastLine[1];
         awaiting.resolve('td-players');
-        match = this.tdMessage.match(pattern);
-        const id = +match[1];
+        const matchIDLine = this.tdMessage.match(pattern);
+        const id = +matchIDLine[1];
         const title = this.tdMessage.split(/[\r\n]+/)[0].trim().slice(1);
-        //const players = this.parseTDPlayers(this.tdMessage);
+        const players = this.parseTDPlayers(this.tdMessage);
         for(let i = this.pendingTournaments.length - 1; i >= 0; i--) {
           const pt = this.pendingTournaments[i];
           if(pt.id === id) {
             pt.title = title;
+            pt.numPlayers = numPlayers;
+            console.log('PLAYERS:', players);
             this.addTournament(pt);
             this.pendingTournaments.splice(i, 1);
           }
@@ -418,29 +422,21 @@ export class Tournaments {
 
   public parseTDPlayers(msg: string) {
     const lines = msg.split(/[\r\n]+/);
-    const playerList: any = [];
+    const players: any = [];
     lines.forEach((line) => {
-
+      const match = line.match(/^:\|\s+(\d+)\s+\|\s+([^\w\s])(\w+(?:\(\w+\))?)\(([\d\-\+]+)\)\s+\|\s+([^\w\s])?(\w+)\s+\|/);
+      if(match) {
+        players.push({
+          id: match[1],
+          playerStatus: match[2],
+          name: match[3],
+          rating: match[4],
+          matchRequestStatus: match[5],
+          status: match[6],
+        });
+      }
     });
-        /*[6:30:55 PM] :The Nightly 5 0 at 22:00
-:
-:Tourney #1's player list:
-:
-:+--------------------------------------------------------------------+
-:| Seed |             Player            |            Status           |
-:|------|-------------------------------|-----------------------------|
-:|    1 | -AsDaGo(TM)(1874)             |    Done                     |
-:|    2 | -kurumim(1864)                |    Done                     |
-:|    3 | -Aromas(1804)                 |    Done                     |
-:|    4 | -RasingWaves(1591)            |    Done                     |
-:+--------------------------------------------------------------------+
-[6:30:55 PM] :.: Idle;
-:%: Requested half-point bye;
-:#: Match request issued.
-:
-:Average rating: 1783
-:Listed:         4 players.
-*/
+    return players;
   }
 
   public addTournament(data: any) {
@@ -457,6 +453,8 @@ export class Tournaments {
               <div class="tournament-title" style="font-weight: bold;"></div>
               <div class="tournament-type" style="white-space: pre;"></div>
               <div class="tournament-date" style="white-space: pre;"></div>
+              <div class="tournament-num-players" style="white-space: pre;"></div>
+              <div class="tournament-winner" style="white-space: pre;"></div>
             </div>
             <div class="d-flex flex-grow-1" style="justify-content: end; align-items: center">
               <div class="btn-group-vertical" style="gap: 10px">
@@ -505,6 +503,10 @@ export class Tournaments {
     const whenStr = `<span class="tournament-card-label">When:</span>  ${dateStr}, ${timeStr}`;
     card.find('.tournament-date').html(whenStr);
     
+    const numPlayersStr = `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}`;
+    card.find('.tournament-num-players').html(numPlayersStr);
+    card.find('.tournament-winner').html(tourney.winner);
+
     if(data.id !== undefined) {
       card.find('.tournament-join').attr('onclick', `sessionSend('td join ${tourney.id}')`);
       card.find('.tournament-withdraw').attr('onclick', `sessionSend('td withdraw ${tourney.id}')`);
