@@ -116,31 +116,15 @@ export class Tournaments {
     match = msg.match(/^:Your KOTHInfo variable has been set to (On|Off)./m);
     if(match) {
       this.kothReceiveUpdates = (match[1] === 'On' ? true : false);
-      const group = $('[data-group-name="koth"]');   
-      if(group.length) {
-        const checkMark = group.find('.receive-updates .checkmark');
-        checkMark.toggleClass('invisible', !this.kothReceiveUpdates);
-      }
-
-      if(!this.kothReceiveUpdates) {
+      if(!this.kothReceiveUpdates) 
         this.kothShowNotifications = false;
-        storage.set('show-koth-notifications', 'false');
-        if(group.length) {
-          const checkMark = group.find('.show-notifications .checkmark');
-          checkMark.addClass('invisible');
-        }
-      }
+      this.updateGroupSettings('koth');
+      return false;
     }
 
     match = msg.match(/^:Your Female variable has been set to (Yes|No)./m);
     if(match) {
-      const group = $('[data-group-name="koth"]');   
-      if(!group.length)
-        return false;   
-      group.find('.tournament-group-title').text(`${this.tdVariables.Female === 'Yes' ? 'Queen' : 'King'} of the Hill`);
-      const checkMark = group.find('.set-female .checkmark');
-      checkMark.toggleClass('invisible', match[1] !== 'Yes');
-      this.updateAllKoTHs({});
+      this.updateGroupSettings('koth');
       return false;
     }
 
@@ -154,12 +138,9 @@ export class Tournaments {
         awaiting.resolve('td-variables');
         this.parseTDVariables(this.tdMessage);
         this.kothReceiveUpdates = (this.tdVariables.KOTHInfo === 'On' ? true : false); 
+        this.updateGroupSettings('koth');
         this.tournamentsReceiveUpdates = (this.tdVariables.TourneyInfo === 'On' ? true : false); 
-        const group = $('[data-group-name="tournament"]');   
-        if(group.length) {
-          const checkMark = group.find('.receive-updates .checkmark');
-          checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
-        }
+        this.updateGroupSettings('tournament');
         this.tdMessage = '';
       }
       return true;
@@ -338,23 +319,10 @@ export class Tournaments {
 
     match = msg.match(/^:Your TourneyInfo variable has been set to (On|Off)./m);
     if(match) {
-      console.log('HELLO???');
       this.tournamentsReceiveUpdates = (match[1] === 'On' ? true : false);
-      console.log('test 1:', this.tournamentsReceiveUpdates);
-      const group = $('[data-group-name="tournament"]');   
-      if(group.length) {
-        const checkMark = group.find('.receive-updates .checkmark');
-        checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
-      }
-
-      if(!this.tournamentsReceiveUpdates) {
+      if(!this.tournamentsReceiveUpdates) 
         this.tournamentsShowNotifications = false;
-        storage.set('show-tournaments-notifications', 'false');
-        if(group.length) {
-          const checkMark = group.find('.show-notifications .checkmark');
-          checkMark.addClass('invisible');
-        }
-      }
+      this.updateGroupSettings('tournament');
     }
 
     pattern = ':mamer\'s tourney list:';
@@ -603,10 +571,34 @@ export class Tournaments {
 
   updateGroupSettings(groupName: string) {
     if(groupName === 'tournament') {
+      const group = $('[data-group-name="tournament"]');   
+      if(group.length) {
+        let checkMark = group.find('.show-notifications .checkmark');
+        checkMark.toggleClass('invisible', !this.tournamentsShowNotifications);
+        storage.set('show-tournaments-notifications', String(this.tournamentsShowNotifications));
 
+        checkMark = group.find('.receive-updates .checkmark');
+        checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
+
+        this.updateAllTournaments({});
+      }
     }
     else if(groupName === 'koth') {
+      const group = $('[data-group-name="koth"]');   
+      if(group.length) {
+        let checkMark = group.find('.show-notifications .checkmark');
+        checkMark.toggleClass('invisible', !this.kothShowNotifications);
+        storage.set('show-koth-notifications', String(this.kothShowNotifications));
 
+        checkMark = group.find('.receive-updates .checkmark');
+        checkMark.toggleClass('invisible', !this.kothReceiveUpdates);
+
+        group.find('.tournament-group-title').text(`${this.tdVariables.Female === 'Yes' ? 'Queen' : 'King'} of the Hill`);
+        checkMark = group.find('.set-female .checkmark');
+        checkMark.toggleClass('invisible', this.tdVariables.Female !== 'Yes');
+
+        this.updateAllKoTHs({});
+      }
     }
   }
 
@@ -808,78 +800,59 @@ export class Tournaments {
     
       if(groupName === 'tournament') {
         group.prependTo('#pills-tournaments');
-        let checkMark = group.find('.show-notifications .checkmark');
-        checkMark.toggleClass('invisible', !this.tournamentsShowNotifications);
+        this.updateGroupSettings('tournament');
         group.find('.show-notifications').on('click', (e) => {
-          checkMark = $(e.currentTarget).find('.checkmark');
+          let checkMark = $(e.currentTarget).find('.checkmark');
           checkMark.toggleClass('invisible');
           e.stopPropagation();
 
           this.tournamentsShowNotifications = !checkMark.hasClass('invisible');
-          storage.set('show-tournaments-notifications', String(this.tournamentsShowNotifications));
-          if(this.tournamentsShowNotifications) {
+          if(this.tournamentsShowNotifications) 
             this.tournamentsReceiveUpdates = true;
-            checkMark = group.find('.receive-updates .checkmark');
-            checkMark.removeClass('invisible');
-          }
-          this.updateAllTournaments({});
+
+          this.updateGroupSettings('tournament');
         });
 
-        checkMark = group.find('.receive-updates .checkmark');
-        console.log('test 2:', this.tournamentsReceiveUpdates);
-        checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
         group.find('.receive-updates').on('click', (e) => {
-          checkMark = $(e.currentTarget).find('.checkmark');
+          const checkMark = $(e.currentTarget).find('.checkmark');
           checkMark.toggleClass('invisible');
           e.stopPropagation();
 
           this.tournamentsReceiveUpdates = !checkMark.hasClass('invisible');
-          if(!this.tournamentsReceiveUpdates) {
+          if(!this.tournamentsReceiveUpdates) 
             this.tournamentsShowNotifications = false;
-            storage.set('show-tournaments-notifications', 'false');
-            let checkMark = group.find('.show-notifications .checkmark');
-            checkMark.addClass('invisible');
-          }
-          this.updateAllTournaments({});
+
+          this.updateGroupSettings('tournament');
         });
       }
       else if(groupName === 'koth') {
         group.appendTo('#pills-tournaments');
-        let checkMark = group.find('.show-notifications .checkmark');
-        checkMark.toggleClass('invisible', !this.kothShowNotifications);
+        this.updateGroupSettings('koth');
+
         group.find('.show-notifications').on('click', (e) => {
-          checkMark = $(e.currentTarget).find('.checkmark');
+          const checkMark = $(e.currentTarget).find('.checkmark');
           checkMark.toggleClass('invisible');
           e.stopPropagation();
 
           this.kothShowNotifications = !checkMark.hasClass('invisible');
-          storage.set('show-koth-notifications', String(this.kothShowNotifications));
-          if(this.kothShowNotifications) {
+          if(this.kothShowNotifications) 
             this.kothReceiveUpdates = true;
-            checkMark = group.find('.receive-updates .checkmark');
-            checkMark.removeClass('invisible');
-          }
+
+          this.updateGroupSettings('koth');
         });
 
-        checkMark = group.find('.receive-updates .checkmark');
-        checkMark.toggleClass('invisible', !this.kothReceiveUpdates);
         group.find('.receive-updates').on('click', (e) => {
-          checkMark = $(e.currentTarget).find('.checkmark');
+          const checkMark = $(e.currentTarget).find('.checkmark');
           checkMark.toggleClass('invisible');
           e.stopPropagation();
 
           this.kothReceiveUpdates = !checkMark.hasClass('invisible');
-          if(!this.kothReceiveUpdates) {
+          if(!this.kothReceiveUpdates) 
             this.kothShowNotifications = false;
-            storage.set('show-koth-notifications', 'false');
-            let checkMark = group.find('.show-notifications .checkmark');
-            checkMark.addClass('invisible');
-          }
+          
+          this.updateGroupSettings('koth');
         });
 
-        group.find('.tournament-group-title').text(`${this.tdVariables.Female === 'Yes' ? 'Queen' : 'King'} of the Hill`);
-        checkMark = group.find('.set-female .checkmark');
-        checkMark.toggleClass('invisible', this.tdVariables.Female !== 'Yes');
         group.find('.set-female').on('click', (e) => {
           const checkMark = $(e.currentTarget).find('.checkmark');
           checkMark.toggleClass('invisible');
