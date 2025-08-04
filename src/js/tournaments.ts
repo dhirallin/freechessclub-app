@@ -515,19 +515,20 @@ export class Tournaments {
 
     if(tourney.date) {
       lastDT = convertToLocalDateTime(tourney.date, true);
-      if(!nextDT)
+      if(!nextDT && (tourney.running || lastDT.getTime() - Date.now() > 0)) 
         nextDT = lastDT;
     }
 
-    const timeStr = nextDT.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const currentDT = nextDT || lastDT;
+    const timeStr = currentDT.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
     if(tourney.recurring === 'daily')
       dateStr = 'Every day';
     else if(weekdays.includes(tourney.recurring))
-      dateStr = weekdays[nextDT.getDay()];
+      dateStr = weekdays[currentDT.getDay()];
     else
-      dateStr = this.formatDateRelative(nextDT);
+      dateStr = this.formatDateRelative(currentDT);
 
-    const whenStr = `<span class="tournament-card-label">When:</span>  ${dateStr}, ${timeStr}`;
+    const whenStr = `<span class="tournament-card-label">${nextDT ? 'When:' : 'Last Held:'}</span>  ${dateStr}, ${timeStr}`;
     card.find('.tournament-date').html(whenStr);
     
     const numPlayersStr = tourney.numPlayers && tourney.running
@@ -549,8 +550,8 @@ export class Tournaments {
       card.find('.tournament-withdraw').attr('onclick', `sessionSend('td withdraw ${tourney.id}')`);
       card.find('.tournament-standings').attr('onclick', `sessionSend('td standings ${tourney.id}')`);
     }
-    card.find('.tournament-notify').toggle(!tourney.running);
-    card.find('.tournament-unnotify').toggle(!tourney.running);
+    card.find('.tournament-notify').toggle(!tourney.running && !!nextDT && !tourney.notify);
+    card.find('.tournament-unnotify').toggle(!tourney.running && !!nextDT && !!tourney.notify);
     card.find('.tournament-join').toggle(!!tourney.joinable);
     card.find('.tournament-withdraw').toggle(!!tourney.joined);
     card.find('.tournament-standings').toggle(!!tourney.winner && ageInDays === 0);
