@@ -14,6 +14,8 @@ export class Tournaments {
   private kothShowNotifications = false;
   private kothReceiveUpdates = false;
   private kothFollowKing = null;
+  private tournamentsShowNotifications = false;
+  private tournamentsReceiveUpdates = false;
   private pendingTournaments = [];
 
   constructor() {
@@ -38,14 +40,21 @@ export class Tournaments {
     });
 
     this.kothShowNotifications = (storage.get('show-koth-notifications') === 'true');
+    this.tournamentsShowNotifications = (storage.get('show-tournaments-notifications') === 'true');
   }
 
   public connected(session: any) {
     this.session = session;
     
-    awaiting.set('td-set');
-    if(this.kothShowNotifications)
+    if(this.kothShowNotifications) {
+      awaiting.set('td-set');
       this.session.send(`td set KOTHInfo 1`);
+    }
+
+    if(this.kothShowNotifications) {
+      awaiting.set('td-set'); 
+      this.session.send(`td set TourneyInfo 1`);
+    }
     
     if($('#pills-tournaments').hasClass('active'))
       this.initTournamentsPane(session);
@@ -75,6 +84,9 @@ export class Tournaments {
     awaiting.set('td-listkoths');
     this.session.send('td listkoths');
   
+    awaiting.set('td-set');
+    this.session.send('td set tourneyinfo 1');
+
     awaiting.set('td-listtourneys');
     this.session.send('td listtourneys');
 
@@ -314,6 +326,25 @@ export class Tournaments {
         $('#tournaments-pane-status').html('<span>You must be registered to participate in King of the Hill. <a href="https://www.freechess.org/cgi-bin/Register/FICS_register.cgi?Language=English" target="_blank">Register now</a>.</span>');  
       $('#tournaments-pane-status').show();
       return false;
+    }
+
+    match = msg.match(/^:Your TourneyInfo variable has been set to (On|Off)./m);
+    if(match) {
+      this.tournamentsReceiveUpdates = (match[1] === 'On' ? true : false);
+      const group = $('[data-group-name="tournament"]');   
+      if(group.length) {
+        const checkMark = group.find('.receive-updates .checkmark');
+        checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
+      }
+
+      if(!this.tournamentsReceiveUpdates) {
+        this.tournamentsShowNotifications = false;
+        storage.set('show-tournaments-notifications', 'false');
+        if(group.length) {
+          const checkMark = group.find('.show-notifications .checkmark');
+          checkMark.addClass('invisible');
+        }
+      }
     }
 
     pattern = ':mamer\'s tourney list:';
@@ -717,6 +748,37 @@ export class Tournaments {
     
       if(groupName === 'tournament') {
         group.prependTo('#pills-tournaments');
+        let checkMark = group.find('.show-notifications .checkmark');
+        checkMark.toggleClass('invisible', !this.tournamentsShowNotifications);
+        group.find('.show-notifications').on('click', (e) => {
+          checkMark = $(e.currentTarget).find('.checkmark');
+          checkMark.toggleClass('invisible');
+          e.stopPropagation();
+
+          this.tournamentsShowNotifications = !checkMark.hasClass('invisible');
+          storage.set('show-tournaments-notifications', String(this.tournamentsShowNotifications));
+          if(this.tournamentsShowNotifications) {
+            this.kothReceiveUpdates = true;
+            checkMark = group.find('.receive-updates .checkmark');
+            checkMark.removeClass('invisible');
+          }
+        });
+
+        checkMark = group.find('.receive-updates .checkmark');
+        checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
+        group.find('.receive-updates').on('click', (e) => {
+          checkMark = $(e.currentTarget).find('.checkmark');
+          checkMark.toggleClass('invisible');
+          e.stopPropagation();
+
+          this.tournamentsReceiveUpdates = !checkMark.hasClass('invisible');
+          if(!this.tournamentsReceiveUpdates) {
+            this.tournamentsShowNotifications = false;
+            storage.set('show-tournaments-notifications', 'false');
+            let checkMark = group.find('.show-notifications .checkmark');
+            checkMark.addClass('invisible');
+          }
+        });
       }
       else if(groupName === 'koth') {
         group.appendTo('#pills-tournaments');
