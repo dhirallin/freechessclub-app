@@ -118,13 +118,13 @@ export class Tournaments {
       this.kothReceiveUpdates = (match[1] === 'On' ? true : false);
       if(!this.kothReceiveUpdates) 
         this.kothShowNotifications = false;
-      this.updateGroupSettings('koth');
+      this.updateGroup('koth');
       return false;
     }
 
     match = msg.match(/^:Your Female variable has been set to (Yes|No)./m);
     if(match) {
-      this.updateGroupSettings('koth');
+      this.updateGroup('koth');
       return false;
     }
 
@@ -138,9 +138,9 @@ export class Tournaments {
         awaiting.resolve('td-variables');
         this.parseTDVariables(this.tdMessage);
         this.kothReceiveUpdates = (this.tdVariables.KOTHInfo === 'On' ? true : false); 
-        this.updateGroupSettings('koth');
+        this.updateGroup('koth');
         this.tournamentsReceiveUpdates = (this.tdVariables.TourneyInfo === 'On' ? true : false); 
-        this.updateGroupSettings('tournament');
+        this.updateGroup('tournament');
         this.tdMessage = '';
       }
       return true;
@@ -322,7 +322,7 @@ export class Tournaments {
       this.tournamentsReceiveUpdates = (match[1] === 'On' ? true : false);
       if(!this.tournamentsReceiveUpdates) 
         this.tournamentsShowNotifications = false;
-      this.updateGroupSettings('tournament');
+      this.updateGroup('tournament');
     }
 
     pattern = ':mamer\'s tourney list:';
@@ -569,7 +569,7 @@ export class Tournaments {
     card.find('.tournament-standings').toggle(!!tourney.winner && ageInDays === 0);
   }
 
-  updateGroupSettings(groupName: string) {
+  updateGroup(groupName: string) {
     if(groupName === 'tournament') {
       const group = $('[data-group-name="tournament"]');   
       if(group.length) {
@@ -800,7 +800,7 @@ export class Tournaments {
     
       if(groupName === 'tournament') {
         group.prependTo('#pills-tournaments');
-        this.updateGroupSettings('tournament');
+        this.updateGroup('tournament');
         group.find('.show-notifications').on('click', (e) => {
           let checkMark = $(e.currentTarget).find('.checkmark');
           checkMark.toggleClass('invisible');
@@ -810,7 +810,7 @@ export class Tournaments {
           if(this.tournamentsShowNotifications) 
             this.tournamentsReceiveUpdates = true;
 
-          this.updateGroupSettings('tournament');
+          this.updateGroup('tournament');
         });
 
         group.find('.receive-updates').on('click', (e) => {
@@ -822,12 +822,12 @@ export class Tournaments {
           if(!this.tournamentsReceiveUpdates) 
             this.tournamentsShowNotifications = false;
 
-          this.updateGroupSettings('tournament');
+          this.updateGroup('tournament');
         });
       }
       else if(groupName === 'koth') {
         group.appendTo('#pills-tournaments');
-        this.updateGroupSettings('koth');
+        this.updateGroup('koth');
 
         group.find('.show-notifications').on('click', (e) => {
           const checkMark = $(e.currentTarget).find('.checkmark');
@@ -838,7 +838,7 @@ export class Tournaments {
           if(this.kothShowNotifications) 
             this.kothReceiveUpdates = true;
 
-          this.updateGroupSettings('koth');
+          this.updateGroup('koth');
         });
 
         group.find('.receive-updates').on('click', (e) => {
@@ -850,7 +850,7 @@ export class Tournaments {
           if(!this.kothReceiveUpdates) 
             this.kothShowNotifications = false;
           
-          this.updateGroupSettings('koth');
+          this.updateGroup('koth');
         });
 
         group.find('.set-female').on('click', (e) => {
