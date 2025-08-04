@@ -434,7 +434,6 @@ export class Tournaments {
     lines.forEach((line) => {
       const match = line.match(/^:\|\s+(\d+)\s+\|\s+([>+]*)(\w+)([<*]*)\s+\|\s+(\w+)\s+\|\s+(.*?)\s+\|\s+(-+|(\d{4})\.(\d{2})(\d{2})\.(\d{2})(\d{2}))\s+\|/);
       if(match) {
-        console.log('match here: ', match[11]);
         const tourney = {
           id: +match[1],
           joined: match[2] === '>',
@@ -511,15 +510,18 @@ export class Tournaments {
 
     const tourney = card.data('tournament-data');
 
-    const tourneyDate = tourney.date 
-        ? (new Date(tourney.date.year, tourney.date.month - 1, tourney.date.day)).getTime()
-        : 0;
-    const dataDate = data.date 
-        ? (new Date(data.date.year, data.date.month - 1, data.date.day)).getTime()
-        : 0;
-    if(!data.running && (tourney.running || dataDate - tourneyDate < 0))
-      return; 
+    if(!data.update) {
+      const tourneyDate = tourney.date 
+          ? (new Date(tourney.date.year, tourney.date.month - 1, tourney.date.day)).getTime()
+          : 0;
+      const dataDate = data.date 
+          ? (new Date(data.date.year, data.date.month - 1, data.date.day)).getTime()
+          : 0;
+      if(!data.running && (tourney.running || dataDate - tourneyDate < 0))
+        return; 
+    }
 
+    data.update = false;
     Object.assign(tourney, data);
 
     if(tourney.title) {
@@ -581,8 +583,9 @@ export class Tournaments {
       card.find('.tournament-withdraw').attr('onclick', `sessionSend('td withdraw ${tourney.id}')`);
       card.find('.tournament-standings').attr('onclick', `sessionSend('td standings ${tourney.id}')`);
     }
-    card.find('.tournament-notify').toggle(!tourney.running && !!nextDT && !tourney.notify);
-    card.find('.tournament-unnotify').toggle(!tourney.running && !!nextDT && !!tourney.notify);
+    const notify = tourney.notify === true || (tourney.notify !== false && this.tournamentsShowNotifications);
+    card.find('.tournament-notify').toggle(!tourney.running && !!nextDT && !notify);
+    card.find('.tournament-unnotify').toggle(!tourney.running && !!nextDT && notify);
     card.find('.tournament-join').toggle(!!tourney.joinable);
     card.find('.tournament-withdraw').toggle(!!tourney.joined);
     card.find('.tournament-standings').toggle(!!tourney.winner && ageInDays === 0);
@@ -725,6 +728,44 @@ export class Tournaments {
     });
   }
 
+  public updateTournament(id: number, data: any, alert?: boolean) {
+    let card;
+    if(id != null) {
+      data.id = id;
+      card = $(`[data-tournament-id="${id}"]`);
+    }
+    else if(data.title) 
+      card = $(`[data-tournament-title="${data.title}"]`);
+    
+    if(card && card.length) {
+      data.update = true;
+      this.addTournament(data);
+    }
+
+    if(alert === true) {
+      const tab = $('button[data-bs-target="#pills-tournaments"]');
+      if(!tab.hasClass('active') || !$('#pills-play').hasClass('active')) 
+        tab.addClass('tournaments-unviewed');
+      this.alerts[id] = true;
+    }
+    else if(alert === false) {
+      delete this.alerts[id];
+      if(!this.alerts.length) {
+        const tab = $('button[data-bs-target="#pills-tournaments"]');
+        tab.removeClass('tournaments-unviewed');
+      }
+    }
+  }
+
+  public updateAllTournaments(data: any, alert?: boolean) {
+    const tourneys = $('[data-tournament-type="tournament"]');
+    tourneys.each((index, element) => {
+      const tourneyData = $(element).data('tournament-data');
+      data.title = tourneyData.title;
+      this.updateTournament(null, data, alert);
+    });  
+  }
+
   public addTournamentCard(card: JQuery<HTMLElement>, groupName: string) {  
     let group = $(`#pills-tournaments .tournament-group[data-group-name="${groupName}"]`);
     if(!group.length) {
@@ -758,10 +799,11 @@ export class Tournaments {
           this.tournamentsShowNotifications = !checkMark.hasClass('invisible');
           storage.set('show-tournaments-notifications', String(this.tournamentsShowNotifications));
           if(this.tournamentsShowNotifications) {
-            this.kothReceiveUpdates = true;
+            this.tournamentsReceiveUpdates = true;
             checkMark = group.find('.receive-updates .checkmark');
             checkMark.removeClass('invisible');
           }
+          this.updateAllTournaments({});
         });
 
         checkMark = group.find('.receive-updates .checkmark');
@@ -778,6 +820,7 @@ export class Tournaments {
             let checkMark = group.find('.show-notifications .checkmark');
             checkMark.addClass('invisible');
           }
+          this.updateAllTournaments({});
         });
       }
       else if(groupName === 'koth') {
