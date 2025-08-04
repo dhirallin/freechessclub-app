@@ -51,7 +51,7 @@ export class Tournaments {
       this.session.send(`td set KOTHInfo 1`);
     }
 
-    if(this.kothShowNotifications) {
+    if(this.tournamentsShowNotifications) {
       awaiting.set('td-set'); 
       this.session.send(`td set TourneyInfo 1`);
     }
@@ -64,12 +64,6 @@ export class Tournaments {
     if(!session || !session.isConnected())
       return;
     
-    this.addTournament({
-      title: 'The Nightly 5 0 at 22:00',
-      type: '5 0 r SS\\5',
-      recurring: 'daily',
-    });
-
     this.tdVariables = {};
 
     $('#tournaments-pane-status').hide();
@@ -78,18 +72,24 @@ export class Tournaments {
     awaiting.set('td-variables');
     this.session.send('td variables');
 
-    awaiting.set('td-set');
-    this.session.send('td set kothinfo 1');
+    this.addTournament({
+      title: 'The Nightly 5 0 at 22:00',
+      type: '5 0 r SS\\5',
+      recurring: 'daily',
+    });
 
-    awaiting.set('td-listkoths');
-    this.session.send('td listkoths');
-  
     awaiting.set('td-set');
     this.session.send('td set tourneyinfo 1');
 
     awaiting.set('td-listtourneys');
     this.session.send('td listtourneys');
 
+    awaiting.set('td-set');
+    this.session.send('td set kothinfo 1');
+
+    awaiting.set('td-listkoths');
+    this.session.send('td listkoths');
+  
     awaiting.set('td-set');
     this.session.send('td set height 24');
   }
@@ -98,6 +98,8 @@ export class Tournaments {
     if(this.session && this.session.isConnected()) {
       awaiting.set('td-set');
       this.session.send(`td set kothinfo ${this.kothReceiveUpdates ? 'On' : 'Off'}`);
+      awaiting.set('td-set');
+      this.session.send(`td set tourneyinfo ${this.tournamentsReceiveUpdates ? 'On' : 'Off'}`);
     }
   }
 
@@ -152,6 +154,12 @@ export class Tournaments {
         awaiting.resolve('td-variables');
         this.parseTDVariables(this.tdMessage);
         this.kothReceiveUpdates = (this.tdVariables.KOTHInfo === 'On' ? true : false); 
+        this.tournamentsReceiveUpdates = (this.tdVariables.TourneyInfo === 'On' ? true : false); 
+        const group = $('[data-group-name="tournament"]');   
+        if(group.length) {
+          const checkMark = group.find('.receive-updates .checkmark');
+          checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
+        }
         this.tdMessage = '';
       }
       return true;
@@ -330,7 +338,9 @@ export class Tournaments {
 
     match = msg.match(/^:Your TourneyInfo variable has been set to (On|Off)./m);
     if(match) {
+      console.log('HELLO???');
       this.tournamentsReceiveUpdates = (match[1] === 'On' ? true : false);
+      console.log('test 1:', this.tournamentsReceiveUpdates);
       const group = $('[data-group-name="tournament"]');   
       if(group.length) {
         const checkMark = group.find('.receive-updates .checkmark');
@@ -520,8 +530,8 @@ export class Tournaments {
       if(!data.running && (tourney.running || dataDate - tourneyDate < 0))
         return; 
     }
-
     data.update = false;
+
     Object.assign(tourney, data);
 
     if(tourney.title) {
@@ -589,6 +599,15 @@ export class Tournaments {
     card.find('.tournament-join').toggle(!!tourney.joinable);
     card.find('.tournament-withdraw').toggle(!!tourney.joined);
     card.find('.tournament-standings').toggle(!!tourney.winner && ageInDays === 0);
+  }
+
+  updateGroupSettings(groupName: string) {
+    if(groupName === 'tournament') {
+
+    }
+    else if(groupName === 'koth') {
+
+    }
   }
 
   public formatDateRelative(date: Date, now = new Date()) {
@@ -807,6 +826,7 @@ export class Tournaments {
         });
 
         checkMark = group.find('.receive-updates .checkmark');
+        console.log('test 2:', this.tournamentsReceiveUpdates);
         checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
         group.find('.receive-updates').on('click', (e) => {
           checkMark = $(e.currentTarget).find('.checkmark');
