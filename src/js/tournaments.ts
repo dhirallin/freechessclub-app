@@ -484,6 +484,23 @@ export class Tournaments {
       `);
       card.data('tournament-data', {});
       this.addTournamentCard(card, 'tournament');
+      card.find('.tournament-notify').on('click', () => {
+        const tourney = card.data('tournament-data');   
+        tourney.notify = true;
+        card.find('.tournament-notify').hide();
+        card.find('.tournament-unnotify').show();
+        const titles = Array.from($('[data-tournament-type="tournament"]'))
+          .map(el => {
+            const data = $(el).data('tournament-data');   
+            if(data.notify === true || data.notify === false) 
+              return data.title;
+            return null;
+          });
+        storage.set('tournaments-notify-list', JSON.stringify(titles));
+      });
+      card.find('.tournament-unnotify').on('click', () => {
+
+      });
     }
 
     const tourney = card.data('tournament-data');
