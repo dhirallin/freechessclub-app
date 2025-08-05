@@ -488,7 +488,6 @@ export class Tournaments {
         </div>
       `);
       card.data('tournament-data', {});
-      this.addTournamentCard(card, 'tournament');
 
       card.find('.tournament-notify, .tournament-unnotify').on('click', (e) => {
         const tourney = card.data('tournament-data');
@@ -550,6 +549,8 @@ export class Tournaments {
     }
 
     const currentDT = nextDT || lastDT;
+    tourney.timestamp = currentDT.getTime();
+
     const timeStr = currentDT.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
     if(tourney.recurring === 'daily')
       dateStr = 'Every day';
@@ -586,6 +587,8 @@ export class Tournaments {
     card.find('.tournament-join').toggle(!!tourney.joinable);
     card.find('.tournament-withdraw').toggle(!!tourney.joined);
     card.find('.tournament-standings').toggle(!!tourney.winner && ageInDays === 0);
+  
+    this.addTournamentCard(card, 'tournament');
   }
 
   updateGroup(groupName: string) {
@@ -889,7 +892,51 @@ export class Tournaments {
       }
     }
 
-    card.appendTo(group.find('.tournament-group-cards'));
+    this.insertChronological(card, group.find('.tournament-group-cards'));
+  }
+
+  public insertChronological(card, container) {
+    const newData = card.data('tournament-data');
+    const newTimestamp = newData.timestamp;
+    
+    if(newData.timestamp == null) {
+      container.append(card);
+      return;
+    }
+
+    if(newData.running) {
+      container.prepend(card);
+      return;
+    }
+    
+    const now = Date.now();
+
+    let inserted = false;
+    container.children().each(function () {
+      const existingData = $(this).data('tournament-data');
+      const existingTimestamp = existingData.timestamp;
+
+      const isNewFuture = newTimestamp >= now;
+      const isExistingFuture = existingTimestamp >= now;
+
+      let shouldInsertBefore = false;
+
+      if(isNewFuture && !isExistingFuture) 
+        shouldInsertBefore = true;
+      else if(isNewFuture && isExistingFuture) 
+        shouldInsertBefore = newTimestamp < existingTimestamp;
+      else if(!isNewFuture && !isExistingFuture) 
+        shouldInsertBefore = newTimestamp > existingTimestamp;
+
+      if(shouldInsertBefore) {
+        card.insertBefore(this);
+        inserted = true;
+        return false; 
+      }
+    });
+
+    if(!inserted) 
+      container.append(card);
   }
 
   public handleOffers(offers: any) {
