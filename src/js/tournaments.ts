@@ -517,6 +517,8 @@ export class Tournaments {
 
     Object.assign(tourney, data);
 
+    card.toggleClass('tournament-card-active', tourney.running); 
+
     if(tourney.title) {
       tourney.notify = this.notifyList[tourney.title];
 
@@ -684,7 +686,8 @@ export class Tournaments {
 
     card.toggleClass('tournament-card-active', koth.king !== '-'); 
 
-    card.find('.koth-title').text(`KoTH ${koth.type.slice(0, -1)}`);
+    koth.title = `KoTH ${koth.type.slice(0, -1)}`;
+    card.find('.koth-title').text(koth.title);
     const isFemale = this.tdVariables.Female === 'Yes';
     const kingStr = `<span class="tournament-card-label">The ${isFemale ? 'Queen' : 'King'}:</span>  ${koth.king !== '-' ? '<i class="fa-solid fa-crown"></i>' : ''} ${koth.king}`; 
     card.find('.koth-king').html(kingStr);
@@ -809,7 +812,7 @@ export class Tournaments {
               <span class="fa-solid fa-ellipsis-vertical" aria-hidden="false"></span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="tournament-more-options">
-              <li><a class="dropdown-item noselect show-notifications"><span class="me-2 checkmark invisible">&#10003;</span>Show Notifications</a></li>
+              <li><a class="dropdown-item noselect show-notifications"><span class="me-2 checkmark invisible">&#10003;</span>Show All Notifications</a></li>
               <li><a class="dropdown-item noselect receive-updates"><span class="me-2 checkmark invisible">&#10003;</span>Receive Updates</a></li>
               ${groupName === 'koth' ? '<li><a class="dropdown-item noselect set-female"><span class="me-2 checkmark invisible">&#10003;</span>Set me as Female</a></li>' : ''}
             </ul>
