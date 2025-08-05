@@ -40,22 +40,24 @@ export class Tournaments {
       this.leaveTournamentsPane();
     });
 
-    this.kothShowNotifications = (storage.get('show-koth-notifications') === 'true');
-    this.tournamentsShowNotifications = (storage.get('show-tournaments-notifications') === 'true');
+    this.kothShowNotifications = (storage.get('koth-show-notifications') === 'true');
+    this.kothReceiveUpdates = (storage.get('koth-receive-updates') === 'true');
+    this.tournamentsShowNotifications = (storage.get('tournaments-show-notifications') === 'true');
+    this.tournamentsReceiveUpdates = (storage.get('tournaments-receive-updates') === 'true');
     this.notifyList = JSON.parse(storage.get('tournaments-notify-list')) || {};
   }
 
   public connected(session: any) {
     this.session = session;
     
-    if(this.kothShowNotifications) {
+    if(this.kothReceiveUpdates != null) {
       awaiting.set('td-set');
-      this.session.send(`td set KOTHInfo 1`);
+      this.session.send(`td set KOTHInfo ${this.kothReceiveUpdates ? 1 : 0}`);
     }
 
-    if(this.tournamentsShowNotifications) {
+    if(this.tournamentsReceiveUpdates != null) {
       awaiting.set('td-set'); 
-      this.session.send(`td set TourneyInfo 1`);
+      this.session.send(`td set TourneyInfo ${this.tournamentsReceiveUpdates ? 1 : 0}`);
     }
     
     if($('#pills-tournaments').hasClass('active'))
@@ -322,6 +324,7 @@ export class Tournaments {
     match = msg.match(/^:Your TourneyInfo variable has been set to (On|Off)./m);
     if(match) {
       this.tournamentsReceiveUpdates = (match[1] === 'On' ? true : false);
+      this.notifyList = {};
       if(!this.tournamentsReceiveUpdates) 
         this.tournamentsShowNotifications = false;
       this.updateGroup('tournament');
@@ -589,10 +592,11 @@ export class Tournaments {
       if(group.length) {
         let checkMark = group.find('.show-notifications .checkmark');
         checkMark.toggleClass('invisible', !this.tournamentsShowNotifications);
-        storage.set('show-tournaments-notifications', String(this.tournamentsShowNotifications));
+        storage.set('tournaments-show-notifications', String(this.tournamentsShowNotifications));
 
         checkMark = group.find('.receive-updates .checkmark');
         checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
+        storage.set('tournaments-receive-updates', String(this.tournamentsReceiveUpdates));
 
         storage.set('tournaments-notify-list', JSON.stringify(this.notifyList));
         this.updateAllTournaments({});
@@ -603,10 +607,11 @@ export class Tournaments {
       if(group.length) {
         let checkMark = group.find('.show-notifications .checkmark');
         checkMark.toggleClass('invisible', !this.kothShowNotifications);
-        storage.set('show-koth-notifications', String(this.kothShowNotifications));
+        storage.set('koth-show-notifications', String(this.kothShowNotifications));
 
         checkMark = group.find('.receive-updates .checkmark');
         checkMark.toggleClass('invisible', !this.kothReceiveUpdates);
+        storage.set('koth-receive-updates', String(this.kothReceiveUpdates));
 
         group.find('.tournament-group-title').text(`${this.tdVariables.Female === 'Yes' ? 'Queen' : 'King'} of the Hill`);
         checkMark = group.find('.set-female .checkmark');
@@ -838,6 +843,7 @@ export class Tournaments {
           if(!this.tournamentsReceiveUpdates) 
             this.tournamentsShowNotifications = false;
 
+          this.notifyList = {};
           this.updateGroup('tournament');
         });
       }
