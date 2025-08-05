@@ -825,7 +825,7 @@ export class Tournaments {
       `);
     
       if(groupName === 'tournament') {
-        group.prependTo('#pills-tournaments');
+        group.appendTo('#pills-tournaments');
         this.updateGroup('tournament');
         group.find('.show-notifications').on('click', (e) => {
           let checkMark = $(e.currentTarget).find('.checkmark');
