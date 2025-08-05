@@ -16,6 +16,7 @@ export class Tournaments {
   private kothFollowKing = null;
   private tournamentsShowNotifications = false;
   private tournamentsReceiveUpdates = false;
+  private notifyList = {};
   private pendingTournaments = [];
 
   constructor() {
@@ -41,6 +42,7 @@ export class Tournaments {
 
     this.kothShowNotifications = (storage.get('show-koth-notifications') === 'true');
     this.tournamentsShowNotifications = (storage.get('show-tournaments-notifications') === 'true');
+    this.notifyList = JSON.parse(storage.get('tournaments-notify-list')) || {};
   }
 
   public connected(session: any) {
@@ -484,22 +486,15 @@ export class Tournaments {
       `);
       card.data('tournament-data', {});
       this.addTournamentCard(card, 'tournament');
-      card.find('.tournament-notify').on('click', () => {
-        const tourney = card.data('tournament-data');   
-        tourney.notify = true;
-        card.find('.tournament-notify').hide();
-        card.find('.tournament-unnotify').show();
-        const titles = Array.from($('[data-tournament-type="tournament"]'))
-          .map(el => {
-            const data = $(el).data('tournament-data');   
-            if(data.notify === true || data.notify === false) 
-              return data.title;
-            return null;
-          });
-        storage.set('tournaments-notify-list', JSON.stringify(titles));
-      });
-      card.find('.tournament-unnotify').on('click', () => {
 
+      card.find('.tournament-notify, .tournament-unnotify').on('click', (e) => {
+        const tourney = card.data('tournament-data');
+        const notify = $(e.target).hasClass('tournament-notify');
+        if(notify) 
+          this.tournamentsReceiveUpdates = true;
+
+        this.notifyList[tourney.title] = notify;
+        this.updateGroup('tournament');
       });
     }
 
@@ -520,6 +515,8 @@ export class Tournaments {
     Object.assign(tourney, data);
 
     if(tourney.title) {
+      tourney.notify = this.notifyList[tourney.title];
+
       card.attr('data-tournament-title', tourney.title);
       const [title, time] = tourney.title.split(/ at ([:\d]+)$/).filter(Boolean);
       tourney.scheduledTime = time;
@@ -597,6 +594,7 @@ export class Tournaments {
         checkMark = group.find('.receive-updates .checkmark');
         checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
 
+        storage.set('tournaments-notify-list', JSON.stringify(this.notifyList));
         this.updateAllTournaments({});
       }
     }
@@ -827,6 +825,7 @@ export class Tournaments {
           if(this.tournamentsShowNotifications) 
             this.tournamentsReceiveUpdates = true;
 
+          this.notifyList = {};
           this.updateGroup('tournament');
         });
 
