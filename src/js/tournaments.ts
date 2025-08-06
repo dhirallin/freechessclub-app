@@ -330,6 +330,66 @@ export class Tournaments {
       this.updateGroup('tournament');
     }
 
+    match = msg.match(/^:Tourney #(\d+), a [^,]+, has been opened!/m);
+    if(match) {
+      const id = +match[1];
+      // get title, get grid, joinable, remove notify me?
+      return false;
+    }
+
+    match = msg.match(/^:mamer TOURNEY #(\d+) UPDATE: Tourney #2 has started!/m);
+    if(match) {
+      const id = +match[1];
+      // get grid, joinable, observe, games?
+      return false;
+    }
+
+    match = msg.match(/:mamer TOURNEY #(\d+) UPDATE: (\w+)\S* has joined tourney #\d+ \(seed: \d+, score: \d+\); (\d+) players? now!/m);
+    if(match) {
+      const id = +match[1];
+      const player = match[2];
+      const numPlayers = +match[3];
+      const joined = player === this.session.getUser();
+      this.updateTournament(id, {
+        ...(joined && { joined: true }),
+        numPlayers: numPlayers
+      });
+      if(joined)
+        this.updateAllTournaments({}); // Stop user joining other running tournaments
+      return false;
+    }
+
+    match = msg.match(/:mamer TOURNEY #(\d+) UPDATE: (\w+)\S* withdrew from tourney #\d+; (\d+) players? now./m);
+    if(match) {
+      const id = +match[1];
+      const player = match[2];
+      const numPlayers = +match[3];
+      const left = player === this.session.getUser();
+      this.updateTournament(id, {
+        ...(left && { joined: false }),
+        numPlayers: numPlayers
+      });    
+      if(left)
+        this.updateAllTournaments({});   
+      return false;
+    }
+    
+    match = msg.match(/^:mamer TOURNEY #(\d+) UPDATE: The tourney has ended./m);
+    if(match) {
+      const id = +match[1];
+      this.updateTournament(id, {
+        running: false,
+      });
+      return false;
+    }
+
+    match = msg.match(/^:mamer TOURNEY #(\d+) UPDATE: Tourney #\d+ has been closed!/m);
+    if(match) {
+      const id = +match[1];
+      // tournament cancelled, get last held tournament
+      return false;
+    }
+
     pattern = ':mamer\'s tourney list:';
     if((msg.startsWith(pattern) || this.tdMessage.startsWith(pattern)) && awaiting.has('td-listtourneys')) {
       this.tdMessage += msg + '\n';
@@ -516,6 +576,13 @@ export class Tournaments {
 
     Object.assign(tourney, data);
 
+    if(!tourney.running) {
+      tourney.joinable = false;
+      tourney.joined = false;
+    }
+
+    const inTournament = this.tdVariables.tourney === 'On';
+
     card.toggleClass('tournament-card-active', tourney.running); 
 
     if(tourney.title) {
@@ -584,7 +651,7 @@ export class Tournaments {
     const notify = tourney.notify === true || (tourney.notify !== false && this.tournamentsShowNotifications);
     card.find('.tournament-notify').toggle(!tourney.running && !!nextDT && !notify);
     card.find('.tournament-unnotify').toggle(!tourney.running && !!nextDT && notify);
-    card.find('.tournament-join').toggle(!!tourney.joinable);
+    card.find('.tournament-join').toggle(!!tourney.joinable && !inTournament);
     card.find('.tournament-withdraw').toggle(!!tourney.joined);
     card.find('.tournament-standings').toggle(!!tourney.winner && ageInDays === 0);
   
