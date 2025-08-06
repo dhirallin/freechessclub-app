@@ -330,9 +330,15 @@ export class Tournaments {
       this.updateGroup('tournament');
     }
 
-    match = msg.match(/^:Tourney #(\d+), a [^,]+, has been opened!/m);
+    match = msg.match(/^:Tourney #\d+, a [^,]+, has been opened!/m);
     if(match) {
-      const id = +match[1];
+      awaiting.set('td-set');
+      this.session.send('td set height 999');
+      awaiting.set('td-listtourneys');
+      this.session.send('td listtourneys');
+      awaiting.set('td-set');
+      this.session.send('td set height 24');
+
       // get title, get grid, joinable, remove notify me?
       return false;
     }
