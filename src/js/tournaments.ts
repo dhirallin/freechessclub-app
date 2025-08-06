@@ -425,7 +425,7 @@ export class Tournaments {
     pattern = /^:Tourney #(\d+)'s player list:/m;
     if((pattern.test(msg) || pattern.test(this.tdMessage)) && awaiting.has('td-players')) {
       this.tdMessage += msg + '\n';
-      const matchLastLine = msg.match(/:Listed:\s+(\d+) players./m);
+      const matchLastLine = msg.match(/:Listed:\s+(\d+) players?./m);
       if(matchLastLine) {
         const numPlayers = +matchLastLine[1];
         awaiting.resolve('td-players');
