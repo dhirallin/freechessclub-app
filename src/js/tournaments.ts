@@ -574,6 +574,25 @@ export class Tournaments {
       }
       return true;
     }
+
+    pattern = /^:Tourney #(\d+)'s round (\S+) games:/m;
+    if((pattern.test(msg) || pattern.test(this.tdMessage)) && awaiting.has('td-games')) {
+      this.tdMessage += msg + '\n';
+      const matchLastLine = msg.match(/:Listed:\s+\d+ gmaes?./m);
+      if(matchLastLine) {
+        awaiting.resolve('td-games');
+        let matchLine = this.tdMessage.match(pattern);
+        const id = +matchLine[1];
+        const round = matchLine[2];
+        const title = this.tdMessage.split(/[\r\n]+/)[0].trim().slice(1);
+        matchLine = this.tdMessage.match(/:Byes: (.*)/m);
+        const byes = matchLine ? matchLine[1] : '';
+        this.tdMessage = '';
+        const games = this.parseTDGames(this.tdMessage);
+        showFixedDialog({type: 'Games List', msg: JSON.stringify(games), btnSuccess: ['', 'OK']});
+      }
+      return true;
+    }
   }
   
   public parseTDVariables(msg: string) {
@@ -693,6 +712,25 @@ export class Tournaments {
     return players;
   }
 
+  public parseTDGames(msg: string) {
+    const lines = msg.split(/[\r\n]+/);
+    const games: any = [];
+    lines.forEach((line) => {
+      const match = line.match(/^:\|\s+(\d+)\s+\|\s+([^\w\s])(\w+(?:\(\w+\))?)\[(\d+)\]\s+\|\s+(\S+)\s+\|/);
+      if(match) {
+        games.push({
+          board: match[1],
+          playerStatus: match[2],
+          name: match[3],
+          seed: match[4],
+          ...(match[5].startsWith('#') && { game: match[5] }),
+          ...(!match[5].startsWith('#') && { result: match[5] }),
+        });
+      }
+    });
+    return games;
+  }
+
   public addTournament(data: any) {
     let card = null;
     if(data.title) 
@@ -746,6 +784,13 @@ export class Tournaments {
         awaiting.set('td-standardgrid');
         awaiting.set('standings-dialog');
         this.session.send(`td standardgrid ${tourney.id}`);
+      });
+
+      
+      card.find('tournament-games').on('click', () => {
+        const tourney = card.data('tournament-data');
+        awaiting.set('td-games');
+        this.session.send(`td games ${tourney.id}`);
       });
     }
 
@@ -839,7 +884,6 @@ export class Tournaments {
     if(tourney.id !== undefined) {
       card.find('.tournament-join').attr('onclick', `sessionSend('td join ${tourney.id}')`);
       card.find('.tournament-withdraw').attr('onclick', `sessionSend('td withdraw ${tourney.id}')`);
-      card.find('.tournament-games').attr('onclick', `sessionSend('td games ${tourney.id}')`);
     }
     const notify = tourney.notify === true || (tourney.notify !== false && this.tournamentsShowNotifications);
     card.find('.tournament-notify').toggle(!tourney.running && !!nextDT && !notify);
