@@ -703,20 +703,20 @@ export class Tournaments {
       card = $(`
         <div class="card tournament-card" data-tournament-type="tournament" data-event-id="${data.eventid}">
           <div class="card-body d-flex">
-            <div>
+            <div class="flex-grow-1" style="min-width: 0;">
               <div class="tournament-title" style="font-weight: bold;"></div>
               <div class="tournament-type" style="white-space: pre;"></div>
               <div class="tournament-date" style="white-space: pre;"></div>
               <div class="tournament-num-players" style="white-space: pre;"></div>
               <div class="tournament-winners" style="white-space: pre;"></div>
             </div>
-            <div class="d-flex flex-grow-1" style="justify-content: end; align-items: center">
+            <div class="d-flex" style="justify-content: end; align-items: center">
               <div class="btn-group-vertical" style="gap: 10px">
-                <button type="button" class="btn btn-outline-secondary btn-md tournament-notify" title="Notify Me" style="display: none">Notify Me</button>
-                <button type="button" class="btn btn-outline-secondary btn-md tournament-unnotify" title="Stop Notifying" style="display: none">Stop Notifying</button>
-                <button type="button" class="btn btn-outline-secondary btn-md tournament-join" title="Join" style="display: none">Join</button>
-                <button type="button" class="btn btn-outline-secondary btn-md tournament-withdraw" title="Withdraw" style="display: none">Withdraw</button>
-                <button type="button" class="btn btn-outline-secondary btn-md tournament-games" title="Games" style="display: none">Games</button>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-notify" title="Notify Me" style="display: none; white-space: nowrap;">Notify Me</button>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-unnotify" title="Stop Notifying" style="display: none; white-space: nowrap;">Stop Notifying</button>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-join" title="Join" style="display: none; white-space: nowrap;">Join</button>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-withdraw" title="Withdraw" style="display: none; white-space: nowrap;">Withdraw</button>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-games" title="Games" style="display: none; white-space: nowrap;">Games</button>
                 </div>
             </div>
           </div>
