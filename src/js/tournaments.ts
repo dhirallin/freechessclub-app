@@ -517,7 +517,7 @@ export class Tournaments {
     pattern = /^:Tourney #(\d+)'s standard grid:/m;
     if((pattern.test(msg) || pattern.test(this.tdMessage)) && awaiting.has('td-standardgrid')) {
       this.tdMessage += msg + '\n';
-      const matchLastLine = msg.match(/^:\+-+\+[^\n]/m);
+      const matchLastLine = msg.match(/^:\+-+\+(?![\r\n])/m);
       if(matchLastLine) {
         awaiting.resolve('td-players');
         const grid = this.parseTDStandardGrid(this.tdMessage);
@@ -534,7 +534,7 @@ export class Tournaments {
               const highestScore = Math.max(...grid.map(p => p.score));
               const winners = grid.filter(p => p.score === highestScore);
               const winnerNames = winners.map(p => p.name);
-              pt.winner = winnerNames.join(', ');
+              pt.winners = winnerNames.join(', ');
             }
             this.addTournament(pt);
             this.pendingTournaments.splice(i, 1);
@@ -631,7 +631,7 @@ export class Tournaments {
       if(match) {
         const roundStrings = match[5].split(/\s+/);
         const rounds = roundStrings.map(str => {
-          const match = str.match(/^([^\d\s]])(\d+([wb])|bye)$/);
+          const match = str.match(/^([^\d\s])(\d+([wb])|bye)$/);
           if(match) {
             return {
               result: match[1],
@@ -643,7 +643,7 @@ export class Tournaments {
 
         const score = rounds.reduce((acc, round) => {
           if(round.result === '+')
-            return acc++;
+            return acc + 1;
           else if(round.result === '=')
             return acc + 0.5;
           else
@@ -678,7 +678,7 @@ export class Tournaments {
               <div class="tournament-type" style="white-space: pre;"></div>
               <div class="tournament-date" style="white-space: pre;"></div>
               <div class="tournament-num-players" style="white-space: pre;"></div>
-              <div class="tournament-winner" style="white-space: pre;"></div>
+              <div class="tournament-winners" style="white-space: pre;"></div>
             </div>
             <div class="d-flex flex-grow-1" style="justify-content: end; align-items: center">
               <div class="btn-group-vertical" style="gap: 10px">
@@ -780,13 +780,17 @@ export class Tournaments {
     card.find('.tournament-num-players').html(numPlayersStr);
     
     const ageInDays = lastDT ? getDiffDays(lastDT) : undefined;
-    let winnerStr = '';
-    if(tourney.winner) {
-      winnerStr = ageInDays === 0
-          ? `<span class="tournament-card-label">Winner:</span>  ${tourney.winner}`
-          : `<span class="tournament-card-label">Last Winner:</span>  ${tourney.winner}  <a href="javascript:void(0)">Standings</a>`;
+
+    if(tourney.running)
+      tourney.winners = '';
+    let winnersStr = '';
+    if(tourney.winners) {
+      console.log('WINNER: ',tourney.winners);
+      winnersStr = ageInDays === 0
+          ? `<span class="tournament-card-label">Winner${tourney.winners.includes(',') ? 's' : ''}:</span>  ${tourney.winners}`
+          : `<span class="tournament-card-label">Last Winner${tourney.winners.includes(',') ? 's' : ''}:</span>  ${tourney.winners}  <a href="javascript:void(0)">(Standings)</a>`;
     }
-    card.find('.tournament-winner').html(tourney.winner);
+    card.find('.tournament-winners').html(winnersStr);
 
     if(tourney.id !== undefined) {
       card.find('.tournament-join').attr('onclick', `sessionSend('td join ${tourney.id}')`);
@@ -798,7 +802,7 @@ export class Tournaments {
     card.find('.tournament-unnotify').toggle(!tourney.running && !!nextDT && notify);
     card.find('.tournament-join').toggle(!!tourney.joinable && !inTournament);
     card.find('.tournament-withdraw').toggle(!!tourney.joined);
-    card.find('.tournament-standings').toggle(!!tourney.winner && ageInDays === 0);
+    card.find('.tournament-standings').toggle(!!tourney.winners && ageInDays === 0);
   
     this.addTournamentCard(card, 'tournament');
   }
