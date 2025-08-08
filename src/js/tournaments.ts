@@ -118,6 +118,9 @@ export class Tournaments {
   public handleMessage(msg: string): boolean {
     let match, pattern;
   
+    if(!msg.startsWith(':') && !awaiting.has('koth-get-game'))
+      return false;
+
     match = msg.match(/^:Your (\S+) variable has been set to (\S+)./m);
     if(match) {
       this.tdVariables[match[1]] = match[2]; 
@@ -209,25 +212,27 @@ export class Tournaments {
       return false;
     }
 
-    match = msg.match(/(?:^|\n)\s*(\d+)\s+(?:\(Exam\.\s+)?[0-9\+\-]+\s(\w+)\s+[0-9\+\-]+\s(\w+)\s*(?:\)\s+)?\[[\w\s]+\]\s+[\d:]+\s*\-\s*[\d:]+\s\(\s*\d+\-\s*\d+\)\s+[BW]:\s+\d+\s*\d+ games? displayed/);
-    if(match && awaiting.resolve('get-koth-game')) {
-      const id = +match[1];
-      const player1 = match[2];
-      const player2 = match[3];
-      const koths = $('[data-tournament-type="koth"]');
-      koths.each((index, element) => {
-        const kothData = $(element).data('tournament-data');
-        if((kothData.king === player1 || kothData.king === player2)
-          && (kothData.opponent || kothData.game !== '-')) {
-          const opponent = kothData.king === player1 ? player2 : player1;
-          this.updateKoTH(kothData.id, {
-            opponent,
-            game: id,
-          });
-          return false;
-        } 
-      });
-      return true;
+    if(awaiting.has('get-koth-game')) {
+      match = msg.match(/(?:^|\n)\s*(\d+)\s+(?:\(Exam\.\s+)?[0-9\+\-]+\s(\w+)\s+[0-9\+\-]+\s(\w+)\s*(?:\)\s+)?\[[\w\s]+\]\s+[\d:]+\s*\-\s*[\d:]+\s\(\s*\d+\-\s*\d+\)\s+[BW]:\s+\d+\s*\d+ games? displayed/);
+      if(match && awaiting.resolve('get-koth-game')) {
+        const id = +match[1];
+        const player1 = match[2];
+        const player2 = match[3];
+        const koths = $('[data-tournament-type="koth"]');
+        koths.each((index, element) => {
+          const kothData = $(element).data('tournament-data');
+          if((kothData.king === player1 || kothData.king === player2)
+            && (kothData.opponent || kothData.game !== '-')) {
+            const opponent = kothData.king === player1 ? player2 : player1;
+            this.updateKoTH(kothData.id, {
+              opponent,
+              game: id,
+            });
+            return false;
+          } 
+        });
+        return true;
+      }
     }
 
     match = msg.match(/^:mamer KOTH INFO: \{KOTH #(\d+) \(\w+ vs. \w+\)/m);
@@ -466,8 +471,15 @@ export class Tournaments {
         });
         tourneys.forEach(tourney => { 
           this.pendingTournaments.push(tourney);
-          awaiting.set('td-players');
-          this.session.send(`td players ${tourney.id}`);
+          if(tourney.running && tourney.status !== 'started') {
+            awaiting.set('td-players');
+            this.session.send(`td players ${tourney.id}`);
+          }
+          else {
+            awaiting.set('td-standardgrid');
+            this.session.send(`td standardgrid ${tourney.id}`);
+          }
+
           if(tourney.running) {
             awaiting.set('td-observetourney');
             this.session.send(`td observetourney ${tourney.id}`);
@@ -493,6 +505,37 @@ export class Tournaments {
           if(pt.id === id) {
             pt.title = title;
             pt.numPlayers = numPlayers;
+            this.addTournament(pt);
+            this.pendingTournaments.splice(i, 1);
+          }
+        }
+        this.tdMessage = '';
+      }
+      return true;
+    }
+
+    pattern = /^:Tourney #(\d+)'s standard grid:/m;
+    if((pattern.test(msg) || pattern.test(this.tdMessage)) && awaiting.has('td-standardgrid')) {
+      this.tdMessage += msg + '\n';
+      const matchLastLine = msg.match(/^:\+-+\+[^\n]/m);
+      if(matchLastLine) {
+        awaiting.resolve('td-players');
+        const grid = this.parseTDStandardGrid(this.tdMessage);
+        const numPlayers = grid.length;
+        const matchIDLine = this.tdMessage.match(pattern);
+        const id = +matchIDLine[1];
+        const title = this.tdMessage.split(/[\r\n]+/)[0].trim().slice(1);
+        for(let i = this.pendingTournaments.length - 1; i >= 0; i--) {
+          const pt = this.pendingTournaments[i];
+          if(pt.id === id) {
+            pt.title = title;
+            pt.numPlayers = numPlayers;
+            if(!pt.running) {
+              const highestScore = Math.max(...grid.map(p => p.score));
+              const winners = grid.filter(p => p.score === highestScore);
+              const winnerNames = winners.map(p => p.name);
+              pt.winner = winnerNames.join(', ');
+            }
             this.addTournament(pt);
             this.pendingTournaments.splice(i, 1);
           }
@@ -574,6 +617,46 @@ export class Tournaments {
           rating: match[4],
           matchRequestStatus: match[5],
           status: match[6],
+        });
+      }
+    });
+    return players;
+  }
+
+  public parseTDStandardGrid(msg: string) {
+    const lines = msg.split(/[\r\n]+/);
+    const players: any = [];
+    lines.forEach((line) => {
+      const match = line.match(/^:\|\s+(\d+)\s+\|\s+([^\w\s])(\w+(?:\(\w+\))?)\(([\d\-\+]+)\)\s+\|\s+(.*?)\s+\|/);
+      if(match) {
+        const roundStrings = match[5].split(/\s+/);
+        const rounds = roundStrings.map(str => {
+          const match = str.match(/^([^\d\s]])(\d+([wb])|bye)$/);
+          if(match) {
+            return {
+              result: match[1],
+              opponent: match[2],
+              color: match[3]
+            }
+          }
+        });
+
+        const score = rounds.reduce((acc, round) => {
+          if(round.result === '+')
+            return acc++;
+          else if(round.result === '=')
+            return acc + 0.5;
+          else
+            return acc;
+        }, 0);
+
+        players.push({
+          seed: +match[1],
+          plusMinus: match[2],
+          name: match[3],
+          rating: match[4],
+          rounds,
+          score,
         });
       }
     });
