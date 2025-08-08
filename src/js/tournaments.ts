@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 import { awaiting, storage } from './storage';
-import { createNotification, removeNotification } from './dialogs';
+import { createNotification, removeNotification, showFixedDialog } from './dialogs';
 import { convertToServerDateTime, convertToLocalDateTime, getDiffDays } from './utils';
 
 export class Tournaments {
@@ -510,6 +510,10 @@ export class Tournaments {
           }
         }
         this.tdMessage = '';
+        if(awaiting.resolve('players-dialog')) {
+          const players = this.parseTDPlayers(this.tdMessage);
+          showFixedDialog({type: 'Player List', msg: JSON.stringify(players), btnSuccess: ['', 'OK']});
+        }
       }
       return true;
     }
@@ -541,6 +545,9 @@ export class Tournaments {
           }
         }
         this.tdMessage = '';
+        if(awaiting.resolve('standings-dialog')) {
+          showFixedDialog({type: 'Standings', msg: JSON.stringify(grid), btnSuccess: ['', 'OK']});
+        }
       }
       return true;
     }
@@ -684,10 +691,10 @@ export class Tournaments {
               <div class="btn-group-vertical" style="gap: 10px">
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-notify" title="Notify Me" style="display: none">Notify Me</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-unnotify" title="Stop Notifying" style="display: none">Stop Notifying</button>
-                <button type="button" class="btn btn-outline-secondary btn-md tournament-standings" title="Standings" style="display: none">Standings</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-join" title="Join" style="display: none">Join</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-withdraw" title="Withdraw" style="display: none">Withdraw</button>
-              </div>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-games" title="Games" style="display: none">Games</button>
+                </div>
             </div>
           </div>
         </div>
@@ -702,6 +709,20 @@ export class Tournaments {
 
         this.notifyList[tourney.title] = notify;
         this.updateGroup('tournament');
+      });
+
+      card.on('click', '.tournament-players-link', () => {
+        const tourney = card.data('tournament-data');
+        awaiting.set('td-players');
+        awaiting.set('players-dialog');
+        this.session.send(`td players ${tourney.id}`);
+      });
+
+      card.on('click', '.tournament-standings-link', () => {
+        const tourney = card.data('tournament-data');
+        awaiting.set('td-standardgrid');
+        awaiting.set('standings-dialog');
+        this.session.send(`td standardgrid ${tourney.id}`);
       });
     }
 
@@ -775,7 +796,7 @@ export class Tournaments {
     card.find('.tournament-date').html(whenStr);
     
     const numPlayersStr = tourney.numPlayers && tourney.running
-        ? `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}  ${tourney.status === 'started' ? '<a href="javascript:void(0)">(Standings)</a>' : '<a href="javascript:void(0)">(Player list)</a>'}`
+        ? `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}  ${tourney.status === 'started' ? '<a href="javascript:void(0)">(Standings)</a>' : '<a class="tournament-players-link" href="javascript:void(0)">(Player list)</a>'}`
         : '';
     card.find('.tournament-num-players').html(numPlayersStr);
     
@@ -784,14 +805,14 @@ export class Tournaments {
     if(tourney.running)
       tourney.winners = '';
     const winnersStr = tourney.winners
-        ? `<span class="tournament-card-label">${ageInHours === 0 ? 'Winner' : 'Last Winner'}${tourney.winners.includes(',') ? 's' : ''}:</span>  ${tourney.winners}  <a href="javascript:void(0)">(Standings)</a>`
+        ? `<span class="tournament-card-label">${ageInHours === 0 ? 'Winner' : 'Last Winner'}${tourney.winners.includes(',') ? 's' : ''}:</span>  ${tourney.winners}  <a class="tournament-standings-link" href="javascript:void(0)">(Standings)</a>`
         : '';
     card.find('.tournament-winners').html(winnersStr);
 
     if(tourney.id !== undefined) {
       card.find('.tournament-join').attr('onclick', `sessionSend('td join ${tourney.id}')`);
       card.find('.tournament-withdraw').attr('onclick', `sessionSend('td withdraw ${tourney.id}')`);
-      card.find('.tournament-standings').attr('onclick', `sessionSend('td standings ${tourney.id}')`);
+      card.find('.tournament-games').attr('onclick', `sessionSend('td games ${tourney.id}')`);
     }
     const notify = tourney.notify === true || (tourney.notify !== false && this.tournamentsShowNotifications);
     card.find('.tournament-notify').toggle(!tourney.running && !!nextDT && !notify);
