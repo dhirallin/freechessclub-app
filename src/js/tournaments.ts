@@ -12,10 +12,10 @@ export class Tournaments {
   private session = null;
   private alerts: any = {};
   private kothShowNotifications = false;
-  private kothReceiveUpdates = false;
+  private kothReceiveInfo = false;
   private kothFollowKing = null;
   private tournamentsShowNotifications = false;
-  private tournamentsReceiveUpdates = false;
+  private tournamentsReceiveInfo = false;
   private notifyList = {};
   private pendingTournaments = [];
 
@@ -41,23 +41,23 @@ export class Tournaments {
     });
 
     this.kothShowNotifications = (storage.get('koth-show-notifications') === 'true');
-    this.kothReceiveUpdates = (storage.get('koth-receive-updates') === 'true');
+    this.kothReceiveInfo = (storage.get('koth-receive-info') === 'true');
     this.tournamentsShowNotifications = (storage.get('tournaments-show-notifications') === 'true');
-    this.tournamentsReceiveUpdates = (storage.get('tournaments-receive-updates') === 'true');
+    this.tournamentsReceiveInfo = (storage.get('tournaments-receive-info') === 'true');
     this.notifyList = JSON.parse(storage.get('tournaments-notify-list')) || {};
   }
 
   public connected(session: any) {
     this.session = session;
     
-    if(this.kothReceiveUpdates != null) {
+    if(this.kothReceiveInfo != null) {
       awaiting.set('td-set');
-      this.session.send(`td set KOTHInfo ${this.kothReceiveUpdates ? 1 : 0}`);
+      this.session.send(`td set KOTHInfo ${this.kothReceiveInfo ? 1 : 0}`);
     }
 
-    if(this.tournamentsReceiveUpdates != null) {
+    if(this.tournamentsReceiveInfo != null) {
       awaiting.set('td-set'); 
-      this.session.send(`td set TourneyInfo ${this.tournamentsReceiveUpdates ? 1 : 0}`);
+      this.session.send(`td set TourneyInfo ${this.tournamentsReceiveInfo ? 1 : 0}`);
     }
     
     if($('#pills-tournaments').hasClass('active'))
@@ -101,9 +101,9 @@ export class Tournaments {
   public leaveTournamentsPane() {
     if(this.session && this.session.isConnected()) {
       awaiting.set('td-set');
-      this.session.send(`td set kothinfo ${this.kothReceiveUpdates ? 'On' : 'Off'}`);
+      this.session.send(`td set kothinfo ${this.kothReceiveInfo ? 'On' : 'Off'}`);
       awaiting.set('td-set');
-      this.session.send(`td set tourneyinfo ${this.tournamentsReceiveUpdates ? 'On' : 'Off'}`);
+      this.session.send(`td set tourneyinfo ${this.tournamentsReceiveInfo ? 'On' : 'Off'}`);
     }
   }
 
@@ -119,8 +119,8 @@ export class Tournaments {
 
     match = msg.match(/^:Your KOTHInfo variable has been set to (On|Off)./m);
     if(match) {
-      this.kothReceiveUpdates = (match[1] === 'On' ? true : false);
-      if(!this.kothReceiveUpdates) 
+      this.kothReceiveInfo = (match[1] === 'On' ? true : false);
+      if(!this.kothReceiveInfo) 
         this.kothShowNotifications = false;
       this.updateGroup('koth');
       return false;
@@ -141,9 +141,9 @@ export class Tournaments {
       if(/^:Language:/m.test(msg)) {
         awaiting.resolve('td-variables');
         this.parseTDVariables(this.tdMessage);
-        this.kothReceiveUpdates = (this.tdVariables.KOTHInfo === 'On' ? true : false); 
+        this.kothReceiveInfo = (this.tdVariables.KOTHInfo === 'On' ? true : false); 
         this.updateGroup('koth');
-        this.tournamentsReceiveUpdates = (this.tdVariables.TourneyInfo === 'On' ? true : false); 
+        this.tournamentsReceiveInfo = (this.tdVariables.TourneyInfo === 'On' ? true : false); 
         this.updateGroup('tournament');
         this.tdMessage = '';
       }
@@ -323,9 +323,9 @@ export class Tournaments {
 
     match = msg.match(/^:Your TourneyInfo variable has been set to (On|Off)./m);
     if(match) {
-      this.tournamentsReceiveUpdates = (match[1] === 'On' ? true : false);
+      this.tournamentsReceiveInfo = (match[1] === 'On' ? true : false);
       this.notifyList = {};
-      if(!this.tournamentsReceiveUpdates) 
+      if(!this.tournamentsReceiveInfo) 
         this.tournamentsShowNotifications = false;
       this.updateGroup('tournament');
     }
@@ -341,7 +341,8 @@ export class Tournaments {
         joinable: true,
         joined: false,
         status: 'open',
-        numPlayers: 0
+        numPlayers: 0,
+        date: null,
       });
       return false;
     }
@@ -580,7 +581,7 @@ export class Tournaments {
         const tourney = card.data('tournament-data');
         const notify = $(e.target).hasClass('tournament-notify');
         if(notify) 
-          this.tournamentsReceiveUpdates = true;
+          this.tournamentsReceiveInfo = true;
 
         this.notifyList[tourney.title] = notify;
         this.updateGroup('tournament');
@@ -636,11 +637,11 @@ export class Tournaments {
       nextDT = convertToLocalDateTime(serverDT, true);
     }
 
-    if(tourney.date) {
-      lastDT = convertToLocalDateTime(tourney.date, true);
-      if(!nextDT && (tourney.running || lastDT.getTime() - Date.now() > 0)) 
+    lastDT = tourney.date 
+        ? convertToLocalDateTime(tourney.date, true)
+        : new Date();
+    if(!nextDT && (tourney.running || lastDT.getTime() - Date.now() > 0)) 
         nextDT = lastDT;
-    }
 
     const currentDT = nextDT || lastDT;
     tourney.timestamp = currentDT.getTime();
@@ -693,9 +694,9 @@ export class Tournaments {
         checkMark.toggleClass('invisible', !this.tournamentsShowNotifications);
         storage.set('tournaments-show-notifications', String(this.tournamentsShowNotifications));
 
-        checkMark = group.find('.receive-updates .checkmark');
-        checkMark.toggleClass('invisible', !this.tournamentsReceiveUpdates);
-        storage.set('tournaments-receive-updates', String(this.tournamentsReceiveUpdates));
+        checkMark = group.find('.receive-info .checkmark');
+        checkMark.toggleClass('invisible', !this.tournamentsReceiveInfo);
+        storage.set('tournaments-receive-info', String(this.tournamentsReceiveInfo));
 
         storage.set('tournaments-notify-list', JSON.stringify(this.notifyList));
         this.updateAllTournaments({});
@@ -708,9 +709,9 @@ export class Tournaments {
         checkMark.toggleClass('invisible', !this.kothShowNotifications);
         storage.set('koth-show-notifications', String(this.kothShowNotifications));
 
-        checkMark = group.find('.receive-updates .checkmark');
-        checkMark.toggleClass('invisible', !this.kothReceiveUpdates);
-        storage.set('koth-receive-updates', String(this.kothReceiveUpdates));
+        checkMark = group.find('.receive-info .checkmark');
+        checkMark.toggleClass('invisible', !this.kothReceiveInfo);
+        storage.set('koth-receive-info', String(this.kothReceiveInfo));
 
         group.find('.tournament-group-title').text(`${this.tdVariables.Female === 'Yes' ? 'Queen' : 'King'} of the Hill`);
         checkMark = group.find('.set-female .checkmark');
@@ -910,7 +911,7 @@ export class Tournaments {
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="tournament-more-options">
               <li><a class="dropdown-item noselect show-notifications"><span class="me-2 checkmark invisible">&#10003;</span>Show All Notifications</a></li>
-              <li><a class="dropdown-item noselect receive-updates"><span class="me-2 checkmark invisible">&#10003;</span>Receive Updates</a></li>
+              <li><a class="dropdown-item noselect receive-info"><span class="me-2 checkmark invisible">&#10003;</span>Receive Info</a></li>
               ${groupName === 'koth' ? '<li><a class="dropdown-item noselect set-female"><span class="me-2 checkmark invisible">&#10003;</span>Set me as Female</a></li>' : ''}
             </ul>
           </div>
@@ -928,19 +929,19 @@ export class Tournaments {
 
           this.tournamentsShowNotifications = !checkMark.hasClass('invisible');
           if(this.tournamentsShowNotifications) 
-            this.tournamentsReceiveUpdates = true;
+            this.tournamentsReceiveInfo = true;
 
           this.notifyList = {};
           this.updateGroup('tournament');
         });
 
-        group.find('.receive-updates').on('click', (e) => {
+        group.find('.receive-info').on('click', (e) => {
           const checkMark = $(e.currentTarget).find('.checkmark');
           checkMark.toggleClass('invisible');
           e.stopPropagation();
 
-          this.tournamentsReceiveUpdates = !checkMark.hasClass('invisible');
-          if(!this.tournamentsReceiveUpdates) 
+          this.tournamentsReceiveInfo = !checkMark.hasClass('invisible');
+          if(!this.tournamentsReceiveInfo) 
             this.tournamentsShowNotifications = false;
 
           this.notifyList = {};
@@ -958,18 +959,18 @@ export class Tournaments {
 
           this.kothShowNotifications = !checkMark.hasClass('invisible');
           if(this.kothShowNotifications) 
-            this.kothReceiveUpdates = true;
+            this.kothReceiveInfo = true;
 
           this.updateGroup('koth');
         });
 
-        group.find('.receive-updates').on('click', (e) => {
+        group.find('.receive-info').on('click', (e) => {
           const checkMark = $(e.currentTarget).find('.checkmark');
           checkMark.toggleClass('invisible');
           e.stopPropagation();
 
-          this.kothReceiveUpdates = !checkMark.hasClass('invisible');
-          if(!this.kothReceiveUpdates) 
+          this.kothReceiveInfo = !checkMark.hasClass('invisible');
+          if(!this.kothReceiveInfo) 
             this.kothShowNotifications = false;
           
           this.updateGroup('koth');
