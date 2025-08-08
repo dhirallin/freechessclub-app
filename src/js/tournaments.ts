@@ -16,6 +16,7 @@ export class Tournaments {
   private kothFollowKing = null;
   private tournamentsShowNotifications = false;
   private tournamentsReceiveInfo = false;
+  private tournamentsReceiveUpdates = false;
   private notifyList = {};
   private pendingTournaments = [];
 
@@ -44,6 +45,7 @@ export class Tournaments {
     this.kothReceiveInfo = (storage.get('koth-receive-info') === 'true');
     this.tournamentsShowNotifications = (storage.get('tournaments-show-notifications') === 'true');
     this.tournamentsReceiveInfo = (storage.get('tournaments-receive-info') === 'true');
+    this.tournamentsReceiveUpdates = (storage.get('tournaments-receive-updates') === 'true');
     this.notifyList = JSON.parse(storage.get('tournaments-notify-list')) || {};
   }
 
@@ -58,6 +60,10 @@ export class Tournaments {
     if(this.tournamentsReceiveInfo != null) {
       awaiting.set('td-set'); 
       this.session.send(`td set TourneyInfo ${this.tournamentsReceiveInfo ? 1 : 0}`);
+    }
+    if(this.tournamentsReceiveUpdates != null) {
+      awaiting.set('td-set'); 
+      this.session.send(`td set TourneyUpdates ${this.tournamentsReceiveUpdates ? 1 : 0}`);
     }
     
     if($('#pills-tournaments').hasClass('active'))
@@ -104,6 +110,8 @@ export class Tournaments {
       this.session.send(`td set kothinfo ${this.kothReceiveInfo ? 'On' : 'Off'}`);
       awaiting.set('td-set');
       this.session.send(`td set tourneyinfo ${this.tournamentsReceiveInfo ? 'On' : 'Off'}`);
+      awaiting.set('td-set');
+      this.session.send(`td set tourneyupdates ${this.tournamentsReceiveUpdates ? 'On' : 'Off'}`);
     }
   }
 
@@ -144,6 +152,7 @@ export class Tournaments {
         this.kothReceiveInfo = (this.tdVariables.KOTHInfo === 'On' ? true : false); 
         this.updateGroup('koth');
         this.tournamentsReceiveInfo = (this.tdVariables.TourneyInfo === 'On' ? true : false); 
+        this.tournamentsReceiveUpdates = (this.tdVariables.TourneyUpdates === 'On' ? true : false); 
         this.updateGroup('tournament');
         this.tdMessage = '';
       }
@@ -328,6 +337,22 @@ export class Tournaments {
       if(!this.tournamentsReceiveInfo) 
         this.tournamentsShowNotifications = false;
       this.updateGroup('tournament');
+      return false;
+    }
+
+    match = msg.match(/^:Your TourneyUpdates variable has been set to (On|Off)./m);
+    if(match) {
+      this.tournamentsReceiveUpdates = (match[1] === 'On' ? true : false);
+      return false;
+    }
+
+    match = msg.match(/^:You are now observing tourney #(\d+)./m);
+    if(match && awaiting.resolve('td-observetourney'))
+      return true;
+    match = msg.match(/^:You are no longer observing tourney #(\d+)./m);
+    if(match && awaiting.has('td-observetourney')) {
+      this.session.send(`td observetourney ${match[1]}`);
+      return true;
     }
 
     match = msg.match(/^:mamer TOURNEY INFO: \*\*\* (.*?) \*\*\*\n:Tourney #(\d+), a [^,]+, has been opened!/m);
@@ -344,6 +369,11 @@ export class Tournaments {
         numPlayers: 0,
         date: null,
       });
+
+      if($('#pills-tournaments').hasClass('active')) {
+        awaiting.set('td-observetourney');
+        this.session.send(`td observetourney ${id}`);
+      }
       return false;
     }
 
@@ -438,6 +468,10 @@ export class Tournaments {
           this.pendingTournaments.push(tourney);
           awaiting.set('td-players');
           this.session.send(`td players ${tourney.id}`);
+          if(tourney.running) {
+            awaiting.set('td-observetourney');
+            this.session.send(`td observetourney ${tourney.id}`);
+          }
         });
         this.tdMessage = '';
       }
