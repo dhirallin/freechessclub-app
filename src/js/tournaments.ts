@@ -786,7 +786,6 @@ export class Tournaments {
         this.session.send(`td standardgrid ${tourney.id}`);
       });
 
-      
       card.find('tournament-games').on('click', () => {
         const tourney = card.data('tournament-data');
         awaiting.set('td-games');
