@@ -330,16 +330,19 @@ export class Tournaments {
       this.updateGroup('tournament');
     }
 
-    match = msg.match(/^:Tourney #\d+, a [^,]+, has been opened!/m);
+    match = msg.match(/^:mamer TOURNEY INFO: \*\*\* (.*?) \*\*\*\n:Tourney #(\d+), a [^,]+, has been opened!/m);
     if(match) {
-      awaiting.set('td-set');
-      this.session.send('td set height 999');
-      awaiting.set('td-listtourneys');
-      this.session.send('td listtourneys');
-      awaiting.set('td-set');
-      this.session.send('td set height 24');
-
-      // get title, get grid, joinable, remove notify me?
+      const title = match[1];
+      const id = +match[2];
+      this.addTournament({
+        id,
+        title,
+        running: true,
+        joinable: true,
+        joined: false,
+        status: 'open',
+        numPlayers: 0
+      });
       return false;
     }
 
@@ -350,33 +353,44 @@ export class Tournaments {
       return false;
     }
 
-    match = msg.match(/:mamer TOURNEY #(\d+) UPDATE: (\w+)\S* has joined tourney #\d+ \(seed: \d+, score: \d+\); (\d+) players? now!/m);
+    match = msg.match(/^:You have joined tourney #(\d+)./m);
     if(match) {
       const id = +match[1];
-      const player = match[2];
-      const numPlayers = +match[3];
-      const joined = player === this.session.getUser();
       this.updateTournament(id, {
-        ...(joined && { joined: true }),
-        numPlayers: numPlayers
+        joined: true,
       });
-      if(joined)
-        this.updateAllTournaments({}); // Stop user joining other running tournaments
+      this.updateAllTournaments({}); // Stop user joining other running tournaments
       return false;
     }
 
-    match = msg.match(/:mamer TOURNEY #(\d+) UPDATE: (\w+)\S* withdrew from tourney #\d+; (\d+) players? now./m);
+    
+    match = msg.match(/^:You withdrew from tourney #(\d+)./m);
     if(match) {
       const id = +match[1];
-      const player = match[2];
-      const numPlayers = +match[3];
-      const left = player === this.session.getUser();
       this.updateTournament(id, {
-        ...(left && { joined: false }),
+        joined: false,
+      });
+      this.updateAllTournaments({});
+      return false;
+    }
+
+    match = msg.match(/:mamer TOURNEY #(\d+) UPDATE: \S+ has joined tourney #\d+ \(seed: \d+, score: \d+\); (\d+) players? now!/m);
+    if(match) {
+      const id = +match[1];
+      const numPlayers = +match[2];
+      this.updateTournament(id, {
+        numPlayers: numPlayers
+      });
+      return false;
+    }
+
+    match = msg.match(/:mamer TOURNEY #(\d+) UPDATE: \S+ withdrew from tourney #\d+; (\d+) players? now./m);
+    if(match) {
+      const id = +match[1];
+      const numPlayers = +match[2];
+      this.updateTournament(id, {
         numPlayers: numPlayers
       });    
-      if(left)
-        this.updateAllTournaments({});   
       return false;
     }
     
@@ -392,7 +406,14 @@ export class Tournaments {
     match = msg.match(/^:mamer TOURNEY #(\d+) UPDATE: Tourney #\d+ has been closed!/m);
     if(match) {
       const id = +match[1];
-      // tournament cancelled, get last held tournament
+      // tourney still open for late joiners?
+      return false;
+    }
+
+    match = msg.match(/^:mamer TOURNEY INFO: Tourney #(\d+) has been aborted!/m);
+    if(match) {
+      const id = +match[1];
+      // tourney no longer running
       return false;
     }
 
