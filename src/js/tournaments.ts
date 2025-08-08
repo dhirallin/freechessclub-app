@@ -360,11 +360,11 @@ export class Tournaments {
       return true;
     }
 
-    match = msg.match(/^:mamer TOURNEY INFO: \*\*\* (.*?) \*\*\*\n:Tourney #(\d+), a [^,]+, has been opened!/m);
+    match = msg.match(/^:mamer TOURNEY INFO: (\*\*\* (.*?) \*\*\*\n:Tourney #(\d+), a [^,]+, has been opened!)/m);
     if(match) {
-      const title = match[1];
-      const id = +match[2];
-      this.addTournament({
+      const title = match[2];
+      const id = +match[3];
+      const card = this.addTournament({
         id,
         title,
         running: true,
@@ -379,13 +379,57 @@ export class Tournaments {
         awaiting.set('td-observetourney');
         this.session.send(`td observetourney ${id}`);
       }
+
+      const data = card.data('tournament-data');
+      if(this.tournamentsShowNotifications || data.notify) {
+        const nElement = createNotification({
+          type: 'Tournament Open', 
+          msg: match[1], 
+          btnSuccess: [`td jointourney ${id}`, 'Join'],
+          btnFailure: ['', 'Not Now'],
+          useSessionSend: true,
+          icons: false
+        });
+        nElement.attr('data-tournament-id', id);
+      }
       return false;
     }
 
     match = msg.match(/^:mamer TOURNEY #(\d+) UPDATE: Tourney #2 has started!/m);
     if(match) {
       const id = +match[1];
-      // get grid, joinable, observe, games?
+      this.updateTournament(id, {
+        status: 'started',
+      });
+      return false;
+    }
+
+    match = msg.match(/^:mamer TOURNEY #(\d+) UPDATE: The tourney has ended./m);
+    if(match) {
+      const id = +match[1];
+      this.updateTournament(id, {
+        running: false,
+      });
+      this.updateAllTournaments({});
+      removeNotification(`[data-tournament-id="${id}"`);
+      return false;
+    }
+
+    match = msg.match(/^:mamer TOURNEY INFO: Tourney #(\d+) has been aborted!/m);
+    if(match) {
+      const id = +match[1];
+      this.updateTournament(id, {
+        running: false,
+      });
+
+      awaiting.set('td-set');
+      this.session.send('td set height 999');
+      awaiting.set('td-listtourneys');
+      this.session.send('td listtourneys');
+      awaiting.set('td-set');
+      this.session.send('td set height 24');
+
+      removeNotification(`[data-tournament-id="${id}"`);
       return false;
     }
 
@@ -396,6 +440,8 @@ export class Tournaments {
         joined: true,
       });
       this.updateAllTournaments({}); // Stop user joining other running tournaments
+      this.session.send('+ch 49');
+      removeNotification(`[data-tournament-id="${id}"`);
       return false;
     }
 
@@ -430,29 +476,6 @@ export class Tournaments {
       return false;
     }
     
-    match = msg.match(/^:mamer TOURNEY #(\d+) UPDATE: The tourney has ended./m);
-    if(match) {
-      const id = +match[1];
-      this.updateTournament(id, {
-        running: false,
-      });
-      return false;
-    }
-
-    match = msg.match(/^:mamer TOURNEY #(\d+) UPDATE: Tourney #\d+ has been closed!/m);
-    if(match) {
-      const id = +match[1];
-      // tourney still open for late joiners?
-      return false;
-    }
-
-    match = msg.match(/^:mamer TOURNEY INFO: Tourney #(\d+) has been aborted!/m);
-    if(match) {
-      const id = +match[1];
-      // tourney no longer running
-      return false;
-    }
-
     pattern = ':mamer\'s tourney list:';
     if((msg.startsWith(pattern) || this.tdMessage.startsWith(pattern)) && awaiting.has('td-listtourneys')) {
       this.tdMessage += msg + '\n';
@@ -778,6 +801,10 @@ export class Tournaments {
     lastDT = tourney.date 
         ? convertToLocalDateTime(tourney.date, true)
         : new Date();
+
+    if(!tourney.date) 
+      tourney.date = convertToServerDateTime(lastDT);
+      
     if(!nextDT && (tourney.running || lastDT.getTime() - Date.now() > 0)) 
         nextDT = lastDT;
 
@@ -822,6 +849,8 @@ export class Tournaments {
     card.find('.tournament-games').toggle(tourney.status === 'started');
   
     this.addTournamentCard(card, 'tournament');
+
+    return card;
   }
 
   updateGroup(groupName: string) {
