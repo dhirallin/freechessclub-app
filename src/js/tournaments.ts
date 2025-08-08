@@ -775,7 +775,7 @@ export class Tournaments {
     card.find('.tournament-date').html(whenStr);
     
     const numPlayersStr = tourney.numPlayers && tourney.running
-        ? `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}`
+        ? `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}  ${tourney.status === 'started' ? '<a href="javascript:void(0)">(Standings)</a>' : '<a href="javascript:void(0)">(Player list)</a>'}`
         : '';
     card.find('.tournament-num-players').html(numPlayersStr);
     
