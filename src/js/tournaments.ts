@@ -779,17 +779,13 @@ export class Tournaments {
         : '';
     card.find('.tournament-num-players').html(numPlayersStr);
     
-    const ageInDays = lastDT ? getDiffDays(lastDT) : undefined;
+    const ageInHours = lastDT ? (Date.now() - lastDT.getTime()) * 60 * 60 * 1000: undefined;
 
     if(tourney.running)
       tourney.winners = '';
-    let winnersStr = '';
-    if(tourney.winners) {
-      console.log('WINNER: ',tourney.winners);
-      winnersStr = ageInDays === 0
-          ? `<span class="tournament-card-label">Winner${tourney.winners.includes(',') ? 's' : ''}:</span>  ${tourney.winners}`
-          : `<span class="tournament-card-label">Last Winner${tourney.winners.includes(',') ? 's' : ''}:</span>  ${tourney.winners}  <a href="javascript:void(0)">(Standings)</a>`;
-    }
+    const winnersStr = tourney.winners
+        ? `<span class="tournament-card-label">${ageInHours === 0 ? 'Winner' : 'Last Winner'}${tourney.winners.includes(',') ? 's' : ''}:</span>  ${tourney.winners}  <a href="javascript:void(0)">(Standings)</a>`
+        : '';
     card.find('.tournament-winners').html(winnersStr);
 
     if(tourney.id !== undefined) {
@@ -802,7 +798,7 @@ export class Tournaments {
     card.find('.tournament-unnotify').toggle(!tourney.running && !!nextDT && notify);
     card.find('.tournament-join').toggle(!!tourney.joinable && !inTournament);
     card.find('.tournament-withdraw').toggle(!!tourney.joined);
-    card.find('.tournament-standings').toggle(!!tourney.winners && ageInDays === 0);
+    card.find('.tournament-games').toggle(tourney.status === 'started');
   
     this.addTournamentCard(card, 'tournament');
   }
