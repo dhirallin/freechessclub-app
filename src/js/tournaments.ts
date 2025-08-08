@@ -771,7 +771,7 @@ export class Tournaments {
     else
       dateStr = this.formatDateRelative(currentDT);
 
-    const whenStr = `<span class="tournament-card-label">${nextDT ? 'When:' : 'Last Held:'}</span>  ${dateStr}, ${timeStr}`;
+    const whenStr = `<span class="tournament-card-label">${nextDT ? 'When:' : 'Last Held:'}</span>  ${dateStr}, ${timeStr} <i class="chat-text-suffix">(local time)</i>`;
     card.find('.tournament-date').html(whenStr);
     
     const numPlayersStr = tourney.numPlayers && tourney.running
