@@ -1000,7 +1000,7 @@ input[type="number"]:focus {
   gap: 10px;
 }
 #pills-tournaments > .tournament-group:nth-of-type(odd) {
-  background-color: initial;
+  background-color: rgba(0, 0, 0, 0.06);
 }
 #pills-tournaments > .tournament-group:nth-of-type(even) {
   background-color: rgba(0, 0, 0, 0.1);
