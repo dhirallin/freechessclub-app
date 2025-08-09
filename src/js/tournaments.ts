@@ -593,6 +593,7 @@ export class Tournaments {
                     <table class="table table-sm table-borderless table-striped modal-table">
                       <thead>
                         <tr>
+                          <th scope="col">Pos</th>
                           <th scope="col">Player</th>
                           <th scope="col">Score</th>
                         </tr>
@@ -611,9 +612,21 @@ export class Tournaments {
             header.append(`<th scope="col">Round ${i}</th>`);
           
           const tbody = standingsModal.find('tbody')[0];
+          let lastScore = null;
+          let position = 1;
           grid.forEach(player => {
-            const row = tbody.insertRow();
+            let posStr = '';
+            if(numRounds && player.score !== lastScore) {
+              posStr = position.toString();
+              lastScore = player.score;
+            }
+            position++;
+            
+            let row = tbody.insertRow();
             let cell = row.insertCell();
+            cell.textContent = posStr;            
+          
+            cell = row.insertCell();
             cell.textContent = `${player.name}(${player.rating}) [${player.seed}]`; 
             cell = row.insertCell();
             cell.textContent = player.score;

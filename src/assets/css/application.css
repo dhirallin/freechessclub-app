@@ -1028,12 +1028,17 @@ input[type="number"]:focus {
 .tournament-standings table {
   width: auto;
 }
-.tournament-standings td:nth-child(2),
-.tournament-standings th:nth-child(2) {
+
+.tournament-standings td:nth-child(1),
+.tournament-standings th:nth-child(1) {
   text-align: right;
 }
-.tournament-standings td:nth-child(n+3),
-.tournament-standings th:nth-child(n+3) {
+.tournament-standings td:nth-child(3),
+.tournament-standings th:nth-child(3) {
+  text-align: right;
+}
+.tournament-standings td:nth-child(n+4),
+.tournament-standings th:nth-child(n+4) {
   text-align: center;
 }
 
