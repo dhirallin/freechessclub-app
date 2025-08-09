@@ -612,11 +612,11 @@ export class Tournaments {
             header.append(`<th scope="col">Round ${i}</th>`);
           
           const tbody = standingsModal.find('tbody')[0];
-          let lastScore = null;
+          let lastScore = 0;
           let position = 1;
           grid.forEach(player => {
             let posStr = '';
-            if(numRounds && player.score !== lastScore) {
+            if(player.score !== lastScore) {
               posStr = position.toString();
               lastScore = player.score;
             }
@@ -627,7 +627,7 @@ export class Tournaments {
             cell.textContent = posStr;            
           
             cell = row.insertCell();
-            cell.textContent = `${player.name}(${player.rating}) [${player.seed}]`; 
+            cell.textContent = `${player.name}(${player.rating})  [${player.seed}]`; 
             cell = row.insertCell();
             cell.textContent = player.score;
             player.rounds.forEach(round => {
