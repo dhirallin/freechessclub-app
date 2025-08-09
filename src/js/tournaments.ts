@@ -631,8 +631,16 @@ export class Tournaments {
             cell = row.insertCell();
             cell.textContent = player.score;
             player.rounds.forEach(round => {
+              let roundStr = '';
+              if(Number.isInteger(round.opponent)) {
+                const opponent = grid.find(p => p.seed === round.opponent);
+                roundStr = `${round.result}  ${opponent.name}(${opponent.rating})  ${round.color}`;
+              }
+              else
+                roundStr = `${round.result}  ${round.opponent}`;
+
               const cell = row.insertCell();
-              cell.textContent = `${round.result} ${round.opponent} ${round.color}`;
+              cell.textContent = roundStr;
             }); 
           });
           
@@ -752,7 +760,7 @@ export class Tournaments {
           if(match) {
             return {
               result: match[1],
-              opponent: match[2],
+              opponent: +match[2],
               color: match[3]
             }
           }

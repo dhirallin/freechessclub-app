@@ -1037,8 +1037,8 @@ input[type="number"]:focus {
 .tournament-standings th:nth-child(3) {
   text-align: right;
 }
-.tournament-standings td:nth-child(n+4),
-.tournament-standings th:nth-child(n+4) {
-  text-align: center;
+.tournament-standings td:nth-child(n+4) {
+  white-space: pre-wrap;
 }
+
 
