@@ -411,7 +411,7 @@ export class Tournaments {
         running: false,
       });
       this.updateAllTournaments({});
-      removeNotification(`[data-tournament-id="${id}"`);
+      removeNotification($(`[data-tournament-id="${id}"`));
       return false;
     }
 
@@ -429,7 +429,7 @@ export class Tournaments {
       awaiting.set('td-set');
       this.session.send('td set height 24');
 
-      removeNotification(`[data-tournament-id="${id}"`);
+      removeNotification($(`[data-tournament-id="${id}"`));
       return false;
     }
 
@@ -441,7 +441,7 @@ export class Tournaments {
       });
       this.updateAllTournaments({}); // Stop user joining other running tournaments
       this.session.send('+ch 49');
-      removeNotification(`[data-tournament-id="${id}"`);
+      removeNotification($(`[data-tournament-id="${id}"`));
       return false;
     }
 
@@ -456,7 +456,7 @@ export class Tournaments {
       return false;
     }
 
-    match = msg.match(/:mamer TOURNEY #(\d+) UPDATE: \S+ has joined tourney #\d+ \(seed: \d+, score: \d+\); (\d+) players? now!/m);
+    match = msg.match(/:mamer TOURNEY #(\d+) UPDATE: \S+ has joined tourney #\d+ \(seed: \d+, score: [\d+\.]+\); (\d+) players? now!/m);
     if(match) {
       const id = +match[1];
       const numPlayers = +match[2];
@@ -590,7 +590,7 @@ export class Tournaments {
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                  <div class="tournament-standings" class="mb-1" style="height: 500px; overflow-y: auto;">
+                  <div class="tournament-standings" class="mb-1">
                     <table class="table table-sm table-borderless table-striped modal-table">
                       <thead>
                         <tr>
@@ -797,8 +797,8 @@ export class Tournaments {
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-notify" title="Notify Me" style="display: none; white-space: nowrap;">Notify Me</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-unnotify" title="Stop Notifying" style="display: none; white-space: nowrap;">Stop Notifying</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-join" title="Join" style="display: none; white-space: nowrap;">Join</button>
-                <button type="button" class="btn btn-outline-secondary btn-md tournament-withdraw" title="Withdraw" style="display: none; white-space: nowrap;">Withdraw</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-games" title="Games" style="display: none; white-space: nowrap;">Games</button>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-withdraw" title="Withdraw" style="display: none; white-space: nowrap;">Withdraw</button>
                 </div>
             </div>
           </div>

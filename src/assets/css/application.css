@@ -1010,7 +1010,18 @@ input[type="number"]:focus {
 .tournament-standings-modal {
   --bs-modal-width: 1000px;
 } 
-.tournament-standings-modal modal-dialog {
-  width: auto;
+.tournament-standings-modal .modal-dialog {
+  width: fit-content;
 } 
+.tournament-standings {
+  height: 500px; 
+  overflow: auto;
+}
+.tournament-standings table {
+  width: auto;
+}
+.tournament-standings th, 
+.tournament-standings td {
+  min-width: 120px;
+}
 
