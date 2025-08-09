@@ -855,6 +855,9 @@ export class Tournaments {
       });
 
       card.on('click', '.tournament-players-link', () => {
+        if(awaiting.has('players-dialog'))
+          return;
+
         const tourney = card.data('tournament-data');
         awaiting.set('td-players');
         awaiting.set('players-dialog');
@@ -862,6 +865,9 @@ export class Tournaments {
       });
 
       card.on('click', '.tournament-standings-link', () => {
+        if(awaiting.has('standings-dialog'))
+          return;
+
         const tourney = card.data('tournament-data');
         awaiting.set('td-standardgrid');
         awaiting.set('standings-dialog');
@@ -869,6 +875,9 @@ export class Tournaments {
       });
 
       card.find('tournament-games').on('click', () => {
+        if(awaiting.has('td-games'))
+          return;
+
         const tourney = card.data('tournament-data');
         awaiting.set('td-games');
         this.session.send(`td games ${tourney.id}`);
