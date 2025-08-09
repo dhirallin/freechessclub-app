@@ -94,15 +94,18 @@ body {
   --bs-btn-border-radius: 0.9rem;
 }
 
-#channels-modal table td:nth-child(1),
-#channels-modal table th:nth-child(1) {
+.modal-table th {
+  white-space: nowrap;
+}
+.modal-table td:nth-child(1),
+.modal-table th:nth-child(1) {
   padding-left: 0.75rem;
 }
-#channels-modal table td:nth-child(2),
-#channels-modal table th:nth-child(2) {
+.modal-table td:nth-child(2),
+.modal-table th:nth-child(2) {
   text-align: center;
 }
-#channels-modal table thead {
+.modal-table thead {
  position: sticky; 
  top: 0;
  box-shadow: 0 1px 0 var(--box-shadow-color);
@@ -1002,4 +1005,11 @@ input[type="number"]:focus {
   z-index: 2;
   background-color: var(--bg-color, white);
 }
+
+.tournament-standings-modal {
+  --bs-modal-width: 1000px;
+} 
+.tournament-standings-modal modal-dialog {
+  width: auto;
+} 
 

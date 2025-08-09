@@ -535,7 +535,20 @@ export class Tournaments {
         this.tdMessage = '';
         if(awaiting.resolve('players-dialog')) {
           const players = this.parseTDPlayers(this.tdMessage);
-          showFixedDialog({type: 'Player List', msg: JSON.stringify(players), btnSuccess: ['', 'OK']});
+          const playersModal = $(`<div class="modal fade tournament-players-modal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Player List</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                </div>
+              </div>
+            </div>
+          </div>`);
+          playersModal.on('hidden.bs.modal', () => playersModal.remove());
+          playersModal.appendTo('body').modal('show');
         }
       }
       return true;
@@ -569,7 +582,38 @@ export class Tournaments {
         }
         this.tdMessage = '';
         if(awaiting.resolve('standings-dialog')) {
-          showFixedDialog({type: 'Standings', msg: JSON.stringify(grid), btnSuccess: ['', 'OK']});
+          const standingsModal = $(`<div class="modal fade tournament-standings-modal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Standings</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="tournament-standings" class="mb-1" style="height: 500px; overflow-y: auto;">
+                    <table class="table table-sm table-borderless table-striped modal-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Player</th>
+                          <th scope="col">Score</th>
+                          <th scope="col">Round 1</th>
+                          <th scope="col">Round 2</th>
+                          <th scope="col">Round 3</th>
+                          <th scope="col">Round 4</th>
+                          <th scope="col">Round 5</th>
+                          <th scope="col">Round 6</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>`);
+          standingsModal.on('hidden.bs.modal', () => standingsModal.remove());
+          standingsModal.appendTo('body').modal('show');        
         }
       }
       return true;

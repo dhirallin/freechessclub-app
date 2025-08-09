@@ -388,7 +388,7 @@ a {
   color: white;
 }
 
-#channels-modal table thead {
+.modal-table thead {
   background: color-mix(in srgb, var(--bg-color) 85%, white 15%);
   --box-shadow-color: color-mix(in srgb, var(--bg-color) 85%, white 15%);
 }
