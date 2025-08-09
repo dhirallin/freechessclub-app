@@ -972,8 +972,8 @@ export class Tournaments {
     const whenStr = `<span class="tournament-card-label">${nextDT ? 'When:' : 'Last Held:'}</span>  ${dateStr}, ${timeStr} <i class="chat-text-suffix">(local time)</i>`;
     card.find('.tournament-date').html(whenStr);
     
-    const numPlayersStr = tourney.numPlayers && tourney.running
-        ? `<span class="tournament-card-label"># Players:</span>  ${tourney.numPlayers}  <a class="tournament-players-link" href="javascript:void(0)">(Player list)</a>'}`
+    const numPlayersStr = tourney.numPlayers // && tourney.running
+        ? `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}  <a class="tournament-players-link" href="javascript:void(0)">(Player List)</a>`
         : '';
     card.find('.tournament-num-players').html(numPlayersStr);
     
