@@ -444,3 +444,14 @@ a {
 .tournament-card-label {
   color: #BBC7D4;
 }
+
+.tournament-standings-pos { color: var(--fg-color); }
+.tournament-standings-name { color: var(--fg-color); }
+.tournament-standings-rating { color: #bbb; }
+.tournament-standings-score { color: var(--fg-color); }
+.tournament-standings-seed { color: #aaa; }
+.tournament-standings-win { color:  #ffd700; }
+.tournament-standings-lose { color: #1e90ff; }
+.tournament-standings-draw { color: #ff8c00; }
+.tournament-standings-result { color: #BB86FC; }
+.tournament-standings-color { color: var(--fg-color); }

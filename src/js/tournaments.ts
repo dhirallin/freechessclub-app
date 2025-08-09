@@ -7,6 +7,12 @@ import { createNotification, removeNotification, showFixedDialog } from './dialo
 import { convertToServerDateTime, convertToLocalDateTime, getDiffDays } from './utils';
 
 export class Tournaments {
+  private scheduledTournaments = [{
+    title: 'The Nightly 5 0 at 22:00',
+    type: '5 0 r SS\\5',
+    recurring: 'daily',
+  }];
+
   private tdMessage = ''; // Stores messages from td (tournament bot)
   private tdVariables: any = {}; // Stores user's td variables
   private session = null;
@@ -82,10 +88,8 @@ export class Tournaments {
     awaiting.set('td-variables');
     this.session.send('td variables');
 
-    this.addTournament({
-      title: 'The Nightly 5 0 at 22:00',
-      type: '5 0 r SS\\5',
-      recurring: 'daily',
+    this.scheduledTournaments.forEach(tourney => {
+      this.addTournament(tourney);
     });
 
     awaiting.set('td-set');
@@ -624,23 +628,33 @@ export class Tournaments {
             
             let row = tbody.insertRow();
             let cell = row.insertCell();
-            cell.textContent = posStr;            
+            cell.innerHTML = `<span class="tournament-standings-pos">${posStr}</span>`;            
           
             cell = row.insertCell();
-            cell.textContent = `${player.name}(${player.rating})  [${player.seed}]`; 
+            cell.innerHTML = `<span class="tournament-standings-name">${player.name}</span><span class="tournament-standings-rating">(${player.rating})</span>  <span class="tournament-standings-seed">[${player.seed}]</span>`; 
             cell = row.insertCell();
-            cell.textContent = player.score;
+            cell.innerHTML = `<span class="tournament-standings-score">${player.score}</span>`;
             player.rounds.forEach(round => {
-              let roundStr = '';
+              let resultClass = '';              
+              if(round.result === '+')
+                resultClass = 'win';
+              else if(round.result === '-')
+                resultClass = 'loss';
+              else if(round.result === '=')
+                resultClass = 'draw';
+              else
+                resultClass = 'result';
+                
+              let roundStr = '';  
               if(Number.isInteger(+round.opponent)) {
                 const opponent = grid.find(p => p.seed === +round.opponent);
-                roundStr = `${round.result}  ${opponent.name}(${opponent.rating})  ${round.color}`;
+                roundStr = `<span class="tournament-standings-${resultClass}">${round.result}</span>  <span class="tournament-standings-name">${opponent.name}</span><span class="tournament-standings-rating">(${opponent.rating})</span>  <span class="tournament-standings-color">${round.color}</span>`;
               }
               else
-                roundStr = `${round.result}  ${round.opponent}`;
+                roundStr = `<span class="tournament-standings-${resultClass}">${round.result}</span>  <span class="tournament-standings-name">${round.opponent}</span>`;
 
               const cell = row.insertCell();
-              cell.textContent = roundStr;
+              cell.innerHTML = roundStr;
             }); 
           });
           
