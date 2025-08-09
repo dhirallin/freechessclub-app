@@ -632,8 +632,8 @@ export class Tournaments {
             cell.textContent = player.score;
             player.rounds.forEach(round => {
               let roundStr = '';
-              if(Number.isInteger(round.opponent)) {
-                const opponent = grid.find(p => p.seed === round.opponent);
+              if(Number.isInteger(+round.opponent)) {
+                const opponent = grid.find(p => p.seed === +round.opponent);
                 roundStr = `${round.result}  ${opponent.name}(${opponent.rating})  ${round.color}`;
               }
               else
@@ -756,11 +756,11 @@ export class Tournaments {
       if(match) {
         const roundStrings = match[5].split(/\s+/);
         const rounds = roundStrings.map(str => {
-          const match = str.match(/^([^\d\s])(\d+|bye)([wb])?$/);
+          const match = str.match(/^(\S)(\d+|\w+)([wb])?$/);
           if(match) {
             return {
               result: match[1],
-              opponent: +match[2],
+              opponent: match[2],
               color: match[3]
             }
           }
