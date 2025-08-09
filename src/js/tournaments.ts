@@ -643,12 +643,12 @@ export class Tournaments {
               else if(round.result === '=')
                 resultClass = 'draw';
               else
-                resultClass = 'result';
+                resultClass = 'other-result';
                 
               let roundStr = '';  
               if(Number.isInteger(+round.opponent)) {
                 const opponent = grid.find(p => p.seed === +round.opponent);
-                roundStr = `<span class="tournament-standings-${resultClass}">${round.result}</span>  <span class="tournament-standings-name">${opponent.name}</span><span class="tournament-standings-rating">(${opponent.rating})</span>  <span class="tournament-standings-color">${round.color}</span>`;
+                roundStr = `<span class="tournament-standings-result tournament-standings-${resultClass}">${round.result}</span>  <span class="tournament-standings-name">${opponent.name}</span><span class="tournament-standings-rating">(${opponent.rating})</span>  <span class="tournament-standings-color">${round.color}</span>`;
               }
               else
                 roundStr = `<span class="tournament-standings-${resultClass}">${round.result}</span>  <span class="tournament-standings-name">${round.opponent}</span>`;

@@ -1038,5 +1038,6 @@ input[type="number"]:focus {
   text-align: right;
 }
 
+.tournament-standings-result { font-weight: bold; }
 
 

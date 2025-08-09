@@ -453,5 +453,5 @@ a {
 .tournament-standings-win { color:  #ffd700; }
 .tournament-standings-lose { color: #1e90ff; }
 .tournament-standings-draw { color: #ff8c00; }
-.tournament-standings-result { color: #BB86FC; }
+.tournament-standings-other-result { color: #BB86FC; }
 .tournament-standings-color { color: var(--fg-color); }
