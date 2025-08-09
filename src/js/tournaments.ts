@@ -535,7 +535,6 @@ export class Tournaments {
             this.pendingTournaments.splice(i, 1);
           }
         }
-        this.tdMessage = '';
         if(awaiting.resolve('players-dialog')) {
           const players = this.parseTDPlayers(this.tdMessage);
           const playersModal = $(`<div class="modal fade tournament-players-modal" tabindex="-1">
@@ -546,13 +545,38 @@ export class Tournaments {
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                  <div class="tournament-players" class="mb-1">
+                    <table class="table table-sm table-borderless table-striped modal-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Seed</th>
+                          <th scope="col">Player</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Online</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>`);
+          </div>`);        
+          const tbody = playersModal.find('tbody')[0];
+          players.forEach(player => {          
+            let row = tbody.insertRow();
+            let cell = row.insertCell();
+            cell.innerHTML = `<span class="tournament-table-pos">${player.seed}</span>`;            
+          
+            cell = row.insertCell();
+            cell.innerHTML = `<span class="tournament-table-name">${player.name}</span> <span class="tournament-table-rating">(${player.rating})</span>`; 
+          });
+          
           playersModal.on('hidden.bs.modal', () => playersModal.remove());
-          playersModal.appendTo('body').modal('show');
+          playersModal.appendTo('body').modal('show');        
         }
+        this.tdMessage = '';
       }
       return true;
     }
@@ -628,12 +652,12 @@ export class Tournaments {
             
             let row = tbody.insertRow();
             let cell = row.insertCell();
-            cell.innerHTML = `<span class="tournament-standings-pos">${posStr}</span>`;            
+            cell.innerHTML = `<span class="tournament-table-pos">${posStr}</span>`;            
           
             cell = row.insertCell();
-            cell.innerHTML = `<span class="tournament-standings-name">${player.name}</span><span class="tournament-standings-rating">(${player.rating})</span>  <span class="tournament-standings-seed">[${player.seed}]</span>`; 
+            cell.innerHTML = `<span class="tournament-table-name">${player.name}</span> <span class="tournament-table-rating">(${player.rating})</span>  <span class="tournament-table-seed">[${player.seed}]</span>`; 
             cell = row.insertCell();
-            cell.innerHTML = `<span class="tournament-standings-score">${player.score}</span>`;
+            cell.innerHTML = `<span class="tournament-table-score">${player.score}</span>`;
             player.rounds.forEach(round => {
               let resultClass = '';              
               if(round.result === '+')
@@ -648,10 +672,10 @@ export class Tournaments {
               let roundStr = '';  
               if(Number.isInteger(+round.opponent)) {
                 const opponent = grid.find(p => p.seed === +round.opponent);
-                roundStr = `<span class="tournament-standings-result tournament-standings-${resultClass}">${round.result}</span>  <span class="tournament-standings-name">${opponent.name}</span><span class="tournament-standings-rating">(${opponent.rating})</span>  <span class="tournament-standings-color">${round.color}</span>`;
+                roundStr = `<span class="tournament-table-result tournament-table-${resultClass}">${round.result}</span>  <span class="tournament-table-name">${opponent.name}</span> <span class="tournament-table-rating">(${opponent.rating})</span>  <span class="tournament-table-color">${round.color}</span>`;
               }
               else
-                roundStr = `<span class="tournament-standings-${resultClass}">${round.result}</span>  <span class="tournament-standings-name">${round.opponent}</span>`;
+                roundStr = `<span class="tournament-table-${resultClass}">${round.result}</span>  <span class="tournament-table-name">${round.opponent}</span>`;
 
               const cell = row.insertCell();
               cell.innerHTML = roundStr;

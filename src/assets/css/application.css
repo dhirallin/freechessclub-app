@@ -999,12 +999,6 @@ input[type="number"]:focus {
   flex-direction: column;
   gap: 10px;
 }
-#pills-tournaments > .tournament-group:nth-of-type(odd) {
-  background-color: rgba(0, 0, 0, 0.06);
-}
-#pills-tournaments > .tournament-group:nth-of-type(even) {
-  background-color: rgba(0, 0, 0, 0.1);
-}
 .card.tournament-card {
   --bs-card-color: var(--fg-color);
 }
@@ -1038,6 +1032,6 @@ input[type="number"]:focus {
   text-align: right;
 }
 
-.tournament-standings-result { font-weight: bold; }
+.tournament-table-result { font-weight: bold; }
 
 

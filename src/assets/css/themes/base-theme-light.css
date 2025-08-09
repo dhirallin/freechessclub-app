@@ -339,13 +339,13 @@ cg-board {
   color: #4A5A6A;
 }
 
-.tournament-standings-pos { color: var(--fg-color); }
-.tournament-standings-name { color: var(--fg-color); }
-.tournament-standings-rating { color: #555a66 }           
-.tournament-standings-score { color: var(--fg-color); }
-.tournament-standings-seed { color: #888; }             
-.tournament-standings-win { color: #b8860b; }           
-.tournament-standings-lose { color: #004080; }          
-.tournament-standings-draw { color: #cc7000; }          
-.tournament-standings-other-result { color: #7a42c1; }   
-.tournament-standings-color { color: var(--fg-color); }
+.tournament-table-pos { color: var(--fg-color); }
+.tournament-table-name { color: var(--fg-color); }
+.tournament-table-rating { color: #555a66 }           
+.tournament-table-score { color: var(--fg-color); }
+.tournament-table-seed { color: #888; }             
+.tournament-table-win { color: #b8860b; }           
+.tournament-table-lose { color: #004080; }          
+.tournament-table-draw { color: #cc7000; }          
+.tournament-table-other-result { color: #7a42c1; }   
+.tournament-table-color { color: var(--fg-color); }
