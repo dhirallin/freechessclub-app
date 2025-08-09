@@ -94,8 +94,8 @@ body {
   --bs-btn-border-radius: 0.9rem;
 }
 
-.modal-table th {
-  white-space: nowrap;
+.modal-table {
+  white-space: pre;
 }
 .modal-table td:nth-child(1),
 .modal-table th:nth-child(1) {
@@ -1037,8 +1037,6 @@ input[type="number"]:focus {
 .tournament-standings th:nth-child(3) {
   text-align: right;
 }
-.tournament-standings td {
-  white-space: pre-wrap;
-}
+
 
 
