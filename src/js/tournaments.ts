@@ -750,8 +750,8 @@ export class Tournaments {
       const match = line.match(/^:\|\s+(\d+)\s+\|\s+([^\w\s])(\w+(?:\(\w+\))?)\(([\d\-\+]+)\)\s+\|\s+([^\w\s])?(\w+)\s+\|/);
       if(match) {
         players.push({
-          id: match[1],
-          playerStatus: match[2],
+          seed: match[1],
+          onlineStatus: match[2],
           name: match[3],
           rating: match[4],
           matchRequestStatus: match[5],
@@ -791,7 +791,7 @@ export class Tournaments {
 
         players.push({
           seed: +match[1],
-          online: match[2] === '+',
+          onlineStatus: match[2],
           name: match[3],
           rating: match[4],
           rounds,
@@ -972,7 +972,7 @@ export class Tournaments {
     card.find('.tournament-date').html(whenStr);
     
     const numPlayersStr = tourney.numPlayers && tourney.running
-        ? `<span class="tournament-card-label"># Players:</span>  ${tourney.numPlayers}  ${tourney.status === 'started' ? '<a href="javascript:void(0)">(Standings)</a>' : '<a class="tournament-players-link" href="javascript:void(0)">(Player list)</a>'}`
+        ? `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}  ${tourney.status === 'started' ? '<a href="javascript:void(0)">(Standings)</a>' : '<a class="tournament-players-link" href="javascript:void(0)">(Player list)</a>'}`
         : '';
     card.find('.tournament-num-players').html(numPlayersStr);
     
