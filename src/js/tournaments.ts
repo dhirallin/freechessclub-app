@@ -571,6 +571,25 @@ export class Tournaments {
           
             cell = row.insertCell();
             cell.innerHTML = `<span class="tournament-table-name">${player.name}</span> <span class="tournament-table-rating">(${player.rating})</span>`; 
+          
+            let statusStr = '';
+            if(player.statusSymbol === '%')
+              statusStr = 'Requested half-point bye';
+            else if(player.statusSymbol === '#')
+              statusStr = 'Match request issued';
+            else {
+              statusStr = player.status;
+              if(player.statusSymbol === '.')
+                statusStr += ' / Idle';
+            }
+            cell = row.insertCell();
+            cell.innerHTML = `<span class="tournament-table-status">${statusStr}</span>`;
+          
+            cell = row.insertCell();
+            const checkCrossIcon = player.onlineStatus === '-' 
+                ? '<i class="fa-solid fa-xmark"></i>'
+                : '<i class="fa-solid fa-check"></i>';
+            cell.innerHTML = checkCrossIcon;
           });
           
           playersModal.on('hidden.bs.modal', () => playersModal.remove());
@@ -778,7 +797,7 @@ export class Tournaments {
           onlineStatus: match[2],
           name: match[3],
           rating: match[4],
-          matchRequestStatus: match[5],
+          statusSymbol: match[5],
           status: match[6],
         });
       }
@@ -996,7 +1015,7 @@ export class Tournaments {
     const whenStr = `<span class="tournament-card-label">${nextDT ? 'When:' : 'Last Held:'}</span>  ${dateStr}, ${timeStr} <i class="chat-text-suffix">(local time)</i>`;
     card.find('.tournament-date').html(whenStr);
     
-    const numPlayersStr = tourney.numPlayers // && tourney.running
+    const numPlayersStr = tourney.numPlayers && tourney.running
         ? `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}  <a class="tournament-players-link" href="javascript:void(0)">(Player List)</a>`
         : '';
     card.find('.tournament-num-players').html(numPlayersStr);

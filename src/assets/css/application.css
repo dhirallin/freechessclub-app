@@ -1016,13 +1016,13 @@ input[type="number"]:focus {
   width: fit-content;
 } 
 .tournament-standings {
-  height: 500px; 
+  min-height: 100px;
+  max-height: 500px; 
   overflow: auto;
 }
 .tournament-standings table {
   width: auto;
 }
-
 .tournament-standings td:nth-child(1),
 .tournament-standings th:nth-child(1) {
   text-align: right;
@@ -1030,6 +1030,29 @@ input[type="number"]:focus {
 .tournament-standings td:nth-child(3),
 .tournament-standings th:nth-child(3) {
   text-align: right;
+}
+
+.tournament-players-modal {
+  --bs-modal-width: 1000px;
+} 
+.tournament-players-modal .modal-dialog {
+  width: fit-content;
+} 
+.tournament-players {
+  min-height: 100px;
+  max-height: 500px; 
+  overflow: auto;
+}
+.tournament-players table {
+  width: auto;
+}
+.tournament-players td:nth-child(1),
+.tournament-players th:nth-child(1) {
+  text-align: right;
+}
+.tournament-players td:nth-child(4),
+.tournament-players th:nth-child(4) {
+  text-align: center;
 }
 
 .tournament-table-result { font-weight: bold; }
