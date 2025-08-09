@@ -850,6 +850,7 @@ export class Tournaments {
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-unnotify" title="Stop Notifying" style="display: none; white-space: nowrap;">Stop Notifying</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-join" title="Join" style="display: none; white-space: nowrap;">Join</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-games" title="Games" style="display: none; white-space: nowrap;">Games</button>
+                <button type="button" class="btn btn-outline-secondary btn-md tournament-standings-button" title="Standings" style="display: none; white-space: nowrap;">Standings</button>
                 <button type="button" class="btn btn-outline-secondary btn-md tournament-withdraw" title="Withdraw" style="display: none; white-space: nowrap;">Withdraw</button>
                 </div>
             </div>
@@ -878,7 +879,7 @@ export class Tournaments {
         this.session.send(`td players ${tourney.id}`);
       });
 
-      card.on('click', '.tournament-standings-link', () => {
+      card.on('click', '.tournament-standings-button, .tournament-standings-link', () => {
         if(awaiting.has('standings-dialog'))
           return;
 
@@ -972,16 +973,15 @@ export class Tournaments {
     card.find('.tournament-date').html(whenStr);
     
     const numPlayersStr = tourney.numPlayers && tourney.running
-        ? `<span class="tournament-card-label">Num of Players:</span>  ${tourney.numPlayers}  ${tourney.status === 'started' ? '<a href="javascript:void(0)">(Standings)</a>' : '<a class="tournament-players-link" href="javascript:void(0)">(Player list)</a>'}`
+        ? `<span class="tournament-card-label"># Players:</span>  ${tourney.numPlayers}  <a class="tournament-players-link" href="javascript:void(0)">(Player list)</a>'}`
         : '';
     card.find('.tournament-num-players').html(numPlayersStr);
     
-    const ageInHours = lastDT ? (Date.now() - lastDT.getTime()) * 60 * 60 * 1000: undefined;
-
+    const ageInHours = lastDT ? (Date.now() - lastDT.getTime()) / (60 * 60 * 1000) : undefined;
     if(tourney.running)
       tourney.winners = '';
     const winnersStr = tourney.winners
-        ? `<span class="tournament-card-label">${ageInHours === 0 ? 'Winner' : 'Last Winner'}${tourney.winners.includes(',') ? 's' : ''}:</span>  ${tourney.winners}  <a class="tournament-standings-link" href="javascript:void(0)">(Standings)</a>`
+        ? `<span class="tournament-card-label">${ageInHours < 1 ? 'Winner' : 'Last Winner'}${tourney.winners.includes(',') ? 's' : ''}:</span>  ${tourney.winners}${ageInHours !== 0 ? '  <a class="tournament-standings-link" href="javascript:void(0)">(Standings)</a>' : ''}`
         : '';
     card.find('.tournament-winners').html(winnersStr);
 
@@ -993,9 +993,10 @@ export class Tournaments {
     card.find('.tournament-notify').toggle(!tourney.running && !!nextDT && !notify);
     card.find('.tournament-unnotify').toggle(!tourney.running && !!nextDT && notify);
     card.find('.tournament-join').toggle(!!tourney.joinable && !inTournament);
-    card.find('.tournament-withdraw').toggle(!!tourney.joined);
     card.find('.tournament-games').toggle(tourney.status === 'started');
-  
+    card.find('.tournament-standings-button').toggle(tourney.status === 'started' || (!!tourney.winners && ageInHours < 1));
+    card.find('.tournament-withdraw').toggle(!!tourney.joined);
+    
     this.addTournamentCard(card, 'tournament');
 
     return card;
