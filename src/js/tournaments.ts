@@ -440,7 +440,6 @@ export class Tournaments {
         joined: true,
       });
       this.updateAllTournaments({}); // Stop user joining other running tournaments
-      this.session.send('+ch 49');
       removeNotification($(`[data-tournament-id="${id}"`));
       return false;
     }
@@ -559,7 +558,7 @@ export class Tournaments {
       this.tdMessage += msg + '\n';
       const matchLastLine = msg.match(/^:\+-+\+(?![\r\n])/m);
       if(matchLastLine) {
-        awaiting.resolve('td-players');
+        awaiting.resolve('td-standardgrid');
         const grid = this.parseTDStandardGrid(this.tdMessage);
         const numPlayers = grid.length;
         const matchIDLine = this.tdMessage.match(pattern);
@@ -596,12 +595,6 @@ export class Tournaments {
                         <tr>
                           <th scope="col">Player</th>
                           <th scope="col">Score</th>
-                          <th scope="col">Round 1</th>
-                          <th scope="col">Round 2</th>
-                          <th scope="col">Round 3</th>
-                          <th scope="col">Round 4</th>
-                          <th scope="col">Round 5</th>
-                          <th scope="col">Round 6</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -612,6 +605,24 @@ export class Tournaments {
               </div>
             </div>
           </div>`);
+          const numRounds = grid[0] ? grid[0].rounds.length : 0;
+          const header = standingsModal.find('thead tr');
+          for(let i = 1; i <= numRounds; i++) 
+            header.append(`<th scope="col">Round ${i}</th>`);
+          
+          const tbody = standingsModal.find('tbody')[0];
+          grid.forEach(player => {
+            const row = tbody.insertRow();
+            let cell = row.insertCell();
+            cell.textContent = `${player.name}(${player.rating}) [${player.seed}]`; 
+            cell = row.insertCell();
+            cell.textContent = player.score;
+            player.rounds.forEach(round => {
+              const cell = row.insertCell();
+              cell.textContent = `${round.result} ${round.opponent} ${round.color}`;
+            }); 
+          });
+          
           standingsModal.on('hidden.bs.modal', () => standingsModal.remove());
           standingsModal.appendTo('body').modal('show');        
         }
@@ -724,7 +735,7 @@ export class Tournaments {
       if(match) {
         const roundStrings = match[5].split(/\s+/);
         const rounds = roundStrings.map(str => {
-          const match = str.match(/^([^\d\s])(\d+([wb])|bye)$/);
+          const match = str.match(/^([^\d\s])(\d+|bye)([wb])?$/);
           if(match) {
             return {
               result: match[1],
@@ -745,13 +756,19 @@ export class Tournaments {
 
         players.push({
           seed: +match[1],
-          plusMinus: match[2],
+          online: match[2] === '+',
           name: match[3],
           rating: match[4],
           rounds,
           score,
         });
       }
+    });
+    players.sort((a, b) => {
+      if (b.score !== a.score) 
+        return b.score - a.score; // Descending by score
+      else 
+        return a.seed - b.seed; // Ascending by seed if scores tie
     });
     return players;
   }

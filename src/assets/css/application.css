@@ -101,6 +101,14 @@ body {
 .modal-table th:nth-child(1) {
   padding-left: 0.75rem;
 }
+.modal-table td:nth-child(n+2),
+.modal-table th:nth-child(n+2) {
+  padding-left: 2rem;
+}
+.modal-table td:last-child,
+.modal-table th:last-child {
+  padding-right: 0.75rem;
+}
 .modal-table thead {
  position: sticky; 
  top: 0;
@@ -1020,8 +1028,12 @@ input[type="number"]:focus {
 .tournament-standings table {
   width: auto;
 }
-.tournament-standings th, 
-.tournament-standings td {
-  min-width: 120px;
+.tournament-standings td:nth-child(2),
+.tournament-standings th:nth-child(2) {
+  text-align: right;
+}
+.tournament-standings td:nth-child(n+3),
+.tournament-standings th:nth-child(n+3) {
+  text-align: center;
 }
 
