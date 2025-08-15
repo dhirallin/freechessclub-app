@@ -120,15 +120,20 @@ export function setDefaultTimezone(timezone: string) {
 /** 
  * Convert an object representing a date time in a specified timezone to a
  * Date object (representing a local date time).
- * @dateTime The date time to be converted, represented as a basic object.
- * See the return value of convertToServerDateTime for the properties. The timezone
- * is taken from dateTime's timeZone property, which is a numerical offset in hours, 
- * e.g. -10.5. 
- * @serverTime If true, dateTime is treated as if it's in the FICS server's timezone,
+ * @param dateTime The date time to be converted, represented as a basic object.
+ * The object is in the following format --
+ *  weekday: // e.g. "Tue"
+ *  month: // e.g. "Jul"
+ *  day: // e.g. "30"
+ *  hour: // e.g. "22"
+ *  minute: // e.g. "15"
+ *  timezone: // e.g. "-10.5"
+ *  year: // e.g. "2025"
+ * @param serverTime If true, dateTime is treated as if it's in the FICS server's timezone,
  * if false, then timeZone must be specified as a property (as a numerical offset in hours)
  * @returns A Date object representing a local date time
  */
-export function convertToLocalDateTime(dateTime: any, serverTime = false) {
+export function parseDate(dateTime: any, serverTime = false) {
   let offset = defaultTimezone;
   if(serverTime)
     offset = serverTimezone;
@@ -163,44 +168,51 @@ export function setServerTimezone(timezone: string) {
  * is converted, the date returned will be set to the following specified weekday
  * (relative to the converted server date). For example, if the converted date is 
  * Mon 13th, and nextWeekDay = 'Wed', then the returned date will be Wed 15th
- * @returns The converted server date-time as a basic object. See formatter below
- * for the properties.
+ * @returns The converted server date-time as a Date object.
  */
-export function convertToServerDateTime(localDT: any, nextWeekDay?: string) { 
+export function convertToServerDate(localDT: any) { 
   // Adjust current date/time to get server time
-  const serverTime = new Date(localDT.getTime() + serverTimezone * 60 * 60 * 1000);
+  const localOffset = -localDT.getTimezoneOffset() / 60;
+  const tzDiff = serverTimezone - localOffset;   // Difference between server's timezone and local timezone
+  const serverTime = new Date(localDT.getTime() + tzDiff * 60 * 60 * 1000);
+  return serverTime;
+}
+
+/** 
+ * Converts a Date object which is simulating a different timezone, back
+ * to local time.
+ * @param dateTime the Date object to convert
+ * @param timezone The timezone offset in hours of the Date object, if null
+ * the server's timezone is used
+ */
+export function convertToLocalDate(dateTime: any, timezone?: number) {
+  if(timezone == null)
+    timezone = serverTimezone;
+
+  const localOffset = -new Date().getTimezoneOffset() / 60; // local offset in hours
+  const tzDiff = localOffset - timezone; // difference between local timezone and server timezone
+
+  const localTime = new Date(dateTime.getTime() + tzDiff * 60 * 60 * 1000);
+  return localTime;
+}
+
+/**
+ * Get the date of the next specified week day relative to the given date
+ * @param date The starting date
+ * @param nextWeekDay The next week day as a 3 letter name, e.g. 'Tue'
+ * @returns The new date
+ */
+export function getNextWeekDayDate(date: Date, nextWeekDay: string) {
+  const outDate = new Date(date);
 
   const weekdayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
   const targetDay = weekdayMap[nextWeekDay];
   if(targetDay !== undefined) {
-    const currentDay = serverTime.getUTCDay(); 
-    let daysToAdd = (targetDay - serverTime.getUTCDay() + 7) % 7;
-    serverTime.setUTCDate(serverTime.getUTCDate() + daysToAdd);
+    const currentDay = date.getDay(); 
+    let daysToAdd = (targetDay - date.getDay() + 7) % 7;
+    outDate.setDate(date.getDate() + daysToAdd);
   }
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC', // trick: treat adjusted serverTime as UTC so we extract the right parts
-    hour12: false,
-    year: 'numeric'
-  });
-
-  const parts = formatter.formatToParts(serverTime);
-  const getPart = (type) => parts.find(p => p.type === type)?.value;
-
-  return {
-    weekday: getPart('weekday'), // e.g. "Tue"
-    month: getPart('month'),     // e.g. "Jul"
-    day: getPart('day'),         // e.g. "30"
-    hour: getPart('hour'),       // e.g. "22"
-    minute: getPart('minute'),   // e.g. "15"
-    timezone: serverTimezone,    // e.g. "-5"
-    year: getPart('year')        // e.g. "2025"
-  };
+  return outDate;
 }
 
 /**

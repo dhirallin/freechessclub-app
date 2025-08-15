@@ -4,7 +4,7 @@
 
 import { awaiting, storage } from './storage';
 import { createNotification, removeNotification, showFixedDialog } from './dialogs';
-import { convertToServerDateTime, convertToLocalDateTime, getDiffDays } from './utils';
+import { convertToServerDate, convertToLocalDate, parseDate, getDiffDays, getNextWeekDayDate } from './utils';
 
 /**
  * Controls the Play->Tournaments pane.
@@ -964,6 +964,14 @@ export class Tournaments {
     lines.forEach((line) => {
       const match = line.match(/^:\|\s+(\d+)\s+\|\s+([>+]*)(\w+)([<*]*)\s+\|\s+(\w+)\s+\|\s+(.*?)\s+\|\s+(-+|(\d{4})\.(\d{2})(\d{2})\.(\d{2})(\d{2}))\s+\|/);
       if(match) {
+        const dateTime = match[7].startsWith('-') ? null : {
+          year: match[8],
+          month: match[9],
+          day: match[10],
+          hour: match[11],
+          minute: match[12],
+        };
+
         const tourney = {
           id: +match[1],
           joined: match[2] === '>',
@@ -972,13 +980,7 @@ export class Tournaments {
           running: match[4] === '<',
           manager: match[5],
           type: match[6],
-          date: match[7].startsWith('-') ? null : {
-            year: match[8],
-            month: match[9],
-            day: match[10],
-            hour: match[11],
-            minute: match[12],
-          },
+          date: dateTime ? parseDate(dateTime) : null,
         }
         tourneys.push(tourney);
       }
@@ -1192,9 +1194,9 @@ export class Tournaments {
     // an update.
     if(data.date) {
       const tourneyDate = tourney.date 
-          ? (new Date(tourney.date.year, tourney.date.month - 1, tourney.date.day)).getTime()
+          ? (new Date(tourney.date)).setHours(0, 0, 0, 0)
           : 0;
-      const dataDate = (new Date(data.date.year, data.date.month - 1, data.date.day)).getTime();
+      const dataDate = (new Date(data.date)).setHours(0, 0, 0, 0);
       if(!data.running && (tourney.running || dataDate - tourneyDate < 0))
         return; 
     }
@@ -1258,10 +1260,10 @@ export class Tournaments {
     // and convert it to local time. For running, non-recurring tournaments, we 
     // just use the time the tournament card was created.
     if(tourney.date)
-      lastDT = convertToLocalDateTime(tourney.date, true);
+      lastDT = tourney.date;
     else if(tourney.running) {
       lastDT = new Date();
-      tourney.date = convertToServerDateTime(lastDT);
+      tourney.date = lastDT;
     }
 
     // For recurring tournaments, e.g. daily / every tuesday etc, we first determine
@@ -1269,12 +1271,14 @@ export class Tournaments {
     // the scheduled time HH:MM and convert the whole thing back to the user's
     // local time. 
     if(tourney.recurring === 'daily' || weekdays.includes(tourney.recurring)) {
-      serverDT = convertToServerDateTime(now, weekdays.includes(tourney.recurring) ? tourney.recurring : undefined);
+      serverDT = convertToServerDate(now);
+      if(weekdays.includes(tourney.recurring))
+        serverDT = getNextWeekDayDate(serverDT, tourney.recurring);
       if(tourney.scheduledTime) {
-        serverDT.hour = tourney.scheduledTime.split(':')[0];
-        serverDT.minute = tourney.scheduledTime.split(':')[1];
+        serverDT.setHours(tourney.scheduledTime.split(':')[0]);
+        serverDT.setMinutes(tourney.scheduledTime.split(':')[1]);
       }
-      nextDT = convertToLocalDateTime(serverDT, true);
+      nextDT = convertToLocalDate(serverDT);
     }
     else if(tourney.running || (lastDT && lastDT.getTime() - Date.now() > 0)) 
       nextDT = lastDT; // A running or future tournament (non-recurring)
