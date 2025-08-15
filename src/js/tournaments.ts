@@ -1259,12 +1259,9 @@ export class Tournaments {
     // For completed tournaments, we get the date in server time from 'listtourneys'
     // and convert it to local time. For running, non-recurring tournaments, we 
     // just use the time the tournament card was created.
-    if(tourney.date)
-      lastDT = tourney.date;
-    else if(tourney.running) {
-      lastDT = new Date();
-      tourney.date = lastDT;
-    }
+    if(!tourney.date && tourney.running) 
+      tourney.date = new Date();
+    lastDT = tourney.date;
 
     // For recurring tournaments, e.g. daily / every tuesday etc, we first determine
     // the date the tournament will next be held in FICS server time, then we add
