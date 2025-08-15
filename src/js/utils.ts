@@ -75,6 +75,7 @@ const timezoneOffsets = {
   WETDST: 1
 };
 
+/** Convert a month from a 3 letter name to a number [1-12] */
 export function monthShortNameToNumber(month: string) {
   const cleanedMonth = month.trim().charAt(0).toUpperCase() + month.slice(1, 3).toLowerCase();
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -82,11 +83,19 @@ export function monthShortNameToNumber(month: string) {
   return index === -1 ? undefined : index + 1;
 }
 
+/**
+ * Convert a month from a number [1-12] to a 3 letter name
+ */
 export function monthNumberToShortName(month: number) {
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return monthNames[month]; 
+  return monthNames[month] + 1; 
 }
 
+/** 
+ * Convert a numerical timezone offset, e.g. -10.5 to a string in the form
+ * <sign>HH:MM, e.g. '-10:30'. This format is needed when creating an
+ * ISO 8601 datetime string.
+ */
 function timezoneOffsetToHHMM(offset: number) {
   if(offset === 0)
     return 'Z';
@@ -100,6 +109,7 @@ function timezoneOffsetToHHMM(offset: number) {
   return `${sign}${hh}:${mm}`;
 }
 
+/** The user's timezone as returned by their tzone user variable on FICS */
 let defaultTimezone = 0;
 export function setDefaultTimezone(timezone: string) {
   defaultTimezone = Number.isInteger(+timezone)
@@ -107,6 +117,17 @@ export function setDefaultTimezone(timezone: string) {
       : timezoneOffsets[timezone] || 0;
 }
 
+/** 
+ * Convert an object representing a date time in a specified timezone to a
+ * Date object (representing a local date time).
+ * @dateTime The date time to be converted, represented as a basic object.
+ * See the return value of convertToServerDateTime for the properties. The timezone
+ * is taken from dateTime's timeZone property, which is a numerical offset in hours, 
+ * e.g. -10.5. 
+ * @serverTime If true, dateTime is treated as if it's in the FICS server's timezone,
+ * if false, then timeZone must be specified as a property (as a numerical offset in hours)
+ * @returns A Date object representing a local date time
+ */
 export function convertToLocalDateTime(dateTime: any, serverTime = false) {
   let offset = defaultTimezone;
   if(serverTime)
@@ -126,6 +147,7 @@ export function convertToLocalDateTime(dateTime: any, serverTime = false) {
   return new Date(dateTimeStr);
 }
 
+/** The FICS server's timezone (obtained from the 'date' command) */
 let serverTimezone = -5; // Default to EST
 export function setServerTimezone(timezone: string) {
   serverTimezone = Number.isInteger(+timezone)
@@ -133,6 +155,17 @@ export function setServerTimezone(timezone: string) {
     : timezoneOffsets[timezone] || -5;
 }
 
+/**
+ * Converts a date time given by a Date object to a date time in
+ * FICS server's timezone.   
+ * @param localDT the Date object to be converted
+ * @param nextWeekDay Optionally specify a week day such as 'Wed'. After the date
+ * is converted, the date returned will be set to the following specified weekday
+ * (relative to the converted server date). For example, if the converted date is 
+ * Mon 13th, and nextWeekDay = 'Wed', then the returned date will be Wed 15th
+ * @returns The converted server date-time as a basic object. See formatter below
+ * for the properties.
+ */
 export function convertToServerDateTime(localDT: any, nextWeekDay?: string) { 
   // Adjust current date/time to get server time
   const serverTime = new Date(localDT.getTime() + serverTimezone * 60 * 60 * 1000);
@@ -170,11 +203,15 @@ export function convertToServerDateTime(localDT: any, nextWeekDay?: string) {
   };
 }
 
+/**
+ * Get the difference in days between the specified Date and now as an integer
+ * e.g. 1 would mean that the Date is 1 day later than now,
+ * whereas -1 would be 1 day earlier.
+ * @param date The Date object to compare
+ * @param now A Date object representing now
+ * @returns date - now in days
+ */
 export function getDiffDays(date: Date, now = new Date()) {
-  const options = { month: 'short', day: 'numeric' };
-  const dateYear = date.getFullYear();
-  const nowYear = now.getFullYear();
-
   // Normalize times for comparison (midnight)
   const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
