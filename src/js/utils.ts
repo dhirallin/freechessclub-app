@@ -164,10 +164,6 @@ export function setServerTimezone(timezone: string) {
  * Converts a date time given by a Date object to a date time in
  * FICS server's timezone.   
  * @param localDT the Date object to be converted
- * @param nextWeekDay Optionally specify a week day such as 'Wed'. After the date
- * is converted, the date returned will be set to the following specified weekday
- * (relative to the converted server date). For example, if the converted date is 
- * Mon 13th, and nextWeekDay = 'Wed', then the returned date will be Wed 15th
  * @returns The converted server date-time as a Date object.
  */
 export function convertToServerDate(localDT: any) { 
