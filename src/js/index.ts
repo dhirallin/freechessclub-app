@@ -6341,6 +6341,12 @@ $('#disconnect').on('click', () => {
     session.disconnect();
 });
 
+/** FRIENDS LIST **/
+
+$('#friends-btn').on('click', () => {
+  $('#friends-modal').modal('show');
+});
+
 /** *******************
  * SETTINGS FUNCTIONS *
  **********************/

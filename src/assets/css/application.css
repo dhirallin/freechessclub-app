@@ -1072,4 +1072,8 @@ input[type="number"]:focus {
 
 .tournament-table-result { font-weight: bold; }
 
-
+#friends-table-container {
+  min-height: 200px;
+  max-height: 500px; 
+  overflow: auto;
+}
