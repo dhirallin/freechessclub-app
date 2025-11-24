@@ -43,9 +43,6 @@ export class Engine {
     this.loadPromise = (async () => {
       const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
       if(wasmSupported) {
-        //new URL('stockfish.js/stockfish.wasm', import.meta.url); // Get webpack to copy the file from node_modules
-        //this.stockfish = new Worker(new URL('stockfish.js/stockfish.wasm.js', import.meta.url));
-
         const jsUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
         let jsCode = await (await fetch(jsUrl)).text();
 
