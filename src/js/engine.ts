@@ -11,6 +11,7 @@ const SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonst
 
 export class Engine {
   protected stockfish: any;
+  protected sfPromise: any;
   protected numPVs: number;
   protected currFen: string;
   protected currEval: string;
@@ -32,14 +33,35 @@ export class Engine {
     if(!this.moveParams)
       this.moveParams = 'infinite';
 
+    this.sfPromise = this.init(game, options);
+  }
+
+  public async init(game: Game, options?: object) {
     const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
     if(wasmSupported) {
-      new URL('stockfish.js/stockfish.wasm', import.meta.url); // Get webpack to copy the file from node_modules
-      this.stockfish = new Worker(new URL('stockfish.js/stockfish.wasm.js', import.meta.url));
+      /*const response = await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js');
+      const code = await response.text();
+      const blob = new Blob([code], { type: 'application/javascript' });
+      const url = URL.createObjectURL(blob);
+      this.stockfish = new Worker(url);*/
+
+      //new URL('stockfish.js/stockfish.wasm', import.meta.url); // Get webpack to copy the file from node_modules
+      //this.stockfish = new Worker(new URL('stockfish.js/stockfish.wasm.js', import.meta.url));
+
+      const jsUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
+      let jsCode = await (await fetch(jsUrl)).text();
+
+      const wasmUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.wasm';
+      const wasmBuffer = await (await fetch(wasmUrl)).arrayBuffer();
+      const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
+      const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
+      jsCode = jsCode.replace(`w=l.locateFile?l.locateFile(o,p):p+o`, `w="${wasmBlobUrl}"`);
+      const workerBlob = new Blob([jsCode], { type: 'application/javascript' });
+      this.stockfish = new Worker(URL.createObjectURL(workerBlob));
     }
     else
       this.stockfish = new Worker(new URL('stockfish.js/stockfish.js', import.meta.url));
-
+  
     this.stockfish.onmessage = (response) => {
       let depth0 = false;
       this.ready = true;
@@ -168,6 +190,7 @@ export class Engine {
 
   public terminate() {
     const worker = this.stockfish;
+
     if(this.ready) 
       worker.terminate();
     else { 
@@ -179,7 +202,9 @@ export class Engine {
     }
   }
 
-  public move(hEntry: HEntry) {
+  public async move(hEntry: HEntry) {
+    await this.sfPromise;
+
     this.currFen = hEntry.fen;
 
     const movesStr = this.movesToCoordinatesString(hEntry);
@@ -206,18 +231,21 @@ export class Engine {
     return movesStr;
   }
 
-  public evaluateFEN(fen: string) {
+  public async evaluateFEN(fen: string) {
+    await this.sfPromise;
     this.currFen = fen;
     this.uci(`position fen ${fen}`);
     this.uci(`go ${this.moveParams}`);
   }
 
-  public setNumPVs(num : any = 1) {
+  public async setNumPVs(num : any = 1) {
+    await this.sfPromise;
     this.numPVs = num;
     this.uci(`setoption name MultiPV value ${this.numPVs}`);
   }
 
-  private uci(cmd: string, ports?: any) {
+  private async uci(cmd: string, ports?: any) {
+    await this.sfPromise;
     return this.stockfish.postMessage(cmd, ports)
   }
 }
