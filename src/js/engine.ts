@@ -11,7 +11,9 @@ const SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonst
 
 export class Engine {
   protected stockfish: any;
-  protected sfPromise: any;
+  protected sfPromise: any = null;
+  protected static loadPromise: any = null; 
+  protected static sfWorkerBlob: any;
   protected numPVs: number;
   protected currFen: string;
   protected currEval: string;
@@ -19,7 +21,6 @@ export class Engine {
   protected bestMoveCallback: (game: Game, move: string, score: string) => void;
   protected pvCallback: (game: Game, pvNum: number, pvEval: string, pvMoves: string) => void;
   protected moveParams: string;
-  protected ready: boolean;
 
   constructor(game: Game, bestMoveCallback: (game: Game, move: string, score: string) => void, pvCallback: (game: Game, pvNum: number, pvEval: string, pvMoves: string) => void, options?: object, moveParams?: string) {
     this.numPVs = 1;
@@ -28,7 +29,6 @@ export class Engine {
     this.game = game;
     this.bestMoveCallback = bestMoveCallback;
     this.pvCallback = pvCallback;
-    this.ready = false;
 
     if(!this.moveParams)
       this.moveParams = 'infinite';
@@ -36,170 +36,173 @@ export class Engine {
     this.sfPromise = this.init(game, options);
   }
 
+  public static async load() {
+    if(this.loadPromise) 
+      return this.loadPromise;
+
+    this.loadPromise = (async () => {
+      const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
+      if(wasmSupported) {
+        //new URL('stockfish.js/stockfish.wasm', import.meta.url); // Get webpack to copy the file from node_modules
+        //this.stockfish = new Worker(new URL('stockfish.js/stockfish.wasm.js', import.meta.url));
+
+        const jsUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
+        let jsCode = await (await fetch(jsUrl)).text();
+
+        const wasmUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.wasm';
+        const wasmBuffer = await (await fetch(wasmUrl)).arrayBuffer();
+        const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
+        const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
+        jsCode = jsCode.replace(`w=l.locateFile?l.locateFile(o,p):p+o`, `w="${wasmBlobUrl}"`);
+        Engine.sfWorkerBlob = new Blob([jsCode], { type: 'application/javascript' });
+      }
+      else {
+        let jsCode = await (await fetch('stockfish.js/stockfish.js')).text();
+        Engine.sfWorkerBlob = new Blob([jsCode], { type: 'application/javascript' });
+      }
+    })();
+
+    return this.loadPromise;
+  }
+
   public async init(game: Game, options?: object) {
-    const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
-    if(wasmSupported) {
-      /*const response = await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js');
-      const code = await response.text();
-      const blob = new Blob([code], { type: 'application/javascript' });
-      const url = URL.createObjectURL(blob);
-      this.stockfish = new Worker(url);*/
+    await Engine.load();
+    this.stockfish = new Worker(URL.createObjectURL(Engine.sfWorkerBlob));
 
-      //new URL('stockfish.js/stockfish.wasm', import.meta.url); // Get webpack to copy the file from node_modules
-      //this.stockfish = new Worker(new URL('stockfish.js/stockfish.wasm.js', import.meta.url));
+    this.sfPromise = new Promise<void>((resolve) => {   
+      this.stockfish.onmessage = (response) => {
+        let depth0 = false;
+        
+        resolve();
+            
+        if(response.data.startsWith('info')) {
+          const fen = this.currFen;
+          const info = response.data.substring(5, response.data.length);
+          const infoArr: string[] = info.trim().split(/\s+/);
 
-      const jsUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
-      let jsCode = await (await fetch(jsUrl)).text();
-
-      const wasmUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.wasm';
-      const wasmBuffer = await (await fetch(wasmUrl)).arrayBuffer();
-      const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
-      const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
-      jsCode = jsCode.replace(`w=l.locateFile?l.locateFile(o,p):p+o`, `w="${wasmBlobUrl}"`);
-      const workerBlob = new Blob([jsCode], { type: 'application/javascript' });
-      this.stockfish = new Worker(URL.createObjectURL(workerBlob));
-    }
-    else
-      this.stockfish = new Worker(new URL('stockfish.js/stockfish.js', import.meta.url));
-  
-    this.stockfish.onmessage = (response) => {
-      let depth0 = false;
-      this.ready = true;
-      
-      if(response.data.startsWith('info')) {
-        const fen = this.currFen;
-        const info = response.data.substring(5, response.data.length);
-        const infoArr: string[] = info.trim().split(/\s+/);
-
-        let bPV = false;
-        const pvArr = [];
-        let scoreStr: string;
-        let pvNum = 1;
-        for(let i = 0; i < infoArr.length; i++) {
-          if(infoArr[i] === 'lowerbound' || infoArr[i] === 'upperbound')
-            return;
-
-          if(infoArr[i] === 'depth' && infoArr[i + 1] === '0')
-            depth0 = true;
-
-          if(infoArr[i] === 'multipv') {
-            pvNum = +infoArr[i + 1];
-            if(pvNum > this.numPVs)
+          let bPV = false;
+          const pvArr = [];
+          let scoreStr: string;
+          let pvNum = 1;
+          for(let i = 0; i < infoArr.length; i++) {
+            if(infoArr[i] === 'lowerbound' || infoArr[i] === 'upperbound')
               return;
+
+            if(infoArr[i] === 'depth' && infoArr[i + 1] === '0')
+              depth0 = true;
+
+            if(infoArr[i] === 'multipv') {
+              pvNum = +infoArr[i + 1];
+              if(pvNum > this.numPVs)
+                return;
+            }
+
+            if(infoArr[i] === 'score') {
+              let score = +infoArr[i + 2];
+              const turn = fen.split(/\s+/)[1];
+
+              let prefix = '';
+              if(score > 0 && turn === 'w' || score < 0 && turn === 'b')
+                prefix = '+';
+              else if(score === 0)
+                prefix = '=';
+              else
+                prefix = '-';
+              score = (score < 0 ? -score : score);
+
+              if(infoArr[i+1] === 'mate') {
+                if(prefix === '+')
+                  prefix = '';
+                else if(prefix === '=') {
+                  if(turn === 'w')
+                    prefix = '-';
+                  else prefix = '';
+                }
+
+                scoreStr = `${prefix}#${score}`;
+              }
+              else
+                scoreStr = `${prefix}${(score / 100).toFixed(2)}`;
+            }
+            else if(infoArr[i] === 'pv')
+              bPV = true;
+            else if(bPV)
+              pvArr.push(infoArr[i]);
           }
 
-          if(infoArr[i] === 'score') {
-            let score = +infoArr[i + 2];
-            const turn = fen.split(/\s+/)[1];
+          if(pvArr.length) {
+            let pv = '';
+            let currFen = fen;
+            for(const move of pvArr) {
+              const moveParam = move[1] === '@'
+                ? move
+                : {
+                  from: move.slice(0, 2),
+                  to: move.slice(2, 4),
+                  promotion: (move.length === 5 ? move.charAt(4) : undefined)
+                };
 
-            let prefix = '';
-            if(score > 0 && turn === 'w' || score < 0 && turn === 'b')
-              prefix = '+';
-            else if(score === 0)
-              prefix = '=';
-            else
-              prefix = '-';
-            score = (score < 0 ? -score : score);
-
-            if(infoArr[i+1] === 'mate') {
-              if(prefix === '+')
-                prefix = '';
-              else if(prefix === '=') {
-                if(turn === 'w')
-                  prefix = '-';
-                else prefix = '';
+              const parsedMove = parseMove(currFen, moveParam, game.history.first().fen, game.category, game.history.holdings);
+              if(!parsedMove) {
+                // Non-standard or unsupported moves were passed to Engine.
+                this.terminate();
+                return;
               }
 
-              scoreStr = `${prefix}#${score}`;
-            }
-            else
-              scoreStr = `${prefix}${(score / 100).toFixed(2)}`;
-          }
-          else if(infoArr[i] === 'pv')
-            bPV = true;
-          else if(bPV)
-            pvArr.push(infoArr[i]);
-        }
-
-        if(pvArr.length) {
-          let pv = '';
-          let currFen = fen;
-          for(const move of pvArr) {
-            const moveParam = move[1] === '@'
-              ? move
-              : {
-                from: move.slice(0, 2),
-                to: move.slice(2, 4),
-                promotion: (move.length === 5 ? move.charAt(4) : undefined)
-              };
-
-            const parsedMove = parseMove(currFen, moveParam, game.history.first().fen, game.category, game.history.holdings);
-            if(!parsedMove) {
-              // Non-standard or unsupported moves were passed to Engine.
-              this.terminate();
-              return;
+              const turnColor = getTurnColorFromFEN(currFen);
+              const moveNumber = getMoveNoFromFEN(currFen);
+              let moveNumStr = '';
+              if(turnColor === 'w')
+                moveNumStr = `${moveNumber}.`;
+              else if(fen === currFen && turnColor === 'b')
+                moveNumStr = `${moveNumber}...`;
+              pv += `${moveNumStr}${parsedMove.move.san} `;
+              currFen = parsedMove.fen;
             }
 
-            const turnColor = getTurnColorFromFEN(currFen);
-            const moveNumber = getMoveNoFromFEN(currFen);
-            let moveNumStr = '';
-            if(turnColor === 'w')
-              moveNumStr = `${moveNumber}.`;
-            else if(fen === currFen && turnColor === 'b')
-              moveNumStr = `${moveNumber}...`;
-            pv += `${moveNumStr}${parsedMove.move.san} `;
-            currFen = parsedMove.fen;
+            if(this.pvCallback)
+              this.pvCallback(this.game, pvNum, scoreStr, pv);
           }
+          // mate in 0
+          else if(scoreStr === '#0' || scoreStr === '-#0') {
+            if(this.pvCallback)
+              this.pvCallback(this.game, 1, scoreStr, '');
+          }
+          this.currEval = scoreStr;
 
-          if(this.pvCallback)
-            this.pvCallback(this.game, pvNum, scoreStr, pv);
+          if(depth0 && this.bestMoveCallback)
+            this.bestMoveCallback(this.game, '', this.currEval);
         }
-        // mate in 0
-        else if(scoreStr === '#0' || scoreStr === '-#0') {
-          if(this.pvCallback)
-            this.pvCallback(this.game, 1, scoreStr, '');
+        else if(response.data.startsWith('bestmove') && this.bestMoveCallback) {
+          const bestMove = response.data.trim().split(/\s+/)[1];
+          this.bestMoveCallback(this.game, bestMove, this.currEval);
         }
-        this.currEval = scoreStr;
+      };
 
-        if(depth0 && this.bestMoveCallback)
-          this.bestMoveCallback(this.game, '', this.currEval);
-      }
-      else if(response.data.startsWith('bestmove') && this.bestMoveCallback) {
-        const bestMove = response.data.trim().split(/\s+/)[1];
-        this.bestMoveCallback(this.game, bestMove, this.currEval);
-      }
-    };
+      this.uci('uci');
 
-    this.uci('uci');
+      // Parse options
+      Object.entries(options).forEach(([key, value]) => {
+        if(key === 'MultiPV')
+          this.numPVs = value;
 
-    // Parse options
-    Object.entries(options).forEach(([key, value]) => {
-      if(key === 'MultiPV')
-        this.numPVs = value;
+        this.uci(`setoption name ${key} value ${value}`);
+      });
 
-      this.uci(`setoption name ${key} value ${value}`);
+      this.uci('ucinewgame');
+      this.uci('isready');
     });
 
-    this.uci('ucinewgame');
-    this.uci('isready');
+    return this.sfPromise;
   }
 
   public static categorySupported(category: string) {
     return SupportedCategories.indexOf(category) > -1;
   }
 
-  public terminate() {
-    const worker = this.stockfish;
-
-    if(this.ready) 
-      worker.terminate();
-    else { 
-      // Wait for a worker to finish being created before terminating it
-      // Stops an overlay error in webpack dev-server
-      worker.onmessage = () => {
-        worker.terminate();
-      }
-    }
+  public async terminate() {
+    await this.sfPromise;
+    this.stockfish.terminate();
   }
 
   public async move(hEntry: HEntry) {

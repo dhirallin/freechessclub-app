@@ -121,6 +121,8 @@ async function onDeviceReady() {
   tournaments = new Tournaments();
   users = new Users();
 
+  Engine.load(); // Pre-fetch Stockfish from the CDN
+
   const game = createGame();
   game.role = Role.NONE;
   game.category = 'untimed';
