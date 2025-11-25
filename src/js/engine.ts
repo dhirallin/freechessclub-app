@@ -14,6 +14,7 @@ export class Engine {
   protected sfPromise: any = null;
   protected static loadPromise: any = null; 
   protected static sfWorkerBlob: any;
+  protected static sfVariantsWorkerBlob: any;
   protected numPVs: number;
   protected currFen: string;
   protected currEval: string;
@@ -45,7 +46,6 @@ export class Engine {
       if(wasmSupported) {
         const jsUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
         let jsCode = await (await fetch(jsUrl)).text();
-
         const wasmUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.wasm';
         const wasmBuffer = await (await fetch(wasmUrl)).arrayBuffer();
         const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
@@ -54,9 +54,9 @@ export class Engine {
         Engine.sfWorkerBlob = new Blob([jsCode], { type: 'application/javascript' });
       }
       else {
-        let jsCode = await (await fetch('stockfish.js/stockfish.js')).text();
+        let jsCode = await (await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-asm-341ff22.js')).text();
         Engine.sfWorkerBlob = new Blob([jsCode], { type: 'application/javascript' });
-      }
+      }   
     })();
 
     return this.loadPromise;
@@ -68,6 +68,7 @@ export class Engine {
 
     this.sfPromise = new Promise<void>((resolve) => {   
       this.stockfish.onmessage = (response) => {
+        console.log(response.data);
         let depth0 = false;
         
         resolve();
@@ -167,12 +168,14 @@ export class Engine {
           }
           this.currEval = scoreStr;
 
+          // For backwards compatibility, older version of Stockfish didn't send a bestmove for mate in 0.
           if(depth0 && this.bestMoveCallback)
             this.bestMoveCallback(this.game, '', this.currEval);
         }
         else if(response.data.startsWith('bestmove') && this.bestMoveCallback) {
           const bestMove = response.data.trim().split(/\s+/)[1];
-          this.bestMoveCallback(this.game, bestMove, this.currEval);
+          if(bestMove !== '(none)')
+            this.bestMoveCallback(this.game, bestMove, this.currEval);
         }
       };
 
