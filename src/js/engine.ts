@@ -75,7 +75,6 @@ export class Engine {
   public async init(game: Game, options?: object) {
     await Engine.load();
     this.stockfish = new Worker(URL.createObjectURL(Engine.sfWorkerBlob));
-    console.log('yo!');
 
     this.sfPromise = new Promise<void>((resolve) => {   
       this.stockfish.onmessage = (response) => {
