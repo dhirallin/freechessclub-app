@@ -44,10 +44,11 @@ export class Engine {
     this.loadPromise = (async () => {
       const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
       if(wasmSupported) {
-        const jsUrl = window.crossOriginIsolated
+        const multiThreaded = typeof SharedArrayBuffer !== 'undefined' && crossOriginIsolated;
+        const jsUrl = multiThreaded
           ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.js'
           : 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
-        const wasmUrl = multiThreaded 
+        const wasmUrl = multiThreaded
           ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.wasm'
           : 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.wasm';
 

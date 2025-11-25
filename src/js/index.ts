@@ -994,9 +994,11 @@ function gameStart(game: Game) {
     }
   }
 
+  console.log('TEST 1');
   if(game === games.focused && evalEngine) {
     evalEngine.terminate();
     evalEngine = null;
+    console.log('TEST 2');
   }
 
   if(!examineModeRequested && !mexamineRequested) {
