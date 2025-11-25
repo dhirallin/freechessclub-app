@@ -49,7 +49,7 @@ export class Engine {
         const jsUrl = multiThreaded
           ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.js'
           : 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
-        const wasmUrl = (window.crossOriginIsolated && !isMobile()) 
+        const wasmUrl = multiThreaded 
           ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.wasm'
           : 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.wasm';
 
@@ -59,7 +59,7 @@ export class Engine {
         const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
         
         if(multiThreaded) 
-          jsCode = jsCode.replace(`w=l.locateFile?l.locateFile(o,p):p+o`, `w="${wasmBlobUrl}"`);
+          jsCode = jsCode.replace(`S=V(S)`, `S="${wasmBlobUrl}"`);
         else
           jsCode = jsCode.replace(`w=l.locateFile?l.locateFile(o,p):p+o`, `w="${wasmBlobUrl}"`);
 
@@ -77,6 +77,7 @@ export class Engine {
   public async init(game: Game, options?: object) {
     await Engine.load();
     this.stockfish = new Worker(URL.createObjectURL(Engine.sfWorkerBlob));
+    console.log('yo!');
 
     this.sfPromise = new Promise<void>((resolve) => {   
       this.stockfish.onmessage = (response) => {
