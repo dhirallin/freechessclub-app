@@ -994,13 +994,9 @@ function gameStart(game: Game) {
     }
   }
 
-  console.log('TEST 1');
-  if(game === games.focused && evalEngine) {
-    evalEngine.terminate();
-    evalEngine = null;
-    console.log('TEST 2');
-  }
-
+  if(game === games.focused) 
+    stopEvalEngine();
+ 
   if(!examineModeRequested && !mexamineRequested) {
     game.historyList.length = 0;
     game.gameListFilter = '';
@@ -6156,6 +6152,7 @@ function showAnalysis() {
 
 function hideAnalysis() {
   stopEngine();
+  stopEvalEngine();
   closeLeftBottomTab($('#engine-tab'));
   closeLeftBottomTab($('#eval-graph-tab'));
   showAnalyzeButton();
@@ -6166,10 +6163,7 @@ function hideAnalysis() {
 function initAnalysis(game: Game) {
   // Check if game category (variant) is supported by Engine
   if(game === games.focused) {
-    if(evalEngine) {
-      evalEngine.terminate();
-      evalEngine = null;
-    }
+    stopEvalEngine();
 
     if(game.category) {
       if(Engine.categorySupported(game.category)) {
@@ -6346,6 +6340,11 @@ function createEvalEngine(game: Game) {
     };
     evalEngine = new EvalEngine(game, options);
   }
+}
+
+function stopEvalEngine() {
+  evalEngine?.terminate();
+  evalEngine = null;
 }
 
 /** STATUS PANEL SHOW/HIDE BUTTON **/
