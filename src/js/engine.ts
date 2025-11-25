@@ -6,7 +6,6 @@ import { HEntry } from './history';
 import { getTurnColorFromFEN, getMoveNoFromFEN, parseMove } from './chess-helper';
 import { gotoMove } from './index';
 import { Game } from './game';
-import { isMobile } from './utils';
 
 const SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'wild/fr', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
 
@@ -45,8 +44,7 @@ export class Engine {
     this.loadPromise = (async () => {
       const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
       if(wasmSupported) {
-        const multiThreaded = window.crossOriginIsolated && !isMobile();
-        const jsUrl = multiThreaded
+        const jsUrl = window.crossOriginIsolated
           ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.js'
           : 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
         const wasmUrl = multiThreaded 

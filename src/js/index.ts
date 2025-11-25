@@ -4070,6 +4070,7 @@ function getPlayComputerEngineOptions(game: Game): object {
   const skillLevels = [0, 1, 2, 3, 5, 7, 9, 11, 13, 15, 17, 20]; // Skill Level for each difficulty level
 
   const engineOptions = {
+    ...(!Utils.isMobile() && { Threads: Math.min(navigator.hardwareConcurrency - 1, 4) }),   
     ...(game.category === 'wild/fr' && { UCI_Chess960: true }),
     ...(game.category === 'crazyhouse' && { UCI_Variant: game.category }),
     'Skill Level': skillLevels[game.difficulty - 1],
@@ -6201,6 +6202,7 @@ function startEngine() {
 
     const options = {
       ...(numPVs > 1 && { MultiPV: numPVs }),
+      ...(!Utils.isMobile() && { Threads: Math.min(navigator.hardwareConcurrency - 1, 4) }),      
       ...(game.category === 'wild/fr' && { UCI_Chess960: true }),
       ...(game.category === 'crazyhouse' && { UCI_Variant: game.category }),
     };
@@ -6336,6 +6338,7 @@ function createEvalEngine(game: Game) {
   if(game.category && Engine.categorySupported(game.category)) {
     // Configure for variants
     const options = {
+      ...(!Utils.isMobile() && { Threads: Math.min(navigator.hardwareConcurrency - 1, 4) }),   
       ...(game.category === 'wild/fr' && { UCI_Chess960: true }),
       ...(game.category === 'crazyhouse' && { UCI_Variant: game.category }),
     };
