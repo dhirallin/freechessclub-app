@@ -57,16 +57,9 @@ export class Engine {
         const wasmBuffer = await (await fetch(wasmUrl)).arrayBuffer();
         const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
         const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
-        
-        if(multiThreaded) {
-          jsCode = jsCode.replace(/locateFile:function[^}]*,worker}/,
-            `locateFile:function(e){const blah = -1<e.indexOf(".wasm")?"${wasmBlobUrl}":"blob:"+self.location.pathname+"#"+"${wasmBlobUrl}"+",worker"; console.log(blah); return blah;}`);
 
-          jsCode = jsCode.replace(`locateFile:function(e){return-1<e.indexOf(".wasm")?-1<e.indexOf(".wasm.map")?s+".map":t||s:self.location.origin+self.location.pathname+"#"+s+",worker"}`,
-            `locateFile:function(e){return-1<e.indexOf(".wasm")?"${wasmBlobUrl}":"blob:"+self.location.pathname+"#"+"${wasmBlobUrl}"+",worker"}`);
-        }
-        else
-          jsCode = jsCode.replace(`w=l.locateFile?l.locateFile(o,p):p+o`, `w="${wasmBlobUrl}"`);
+        jsCode = jsCode.replace(/locateFile:function[^}]*,worker"}/,
+          `locateFile:function(e){return-1<e.indexOf(".wasm")?"${wasmBlobUrl}":"blob:"+self.location.pathname+"#"+"${wasmBlobUrl}"+",worker"}`);
 
         Engine.sfWorkerBlob = new Blob([jsCode], { type: 'application/javascript' });
       }
