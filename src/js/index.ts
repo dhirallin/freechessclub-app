@@ -1167,10 +1167,10 @@ function gameEnd(data: any) {
       if(data.extraText)
         dialogText += `\n\n${data.extraText}`;
       
-      if(game.role === Role.PLAYING_COMPUTER) {
+      if(game.role === Role.PLAYING_COMPUTER) 
         rematch = ['rematchComputer();', 'Rematch'];
-      }
-      rematch = ['sessionSend(\'rematch\')', 'Rematch']
+      else 
+        rematch = ['sessionSend(\'rematch\')', 'Rematch']
     }
     if(data.reason !== Reason.Adjourn && data.reason !== Reason.Abort && game.history.length()) 
       analyze = ['analyze();', 'Analyze'];
