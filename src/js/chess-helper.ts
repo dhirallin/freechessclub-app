@@ -451,7 +451,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
     outFen = `${boardAfter} ${colorAfter} ${castlingRightsAfter} ${enPassantAfter} ${plyClockAfter} ${moveNoAfter}`;
 
     chess.load(outFen);
-    if(chess.in_checkmate())
+    if(chess.in_checkmate()) 
       outMove.san += '#';
     else if(chess.in_check())
       outMove.san += '+';
@@ -483,7 +483,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
       for(const adj of adjacent) {
         if(!chess.get(adj)) {
           chess.put({type: 'p', color: chess.turn()}, adj);
-          if(!chess.in_checkmate()) {
+          if(!chess.in_check()) {
             blockingSquare = adj;
             break;
           }
