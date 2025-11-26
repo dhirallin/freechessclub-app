@@ -1164,7 +1164,8 @@ function gameEnd(data: any) {
     let analyze = [];
     let dialogText = data.message;
     if(data.reason !== Reason.Disconnect && data.reason !== Reason.Adjourn && data.reason !== Reason.Abort) {
-      dialogText += `\n\n${data.extraText}`
+      if(data.extraText)
+        dialogText += `\n\n${data.extraText}`;
       
       if(game.role === Role.PLAYING_COMPUTER) {
         rematch = ['rematchComputer();', 'Rematch'];
