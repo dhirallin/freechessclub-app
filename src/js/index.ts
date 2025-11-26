@@ -5038,6 +5038,7 @@ function newGame(createNewBoard: boolean, game?: Game, category = 'untimed', fen
 
   const data = {
     fen,                                    // game state
+    color: 'w',                             // The side of the board to view from
     turn: 'w',                              // color whose turn it is to move ("B" or "W")
     id: null,                               // The game number
     wname: '',                              // White's name
