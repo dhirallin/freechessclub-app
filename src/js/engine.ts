@@ -46,18 +46,21 @@ export class Engine {
       const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
       if(wasmSupported) {
         const multiThreaded = typeof SharedArrayBuffer !== 'undefined' && crossOriginIsolated;
-        const jsUrl = multiThreaded
-          ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.js'
-          : 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
-        const wasmUrl = multiThreaded
-          ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.wasm'
-          : 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.wasm';
-
-        let jsCode = await (await fetch(jsUrl)).text();
+        let jsUrl = null, wasmUrl = null;
+        if(multiThreaded) {
+          jsUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.js';
+          wasmUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.wasm';
+        }
+        else {
+          jsUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.js';
+          wasmUrl = 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-single-03e3232.wasm';
+        }
+        
         const wasmBuffer = await (await fetch(wasmUrl)).arrayBuffer();
         const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
         const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
 
+        let jsCode = await (await fetch(jsUrl)).text();
         jsCode = jsCode.replace(/locateFile:function[^}]*,worker"}/,
           `locateFile:function(e){return-1<e.indexOf(".wasm")?"${wasmBlobUrl}":"blob:"+self.location.pathname+"#"+"${wasmBlobUrl}"+",worker"}`);
 
@@ -79,24 +82,31 @@ export class Engine {
     this.variantsLoadPromise = (async () => {
       const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
       if(wasmSupported) {
-        //const multiThreaded = typeof SharedArrayBuffer !== 'undefined' && crossOriginIsolated;
-        const multiThreaded = false;
-        const jsUrl = multiThreaded
-          ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.js'
-          : 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm.js';
-        const wasmUrl = multiThreaded
-          ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.wasm'
-          : 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm';
+        const multiThreaded = typeof SharedArrayBuffer !== 'undefined' && crossOriginIsolated;
+        let jsUrl = null, wasmUrl = null, jsWorkerUrl;
+        if(multiThreaded) {
+          jsUrl = 'https://cdn.jsdelivr.net/npm/fairy-stockfish-nnue.wasm@1.1.10/stockfish.js';
+          wasmUrl = 'https://cdn.jsdelivr.net/npm/fairy-stockfish-nnue.wasm@1.1.10/stockfish.wasm';
+          jsWorkerUrl = 'https://cdn.jsdelivr.net/npm/fairy-stockfish-nnue.wasm@1.1.10/stockfish.worker.js';
+        }
+        else {
+          jsUrl = 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm.js';
+          wasmUrl = 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm';
+        }
 
-        let jsCode = await (await fetch(jsUrl)).text();
         const wasmBuffer = await (await fetch(wasmUrl)).arrayBuffer();
         const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
         const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
 
+        let jsWorkerCode = null, jsWorkerBlob = null, jsWorkerBlobUrl = null;
+        if(jsWorkerUrl) 
+          jsWorkerCode = await (await fetch(jsWorkerUrl)).text();        
+
+        let jsCode = await (await fetch(jsUrl)).text();
         jsCode = jsCode.replace(/locateFile:function[^}]*}/,
           `locateFile:function(e){return "${wasmBlobUrl}"}`);
 
-        Engine.sfVariantsWorkerBlob = new Blob([jsCode], { type: 'application/javascript' });
+        Engine.sfVariantsWorkerBlob = new Blob([jsWorkerCode || jsCode], { type: 'application/javascript' });
       }
       else {
         let jsCode = await (await fetch('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js')).text();
