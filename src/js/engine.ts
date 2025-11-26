@@ -14,6 +14,7 @@ export class Engine {
   protected sfPromise: any = null;
   protected static loadPromise: any = null; 
   protected static sfWorkerBlob: any;
+  protected static variantsLoadPromise: any = null;
   protected static sfVariantsWorkerBlob: any;
   protected numPVs: number;
   protected currFen: string;
@@ -71,9 +72,50 @@ export class Engine {
     return this.loadPromise;
   }
 
+  public static async variantsLoad() {
+    if(this.variantsLoadPromise) 
+      return this.variantsLoadPromise;
+
+    this.variantsLoadPromise = (async () => {
+      const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
+      if(wasmSupported) {
+        //const multiThreaded = typeof SharedArrayBuffer !== 'undefined' && crossOriginIsolated;
+        const multiThreaded = false;
+        const jsUrl = multiThreaded
+          ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.js'
+          : 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm.js';
+        const wasmUrl = multiThreaded
+          ? 'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-lite-51f59da.wasm'
+          : 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm';
+
+        let jsCode = await (await fetch(jsUrl)).text();
+        const wasmBuffer = await (await fetch(wasmUrl)).arrayBuffer();
+        const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
+        const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
+
+        jsCode = jsCode.replace(/locateFile:function[^}]*}/,
+          `locateFile:function(e){return "${wasmBlobUrl}"}`);
+
+        Engine.sfVariantsWorkerBlob = new Blob([jsCode], { type: 'application/javascript' });
+      }
+      else {
+        let jsCode = await (await fetch('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js')).text();
+        Engine.sfVariantsWorkerBlob = new Blob([jsCode], { type: 'application/javascript' });
+      }   
+    })();
+
+    return this.variantsLoadPromise;
+  }
+
   public async init(game: Game, options?: object) {
-    await Engine.load();
-    this.stockfish = new Worker(URL.createObjectURL(Engine.sfWorkerBlob));
+    if(options?.hasOwnProperty('UCI_Variant')) {
+      await Engine.variantsLoad();
+      this.stockfish = new Worker(URL.createObjectURL(Engine.sfVariantsWorkerBlob));
+    }
+    else {
+      await Engine.load();
+      this.stockfish = new Worker(URL.createObjectURL(Engine.sfWorkerBlob));
+    }
 
     this.sfPromise = new Promise<void>((resolve) => {   
       this.stockfish.onmessage = (response) => {
