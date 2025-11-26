@@ -98,15 +98,22 @@ export class Engine {
         const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
         const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
 
-        let jsWorkerCode = null, jsWorkerBlob = null, jsWorkerBlobUrl = null;
-        if(jsWorkerUrl) 
-          jsWorkerCode = await (await fetch(jsWorkerUrl)).text();        
-
         let jsCode = await (await fetch(jsUrl)).text();
-        jsCode = jsCode.replace(/locateFile:function[^}]*}/,
-          `locateFile:function(e){return "${wasmBlobUrl}"}`);
 
-        Engine.sfVariantsWorkerBlob = new Blob([jsWorkerCode || jsCode], { type: 'application/javascript' });
+        if(multiThreaded) {
+          const jsWorkerCode = await (await fetch(jsWorkerUrl)).text();    
+          const jsWorkerBlob = new Blob([jsWorkerCode], { type: 'application/javascript' });
+          const jsWorkerBlobUrl = URL.createObjectURL(jsWorkerBlob); 
+          
+          jsCode = jsCode.replace(`function qa(a){return A.locateFile?A.locateFile(a,H):H+a}`,
+            `function qa(a){return-1<a.indexOf(".wasm")?"${wasmBlobUrl}":"${jsWorkerBlobUrl}"}`);
+        } 
+        else {
+          jsCode = jsCode.replace(/locateFile:function[^}]*}/,
+            `locateFile:function(e){return "${wasmBlobUrl}"}`);
+        }
+
+        Engine.sfVariantsWorkerBlob = new Blob([jsCode], { type: 'application/javascript' });
       }
       else {
         let jsCode = await (await fetch('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js')).text();
@@ -118,14 +125,14 @@ export class Engine {
   }
 
   public async init(game: Game, options?: object) {
-    if(options?.hasOwnProperty('UCI_Variant')) {
+    //if(options?.hasOwnProperty('UCI_Variant')) {
       await Engine.variantsLoad();
       this.stockfish = new Worker(URL.createObjectURL(Engine.sfVariantsWorkerBlob));
-    }
-    else {
-      await Engine.load();
-      this.stockfish = new Worker(URL.createObjectURL(Engine.sfWorkerBlob));
-    }
+    //}
+    //else {
+    //  await Engine.load();
+    //  this.stockfish = new Worker(URL.createObjectURL(Engine.sfWorkerBlob));
+    //}
 
     this.sfPromise = new Promise<void>((resolve) => {   
       this.stockfish.onmessage = (response) => {
