@@ -494,7 +494,7 @@ function parseVariantMove(fen: string, move: any, startFen: string, category: st
         let canBlock = false;
         if(category === 'crazyhouse') {
           // check if we have a held piece capable of occupying the blocking square
-          for(const k in variantData.holdings) {
+          for(const k in variantData?.holdings) {
             if(variantData.holdings[k] === 0)
               continue;
 
