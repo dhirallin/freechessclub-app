@@ -16,6 +16,7 @@ export class Engine {
   protected workerPromise: any = null; // For waiting until engine worker is created and initialised
   protected static loadPromise: any = null; // For waiting until engine files are fetched
   protected static workerUrl: any; // engine worker Blob URL
+  protected static weightsUrl: any; // weights file Blob URL used for Lc0
   protected static multiThreadedBlob: boolean = false; // Is the loaded Blob a multi-threading engine?
   protected static abortLoad: AbortController; // For aborting an engine fetch 
   public multiThreaded: boolean = false; // Is this instance a multi-threading engine?
@@ -181,7 +182,7 @@ export class Engine {
         }
       };
 
-      this.worker.postMessage('load https://cdn.jsdelivr.net/gh/dkappe/leela-chess-weights@1d12c2e/weights/weights_394.txt.gz');
+      this.worker.postMessage(`load ${Engine.weightsUrl}`);
       this.worker.postMessage('uci');
     });
   }
@@ -215,7 +216,37 @@ export class Engine {
         if(typeof OffscreenCanvas === 'undefined')
           throw new TypeError('Failed to load Lc0. OffscreenCanvas is not supported in this browser');
 
-        Engine.workerUrl = '/assets/js/lc0.js';
+          const url = '/assets/js/lc0';
+          const jsUrl = `${url}.js`;
+          const wasmUrl = `${url}.wasm`;
+          Engine.weightsUrl = `${location.origin}/assets/js/weights_9155.txt.gz`;
+
+          const wasmBuffer = await (await fetch(wasmUrl, { signal })).arrayBuffer();
+          const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
+          const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
+
+          jsCode = `
+            console.log('testing');
+
+            self.Module = self.Module || {};
+            Module.locateFile = (path, scriptDir) => '${wasmBlobUrl}';
+
+            importScripts('${location.origin}${jsUrl}');
+
+            const originalOnMessage = self.onmessage;
+            self.onmessage = async function(e) {
+              let data = e.data;
+              if(typeof data === 'string' && data.startsWith('load ')) {
+                const fileName = e.data.split(/\\s+/)[1].trim();
+                const weightsResponse = await fetch(fileName);
+                const weightsBuffer = await weightsResponse.arrayBuffer();
+                console.log('before write');
+                //FS.writeFile('weights.txt.gz', new Uint8Array(weightsBuffer));
+                console.log('after write');
+              }
+              originalOnMessage.call(self, { data });
+            };
+          `;
       }
       else if(engineName === 'Stockfish MV 2019') {
         if(wasmSupported) {
@@ -233,9 +264,6 @@ export class Engine {
         }
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js', { signal })).text();
-      
-        const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
-        Engine.workerUrl = URL.createObjectURL(jsBlob); 
       }
       else if(engineName === 'Stockfish 17.1') {
         if(wasmSupported) {     
@@ -265,9 +293,6 @@ export class Engine {
         }
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-asm-341ff22.js', { signal })).text();
-      
-        const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
-        Engine.workerUrl = URL.createObjectURL(jsBlob); 
       }
       else { // Stockfish 17.1 Lite (default)
         if(wasmSupported) {      
@@ -291,10 +316,9 @@ export class Engine {
         }
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-asm-341ff22.js', { signal })).text();
-
-        const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
-        Engine.workerUrl = URL.createObjectURL(jsBlob); 
       }
+      const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
+      Engine.workerUrl = URL.createObjectURL(jsBlob); 
     })().catch(err => {
       this.loadPromise = null;
       throw err;
