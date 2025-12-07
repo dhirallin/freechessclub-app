@@ -181,6 +181,7 @@ export class Engine {
         }
       };
 
+      this.worker.postMessage('load https://cdn.jsdelivr.net/gh/dkappe/leela-chess-weights@1d12c2e/weights/weights_394.txt.gz');
       this.worker.postMessage('uci');
     });
   }
