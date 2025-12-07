@@ -216,49 +216,15 @@ export class Engine {
         if(typeof OffscreenCanvas === 'undefined')
           throw new TypeError('Failed to load Lc0. OffscreenCanvas is not supported in this browser');
 
-          const url = '/assets/js/lc0';
-          const jsUrl = `${url}.js`;
-          const wasmUrl = `${url}.wasm`;
-          //Engine.weightsUrl = `${location.origin}/assets/js/weights_11248.dat.gz`;
-          //Engine.weightsUrl = `${location.origin}/assets/js/weights_9155.txt.gz`;
-          //Engine.weightsUrl = `${location.origin}/assets/js/maia-1100.pb.gz`;
-          //Engine.weightsUrl = 'https://raw.githubusercontent.com/CSSLab/maia-chess/main/maia_weights/maia-1100.pb.gz';
-          
-          const weightsUrl = '/assets/js/weights_11248.dat.gz';
-          //const weightsUrl = '/assets/js/weights_9155.txt.gz';         
-          const weightsBuffer = await (await fetch(weightsUrl, { signal })).arrayBuffer();
-          const weightsBlob = new Blob([weightsBuffer], { type: 'application/octet-stream' });
-          Engine.weightsUrl = URL.createObjectURL(weightsBlob);     
+        //const weightsUrl = 'assets/js/weights_11248.dat.gz';
+        //Engine.weightsUrl = 'weights_9155.txt.gz';
+        const weightsUrl = 'assets/js/maia-1100.pb.gz';
+        //const weightsUrl = 'https://raw.githubusercontent.com/CSSLab/maia-chess/main/maia_weights/maia-1100.pb.gz';
+        const weightsBuffer = await (await fetch(weightsUrl, { signal })).arrayBuffer();
+        const weightsBlob = new Blob([weightsBuffer], { type: 'application/octet-stream' });
+        Engine.weightsUrl = URL.createObjectURL(weightsBlob);     
 
-          const wasmBuffer = await (await fetch(wasmUrl, { signal })).arrayBuffer();
-          const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
-          const wasmBlobUrl = URL.createObjectURL(wasmBlob); 
-
-          jsCode = `
-            console.log('testing');
-
-            self.Module = self.Module || {};
-            Module.locateFile = (path, scriptDir) => '${wasmBlobUrl}';
-
-            importScripts('${location.origin}${jsUrl}');
-
-            /*const originalOnMessage = self.onmessage;
-            self.onmessage = async function(e) {
-              let data = e.data;
-              if(typeof data === 'string' && data.startsWith('load ')) {
-                const fileName = e.data.split(/\\s+/)[1].trim();
-                const weightsResponse = await fetch(fileName);
-                const weightsBuffer = await weightsResponse.arrayBuffer();
-                console.log('before write');
-                FS.writeFile('weights.txt.gz', new Uint8Array(weightsBuffer));
-                console.log('after write');
-                data = 'load weights.txt.gz';
-              }
-              originalOnMessage.call(self, { data });
-            };*/
-          `;
-
-          Engine.workerUrl = '/assets/js/lc0.js';
+        Engine.workerUrl = '/assets/js/lc0.js';
       }
       else if(engineName === 'Stockfish MV 2019') {
         if(wasmSupported) {
@@ -276,6 +242,9 @@ export class Engine {
         }
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js', { signal })).text();
+      
+        const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
+        Engine.workerUrl = URL.createObjectURL(jsBlob); 
       }
       else if(engineName === 'Stockfish 17.1') {
         if(wasmSupported) {     
@@ -305,6 +274,9 @@ export class Engine {
         }
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-asm-341ff22.js', { signal })).text();
+      
+        const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
+        Engine.workerUrl = URL.createObjectURL(jsBlob); 
       }
       else { // Stockfish 17.1 Lite (default)
         if(wasmSupported) {      
@@ -328,9 +300,10 @@ export class Engine {
         }
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-asm-341ff22.js', { signal })).text();
+
+        const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
+        Engine.workerUrl = URL.createObjectURL(jsBlob); 
       }
-      //const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
-      //Engine.workerUrl = URL.createObjectURL(jsBlob); 
     })().catch(err => {
       this.loadPromise = null;
       throw err;
