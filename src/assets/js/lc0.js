@@ -210,10 +210,15 @@ Network = (function () {
         console.log('test 2');
         var type = root.lookupType("pblczero.Net");
         var net = type.decode(byteArray);
+        console.log(JSON.stringify(Object.keys(net))); 
+        console.log(JSON.stringify(Object.keys(net.weights))); 
         console.log(JSON.stringify(Object.keys(net.weights.input))); 
         console.log(JSON.stringify(Object.keys(net.weights.input.weights))); 
+        console.log(JSON.stringify(Object.keys(net.weights.input.weights.dims)));
+
+        console.log(JSON.stringify(net.weights.input.weights.dims)); 
         console.log('test 3');
-        populateBiasesFromBN(net);
+        //populateBiasesFromBN(net);
 
         this.decodeBin(net)
       }).bind(this))
@@ -240,13 +245,19 @@ Network = (function () {
           conv2: conv2
         }
       }
+      console.log('hey');
+      console.log(JSON.stringify(net.weights.policy.weights));
       var policy_conv1 = this.decodeBinConv(weights.policy, 1);
+      console.log('heyo');
+      console.log(JSON.stringify(Object.keys(weights.policy1)));
       var policy_fc = this.decodeBinFC(weights.ipPolW, weights.ipPolB);
+      console.log('did we get here?');
       this.data.policy_head = {
         conv1: policy_conv1,
         fc: policy_fc
       };
       var value_conv1 = this.decodeBinConv(weights.value, 1);
+      console.log('are we here?');
       value_fc1 = this.decodeBinFC(weights.ip1ValW, weights.ip1ValB);
       value_fc2 = this.decodeBinFC(weights.ip2ValW, weights.ip2ValB);
       this.data.value_head = {
@@ -259,12 +270,21 @@ Network = (function () {
     decodeBinConv: (function (convBlock, filtersize) {
       var conv = {};
       conv.filtersize = filtersize;
+      console.log('huh?');
       conv.weights = this.decodeBinLayer(convBlock.weights);
       console.log('testing');
-      conv.biases = this.decodeBinLayer(convBlock.biases);
-      console.log('testing 2');
-      conv.bn_means = this.decodeBinLayer(convBlock.bnMeans);
-      conv.bn_stddivs = this.decodeBinLayer(convBlock.bnStddivs);
+      conv.biases = convBlock.biases 
+        ? this.decodeBinLayer(convBlock.biases)
+        : new Float32Array(conv.weights.length); 
+
+      conv.bn_means = convBlock.bnMeans
+        ? this.decodeBinLayer(convBlock.bnMeans)
+        : new Float32Array(conv.weights.length);
+
+      conv.bn_stddivs = convBlock.bnStddivs
+        ? this.decodeBinLayer(convBlock.bnMeans)
+        : new Float32Array(conv.weights.length);
+
       conv.outputs = conv.biases.length;
       conv.inputs = conv.weights.length / (filtersize * filtersize * conv.outputs);
       return conv
@@ -273,6 +293,7 @@ Network = (function () {
       var fc = {};
       fc.weights = this.decodeBinLayer(weights);
       fc.biases = this.decodeBinLayer(biases);
+    
       fc.outputs = fc.biases.length;
       fc.inputs = fc.weights.length / fc.outputs;
       return fc
