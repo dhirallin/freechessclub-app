@@ -223,7 +223,9 @@ export class Engine {
           //Engine.weightsUrl = `${location.origin}/assets/js/weights_9155.txt.gz`;
           //Engine.weightsUrl = `${location.origin}/assets/js/maia-1100.pb.gz`;
           //Engine.weightsUrl = 'https://raw.githubusercontent.com/CSSLab/maia-chess/main/maia_weights/maia-1100.pb.gz';
-          const weightsUrl = '/assets/js/weights_9155.txt.gz';         
+          
+          const weightsUrl = '/assets/js/weights_11248.dat.gz';
+          //const weightsUrl = '/assets/js/weights_9155.txt.gz';         
           const weightsBuffer = await (await fetch(weightsUrl, { signal })).arrayBuffer();
           const weightsBlob = new Blob([weightsBuffer], { type: 'application/octet-stream' });
           Engine.weightsUrl = URL.createObjectURL(weightsBlob);     
@@ -240,7 +242,7 @@ export class Engine {
 
             importScripts('${location.origin}${jsUrl}');
 
-            const originalOnMessage = self.onmessage;
+            /*const originalOnMessage = self.onmessage;
             self.onmessage = async function(e) {
               let data = e.data;
               if(typeof data === 'string' && data.startsWith('load ')) {
@@ -253,8 +255,10 @@ export class Engine {
                 data = 'load weights.txt.gz';
               }
               originalOnMessage.call(self, { data });
-            };
+            };*/
           `;
+
+          Engine.workerUrl = '/assets/js/lc0.js';
       }
       else if(engineName === 'Stockfish MV 2019') {
         if(wasmSupported) {
@@ -325,8 +329,8 @@ export class Engine {
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-asm-341ff22.js', { signal })).text();
       }
-      const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
-      Engine.workerUrl = URL.createObjectURL(jsBlob); 
+      //const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
+      //Engine.workerUrl = URL.createObjectURL(jsBlob); 
     })().catch(err => {
       this.loadPromise = null;
       throw err;
