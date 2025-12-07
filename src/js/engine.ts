@@ -219,7 +219,14 @@ export class Engine {
           const url = '/assets/js/lc0';
           const jsUrl = `${url}.js`;
           const wasmUrl = `${url}.wasm`;
-          Engine.weightsUrl = `${location.origin}/assets/js/weights_9155.txt.gz`;
+          //Engine.weightsUrl = `${location.origin}/assets/js/weights_11248.dat.gz`;
+          //Engine.weightsUrl = `${location.origin}/assets/js/weights_9155.txt.gz`;
+          //Engine.weightsUrl = `${location.origin}/assets/js/maia-1100.pb.gz`;
+          //Engine.weightsUrl = 'https://raw.githubusercontent.com/CSSLab/maia-chess/main/maia_weights/maia-1100.pb.gz';
+          const weightsUrl = '/assets/js/weights_9155.txt.gz';         
+          const weightsBuffer = await (await fetch(weightsUrl, { signal })).arrayBuffer();
+          const weightsBlob = new Blob([weightsBuffer], { type: 'application/octet-stream' });
+          Engine.weightsUrl = URL.createObjectURL(weightsBlob);     
 
           const wasmBuffer = await (await fetch(wasmUrl, { signal })).arrayBuffer();
           const wasmBlob = new Blob([wasmBuffer], { type: 'application/wasm' });
@@ -241,8 +248,9 @@ export class Engine {
                 const weightsResponse = await fetch(fileName);
                 const weightsBuffer = await weightsResponse.arrayBuffer();
                 console.log('before write');
-                //FS.writeFile('weights.txt.gz', new Uint8Array(weightsBuffer));
+                FS.writeFile('weights.txt.gz', new Uint8Array(weightsBuffer));
                 console.log('after write');
+                data = 'load weights.txt.gz';
               }
               originalOnMessage.call(self, { data });
             };
