@@ -52,7 +52,10 @@ export class Engine {
     
     return new Promise<void>((resolve) => {   
       this.worker.onmessage = (response) => {     
-        if(response.data === 'uciok') {
+        const message = Array.isArray(response.data) ? response.data[0] : response.data;
+        console.log(message);
+
+        if(message === 'uciok') {
           // Parse options
           Object.entries(options).forEach(([key, value]) => {
             this.worker.postMessage(`setoption name ${key} value ${value}`);
@@ -61,15 +64,15 @@ export class Engine {
           this.worker.postMessage('ucinewgame');
           this.worker.postMessage('isready');
         }
-        else if(response.data === 'readyok')
+        else if(message === 'readyok')
           resolve(); 
-        else if(response.data.startsWith('info')) {
+        else if(message.startsWith('info')) {
           if(this.stopping)
             return;
 
           let depth0 = false;
           const fen = this.currFen;
-          const info = response.data.substring(5, response.data.length);
+          const info = message.substring(5, message.length);
           const infoArr: string[] = info.trim().split(/\s+/);
 
           let bPV = false;
@@ -163,7 +166,7 @@ export class Engine {
           if(depth0 && this.bestMoveCallback)
             this.bestMoveCallback(this.game, '', this.currEval);
         }
-        else if(response.data.startsWith('bestmove')) {
+        else if(message.startsWith('bestmove')) {
           if(this.stopping) {
             this.stopping = false;
             return;
@@ -171,7 +174,7 @@ export class Engine {
           this.thinking = false;
 
           if(this.bestMoveCallback) {
-            const bestMove = response.data.trim().split(/\s+/)[1];
+            const bestMove = message.trim().split(/\s+/)[1];
             if(bestMove !== '(none)')
               this.bestMoveCallback(this.game, bestMove, this.currEval);
           }
@@ -187,6 +190,8 @@ export class Engine {
    * We only load one Blob at a time. 
    */
   public static load(engineName?: string) {
+    engineName = 'Lc0';
+    
     if(!engineName)
       engineName = 'Stockfish 17.1 Lite';
 
@@ -202,7 +207,16 @@ export class Engine {
       const wasmSupported = typeof WebAssembly === 'object' && WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
       this.multiThreadedBlob = false;
       let jsCode = null;
-      if(engineName === 'Stockfish MV 2019') {
+      if(engineName === 'Lc0') {
+        if(!wasmSupported) 
+          throw new TypeError('Failed to load Lc0. WebAssembly is not supported in this browser');
+
+        if(typeof OffscreenCanvas === 'undefined')
+          throw new TypeError('Failed to load Lc0. OffscreenCanvas is not supported in this browser');
+
+        Engine.workerUrl = '/assets/js/lc0.js';
+      }
+      else if(engineName === 'Stockfish MV 2019') {
         if(wasmSupported) {
           const jsUrl = 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm.js';
           const wasmUrl = 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm';
@@ -218,6 +232,9 @@ export class Engine {
         }
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js', { signal })).text();
+      
+        const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
+        Engine.workerUrl = URL.createObjectURL(jsBlob); 
       }
       else if(engineName === 'Stockfish 17.1') {
         if(wasmSupported) {     
@@ -247,6 +264,9 @@ export class Engine {
         }
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-asm-341ff22.js', { signal })).text();
+      
+        const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
+        Engine.workerUrl = URL.createObjectURL(jsBlob); 
       }
       else { // Stockfish 17.1 Lite (default)
         if(wasmSupported) {      
@@ -270,9 +290,10 @@ export class Engine {
         }
         else 
           jsCode = await (await fetch('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@7fa3404/src/stockfish-17.1-asm-341ff22.js', { signal })).text();
+
+        const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
+        Engine.workerUrl = URL.createObjectURL(jsBlob); 
       }
-      const jsBlob = new Blob([jsCode], { type: 'application/javascript' });
-      Engine.workerUrl = URL.createObjectURL(jsBlob); 
     })().catch(err => {
       this.loadPromise = null;
       throw err;
