@@ -183,7 +183,7 @@ export class Engine {
       };
 
       this.worker.postMessage(`load ${Engine.weightsUrl}`);
-      this.worker.postMessage('uci');
+      //this.worker.postMessage('uci');
     });
   }
 
@@ -217,8 +217,8 @@ export class Engine {
           throw new TypeError('Failed to load Lc0. OffscreenCanvas is not supported in this browser');
 
         //const weightsUrl = 'assets/js/weights_11248.dat.gz';
-        //Engine.weightsUrl = 'weights_9155.txt.gz';
-        const weightsUrl = 'assets/js/maia-1100.pb.gz';
+        //const weightsUrl = 'assets/js/maia-1100.pb.gz';
+        const weightsUrl = 'assets/js/t1-256x10-distilled-swa-2432500.pb.gz';
         //const weightsUrl = 'https://raw.githubusercontent.com/CSSLab/maia-chess/main/maia_weights/maia-1100.pb.gz';
         const weightsBuffer = await (await fetch(weightsUrl, { signal })).arrayBuffer();
         const weightsBlob = new Blob([weightsBuffer], { type: 'application/octet-stream' });

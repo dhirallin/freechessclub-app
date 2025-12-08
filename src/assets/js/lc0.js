@@ -8,7 +8,11 @@ const LC0_DEPENDENCIES = [{
 }, {
   id: "protobuf",
   url: "https://cdn.rawgit.com/dcodeIO/protobuf.js/6.8.8/dist/protobuf.min.js"
+}, {
+  id: "ort",
+  url: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.js"
 }];
+
 if (typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) {
   if ("undefined" == typeof requestAnimationFrame) {
     function requestAnimationFrame(callback) {
@@ -31,40 +35,6 @@ if (typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScop
     self.HTMLImageElement = (function () {});
     self.HTMLCanvasElement = (function () {})
   }
-
-  function populateBiasesFromBN(net) {
-    if (net.weights && net.weights.input && !net.weights.input.biases) {
-      const input = net.weights.input;
-      const params = input.weights.params;
-      const n = params.length;
-
-      const biasesParams = new Float32Array(n);
-
-      // compute biases from batch-norm
-      let min = Infinity;
-      let max = -Infinity;
-      for (let i = 0; i < n; i++) {
-        const mean = input.bnMeans?.[i] ?? 0;
-        const gamma = input.bnGammas?.[i] ?? 1;
-        const beta = input.bnBetas?.[i] ?? 0;
-        biasesParams[i] = beta - mean * gamma;
-        if(biasesParams[i] < min)
-          min = biasesParams[i];
-        if(biasesParams[i] > max)
-          max = biasesParams[i];
-      }
-
-      input.biases = {
-        dims: input.dims,      // same shape as weights
-        minVal: min,
-        maxVal: max,
-        params: biasesParams
-      };
-    }
-
-    return net;
-  }
-
 
   function loadDependencies() {
     return new Promise((function (resolve, reject) {
@@ -124,10 +94,44 @@ Network = (function () {
       this.isChannelsFirst = format == "channelsFirst";
       this.isChannelsLast = format == "channelsLast"
     }),
-    load: (function (name) {
-      var decoder = name.match(/^.*\.txt\.gz$/) ? this.decodeText : this.decodeProtobuf;
-      return readFile(name).then(decoder.bind(this))
+    load: (async function(name) {
+      let bytearray = await readFile(name);
+
+      if(name.endsWith(".gz")) 
+        bytearray = window.pako.inflate(bytearray); 
+      
+      this.model = await window.ort.InferenceSession.create(bytearray);
+      this.log("Network successfully loaded!");
     }),
+    forward: (function (batch_size, input, policy, value) {
+      const sab = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
+      const flag = new Int32Array(sab); 
+      Atomics.store(flag, 0, 0);
+      (async => {
+        
+        Atomics.store(flag, 0, 1); 
+        Atomics.notify(flag, 0, 1);    
+      })();     
+      Atomics.wait(flag, 0, 0);
+
+      var self = this;
+
+      function work() {
+        var x = tf.tensor4d(input, [batch_size, kInputPlanes, 8, 8]);
+        if (self.isChannelsLast) {
+          x = tf.transpose(x, [0, 2, 3, 1])
+        }
+        var predict = self.model.predict(x);
+        var p_data = predict[0].dataSync();
+        for (var i = 0; i < policy.length; i++) policy[i] = p_data[i];
+        var v_data = predict[1].dataSync();
+        for (var i = 0; i < value.length; i++) value[i] = v_data[i]
+      }
+      tf.tidy(work)
+    }),
+    log: (function (text) {
+      self.console.info(text)
+    })
     decodeText: (function (bytearray) {
       var text = window.pako.inflate(bytearray, {
         to: "string"
@@ -205,34 +209,19 @@ Network = (function () {
     }),
     decodeProtobuf: (function (arraybuffer) {
       var byteArray = window.pako.inflate(arraybuffer);
-      console.log('test 1');
       return window.protobuf.load("pb.proto").then((function (root) {
-        console.log('test 2');
         var type = root.lookupType("pblczero.Net");
         var net = type.decode(byteArray);
-        console.log(JSON.stringify(Object.keys(net))); 
-        console.log(JSON.stringify(Object.keys(net.weights))); 
-        console.log(JSON.stringify(Object.keys(net.weights.input))); 
-        console.log(JSON.stringify(Object.keys(net.weights.input.weights))); 
-        console.log(JSON.stringify(Object.keys(net.weights.input.weights.dims)));
-
-        console.log(JSON.stringify(net.weights.input.weights.dims)); 
-        console.log('test 3');
-        //populateBiasesFromBN(net);
-
         this.decodeBin(net)
       }).bind(this))
     }),
     decodeBin: (function (net) {
       var weights = net.weights;
       this.data = {};
-      console.log('test 3b');
       this.data.input = this.decodeBinConv(weights.input, 3);
-      console.log('test 4');
       this.filters = this.data.input.biases.length;
       var residuals = weights.residual;
       this.blocks = residuals.length;
-      console.log('test 5');
       this.log("Network blocks: " + this.blocks);
       this.log("Network filters: " + this.filters);
       this.data.tower = new Array(this.blocks);
@@ -245,19 +234,13 @@ Network = (function () {
           conv2: conv2
         }
       }
-      console.log('hey');
-      console.log(JSON.stringify(net.weights.policy.weights));
       var policy_conv1 = this.decodeBinConv(weights.policy, 1);
-      console.log('heyo');
-      console.log(JSON.stringify(Object.keys(weights.policy1)));
       var policy_fc = this.decodeBinFC(weights.ipPolW, weights.ipPolB);
-      console.log('did we get here?');
       this.data.policy_head = {
         conv1: policy_conv1,
         fc: policy_fc
       };
       var value_conv1 = this.decodeBinConv(weights.value, 1);
-      console.log('are we here?');
       value_fc1 = this.decodeBinFC(weights.ip1ValW, weights.ip1ValB);
       value_fc2 = this.decodeBinFC(weights.ip2ValW, weights.ip2ValB);
       this.data.value_head = {
@@ -270,21 +253,10 @@ Network = (function () {
     decodeBinConv: (function (convBlock, filtersize) {
       var conv = {};
       conv.filtersize = filtersize;
-      console.log('huh?');
       conv.weights = this.decodeBinLayer(convBlock.weights);
-      console.log('testing');
-      conv.biases = convBlock.biases 
-        ? this.decodeBinLayer(convBlock.biases)
-        : new Float32Array(conv.weights.length); 
-
-      conv.bn_means = convBlock.bnMeans
-        ? this.decodeBinLayer(convBlock.bnMeans)
-        : new Float32Array(conv.weights.length);
-
-      conv.bn_stddivs = convBlock.bnStddivs
-        ? this.decodeBinLayer(convBlock.bnMeans)
-        : new Float32Array(conv.weights.length);
-
+      conv.biases = this.decodeBinLayer(convBlock.biases);
+      conv.bn_means = this.decodeBinLayer(convBlock.bnMeans);
+      conv.bn_stddivs = this.decodeBinLayer(convBlock.bnStddivs);
       conv.outputs = conv.biases.length;
       conv.inputs = conv.weights.length / (filtersize * filtersize * conv.outputs);
       return conv
@@ -293,7 +265,6 @@ Network = (function () {
       var fc = {};
       fc.weights = this.decodeBinLayer(weights);
       fc.biases = this.decodeBinLayer(biases);
-    
       fc.outputs = fc.biases.length;
       fc.inputs = fc.weights.length / fc.outputs;
       return fc
@@ -453,25 +424,6 @@ Network = (function () {
       this.log("p: " + predict[0]);
       this.log("v: " + predict[1])
     }),
-    forward: (function (batch_size, input, policy, value) {
-      var self = this;
-
-      function work() {
-        var x = tf.tensor4d(input, [batch_size, kInputPlanes, 8, 8]);
-        if (self.isChannelsLast) {
-          x = tf.transpose(x, [0, 2, 3, 1])
-        }
-        var predict = self.model.predict(x);
-        var p_data = predict[0].dataSync();
-        for (var i = 0; i < policy.length; i++) policy[i] = p_data[i];
-        var v_data = predict[1].dataSync();
-        for (var i = 0; i < value.length; i++) value[i] = v_data[i]
-      }
-      tf.tidy(work)
-    }),
-    log: (function (text) {
-      self.console.info(text)
-    })
   };
   return Network
 })();
