@@ -496,11 +496,11 @@ Module["onRuntimeInitialized"] = module_ready;
 
 loadDependencies().then(load_network);
 
-function lczero_forward(batch_size, input, policy, value) {
+function lczero_forward(batchSize, input, policy, value) {
   const flagSize = 1;
-  const inputSize = 112 * 64 * batch_size;
-  const policySize = 1858 * batch_size;
-  const valueSize = batch_size;
+  const inputSize = 112 * 64 * batchSize;
+  const policySize = 1858 * batchSize;
+  const valueSize = batchSize;
   const totalBytes = 4 * (flagSize + inputSize + policySize + valueSize);
 
   if(networkSAB.byteLength < totalBytes)
@@ -522,10 +522,10 @@ function lczero_forward(batch_size, input, policy, value) {
   onnxWorker.postMessage({
     command: 'forward',
     doneFlag,
+    batchSize,
     input: inputSABView,
     policy: policySABView,
     value: valueSABView,
-    batch_size
   });
 
   Atomics.wait(doneFlag, 0, 0);
