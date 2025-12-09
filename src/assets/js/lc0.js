@@ -8,9 +8,6 @@ const LC0_DEPENDENCIES = [{
 }, {
   id: "protobuf",
   url: "https://cdn.rawgit.com/dcodeIO/protobuf.js/6.8.8/dist/protobuf.min.js"
-}, {
-  id: "ort",
-  url: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.js"
 }];
 
 if (typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) {
@@ -72,7 +69,7 @@ function readFile(url) {
 Network = (function () {
   const kNumOutputPolicies = 1858;
   const kInputPlanes = 112;
-
+  
   function Network() {
     this.backend = tf.getBackend();
     this.log("Tensorflow backend: " + this.backend);
@@ -104,34 +101,29 @@ Network = (function () {
       this.log("Network successfully loaded!");
     }),
     forward: (function (batch_size, input, policy, value) {
-      const sab = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
-      const flag = new Int32Array(sab); 
-      Atomics.store(flag, 0, 0);
-      (async => {
-        
-        Atomics.store(flag, 0, 1); 
-        Atomics.notify(flag, 0, 1);    
+      (async () => {
+        const session = this.model;
+        const inputName = session.inputNames[0];
+        const dims = [...session.inputMetadata[inputName].dimensions];
+        dims[0] = batch_size;
+        const inputTensor = new ort.Tensor('float32', input, dims);
+        const results = await session.run({ [inputName]: inputTensor });
+
+        const p_data = results[session.outputNames[0]].data;
+        for(var i = 0; i < policy.length; i++) 
+          policy[i] = p_data[i];
+        const v_data = results[session.outputNames[1]].data;
+        for(var i = 0; i < value.length; i++) 
+          value[i] = v_data[i];
+
+        Atomics.store(this.forwardSyncFlag, 0, 1); 
+        Atomics.notify(this.forwardSyncFlag, 0, 1);    
       })();     
-      Atomics.wait(flag, 0, 0);
-
-      var self = this;
-
-      function work() {
-        var x = tf.tensor4d(input, [batch_size, kInputPlanes, 8, 8]);
-        if (self.isChannelsLast) {
-          x = tf.transpose(x, [0, 2, 3, 1])
-        }
-        var predict = self.model.predict(x);
-        var p_data = predict[0].dataSync();
-        for (var i = 0; i < policy.length; i++) policy[i] = p_data[i];
-        var v_data = predict[1].dataSync();
-        for (var i = 0; i < value.length; i++) value[i] = v_data[i]
-      }
-      tf.tidy(work)
+      Atomics.wait(this.forwardSyncFlag, 0, 0);
     }),
     log: (function (text) {
       self.console.info(text)
-    })
+    }),
     decodeText: (function (bytearray) {
       var text = window.pako.inflate(bytearray, {
         to: "string"
@@ -509,13 +501,46 @@ function load_network() {
   }))
 }
 Module["onRuntimeInitialized"] = module_ready;
+
 loadDependencies().then(load_network);
 
+let networkSAB = null;
+
 function lczero_forward(batch_size, input, policy, value) {
-  var input_array = new Float32Array(Module.HEAPU8.buffer, input, 112 * 64 * batch_size);
-  var policy_array = new Float32Array(Module.HEAPU8.buffer, policy, 1858 * batch_size);
-  var value_array = new Float32Array(Module.HEAPU8.buffer, value, batch_size);
-  network.forward(batch_size, input_array, policy_array, value_array)
+  const flag = new Int32Array(sab, 0, 1);
+
+  const flagSize = 1;
+  const inputSize = 112 * 64 * batch_size;
+  const policySize = 1858 * batch_size;
+  const valueSize = batch_size;
+  const totalBytes = 4 * (flagSize + inputSize + policySize + valueSize);
+
+  if(!networkSAB || networkSAB.byteLength < totalBytes)
+    networkSAB = new SharedArrayBuffer(totalBytes);
+
+  const inputArray = new Float32Array(Module.HEAPU8.buffer, input, inputSize);
+  const policyArray = new Float32Array(Module.HEAPU8.buffer, policy, policySize);
+  const valueArray = new Float32Array(Module.HEAPU8.buffer, value, valueSize);
+    
+  const inputSABView = new Float32Array(networkSAB, 4 * flagSize, inputSize);
+  const policySABView = new Float32Array(networkSAB, 4 * (flagSize + inputSize), policySize);
+  const valueSABView = new Float32Array(networkSAB, 4 * (flagSize + inputSize + policySize), valueSize);
+  inputSABView.set(inputArray);
+  
+  Atomics.store(flag, 0, 0);
+
+  onnxWorker.postMessage({
+    command: 'forward',
+    input: inputSABView,
+    policy: policySABView,
+    value: valueSABView,
+    batch_size
+  });
+
+  Atomics.wait(flag, 0, 0);
+
+  policyArray.set(policySABView);
+  valueArray.set(valueSABView);  
 }
 var loop_id;
 
