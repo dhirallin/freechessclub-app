@@ -475,14 +475,15 @@ let onnxWorker = new Worker('lc0-onnx.js');
 
 function load_network() {
   network_name.get().then(readFile).then((networkBuffer) => {
-    const flag = new Int32Array(networkSAB, 0, 1);
+    const doneFlag = new Int32Array(networkSAB, 0, 1);
     Atomics.store(flag, 0, 0);
     onnxWorker.postMessage({
       command: 'init',
+      doneFlag,
       networkBuffer,
     }, [byteArray]);
-    Atomics.wait(flag, 0, 0);
-    const result = Atomics.load(flag, 0);
+    Atomics.wait(doneFlag, 0, 0);
+    const result = Atomics.load(doneFlag, 0);
     if(result === 1)
       postMessage('Network successfully loaded!');
     else
@@ -505,7 +506,7 @@ function lczero_forward(batch_size, input, policy, value) {
   if(networkSAB.byteLength < totalBytes)
     networkSAB = new SharedArrayBuffer(totalBytes);
 
-  const flag = new Int32Array(networkSAB, 0, 1);
+  const doneFlag = new Int32Array(networkSAB, 0, 1);
 
   const inputArray = new Float32Array(Module.HEAPU8.buffer, input, inputSize);
   const policyArray = new Float32Array(Module.HEAPU8.buffer, policy, policySize);
@@ -516,17 +517,18 @@ function lczero_forward(batch_size, input, policy, value) {
   const valueSABView = new Float32Array(networkSAB, 4 * (flagSize + inputSize + policySize), valueSize);
   inputSABView.set(inputArray);
   
-  Atomics.store(flag, 0, 0);
+  Atomics.store(doneFlag, 0, 0);
 
   onnxWorker.postMessage({
     command: 'forward',
+    doneFlag,
     input: inputSABView,
     policy: policySABView,
     value: valueSABView,
     batch_size
   });
 
-  Atomics.wait(flag, 0, 0);
+  Atomics.wait(doneFlag, 0, 0);
 
   policyArray.set(policySABView);
   valueArray.set(valueSABView);  

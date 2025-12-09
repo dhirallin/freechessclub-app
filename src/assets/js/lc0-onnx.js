@@ -4,46 +4,46 @@ let session = null;
 
 // Initialize the ONNX model
 async function init(bytearray) {
-  this.model = await window.ort.InferenceSession.create(bytearray);
-  postMessage({ type: 'init', status: 'done' });
+  session = await window.ort.InferenceSession.create(bytearray);
 }
 
 // Run a forward pass
-async function forward(inputArray, batchSize) {
-  const session = this.model;
+async function forward(batchSize, input, policy, value) {
   const inputName = session.inputNames[0];
   const dims = [...session.inputMetadata[inputName].dimensions];
-  dims[0] = batch_size;
+  dims[0] = batchSize;
   const inputTensor = new ort.Tensor('float32', input, dims);
   const results = await session.run({ [inputName]: inputTensor });
 
-  const p_data = results[session.outputNames[0]].data;
+  const pData = results[session.outputNames[0]].data;
   for(var i = 0; i < policy.length; i++) 
-    policy[i] = p_data[i];
-  const v_data = results[session.outputNames[1]].data;
+    policy[i] = pData[i];
+  const vData = results[session.outputNames[1]].data;
   for(var i = 0; i < value.length; i++) 
-    value[i] = v_data[i];
-
-  Atomics.store(this.forwardSyncFlag, 0, 1); 
-  Atomics.notify(this.forwardSyncFlag, 0, 1);  
+    value[i] = vData[i];
 }
 
 // Message handler
 onmessage = async (e) => {
-  const { cmd, payload } = e.data;
-
+  const command = e.data.command;
+  const doneFlag = e.data.doneFlag;
   try {
-    switch (cmd) {
+    switch (command) {
       case 'init':
-        await init(payload.modelUrl);
+        await init(e.data.networkBuffer);
         break;
       case 'forward':
-        await forward(payload.inputArray, payload.batchSize);
+        await forward(e.data.batchSize, e.data.input, e.data.policy, e.data.value);
         break;
       default:
-        throw new Error('Unknown command: ' + cmd);
+        throw new Error('Unknown command: ' + command);
     }
   } catch (err) {
     postMessage({ type: 'error', message: err.message });
+    Atomics.store(this.doneFlag, 0, 2); 
+    Atomics.notify(this.doneFlag, 0, 1); 
+    return;
   }
+  Atomics.store(this.doneFlag, 0, 1); 
+  Atomics.notify(this.doneFlag, 0, 1);  
 };
