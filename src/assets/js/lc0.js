@@ -92,34 +92,10 @@ Network = (function () {
       this.isChannelsLast = format == "channelsLast"
     }),
     load: (async function(name) {
-      let bytearray = await readFile(name);
 
-      if(name.endsWith(".gz")) 
-        bytearray = window.pako.inflate(bytearray); 
-      
-      this.model = await window.ort.InferenceSession.create(bytearray);
-      this.log("Network successfully loaded!");
     }),
     forward: (function (batch_size, input, policy, value) {
-      (async () => {
-        const session = this.model;
-        const inputName = session.inputNames[0];
-        const dims = [...session.inputMetadata[inputName].dimensions];
-        dims[0] = batch_size;
-        const inputTensor = new ort.Tensor('float32', input, dims);
-        const results = await session.run({ [inputName]: inputTensor });
 
-        const p_data = results[session.outputNames[0]].data;
-        for(var i = 0; i < policy.length; i++) 
-          policy[i] = p_data[i];
-        const v_data = results[session.outputNames[1]].data;
-        for(var i = 0; i < value.length; i++) 
-          value[i] = v_data[i];
-
-        Atomics.store(this.forwardSyncFlag, 0, 1); 
-        Atomics.notify(this.forwardSyncFlag, 0, 1);    
-      })();     
-      Atomics.wait(this.forwardSyncFlag, 0, 0);
     }),
     log: (function (text) {
       self.console.info(text)
@@ -494,9 +470,24 @@ function start_engine() {
   engine.Send("uci")
 }
 
+let networkSAB = new SharedArrayBuffer(4);
+let onnxWorker = new Worker('lc0-onnx.js');
+
 function load_network() {
-  network = new Network;
-  network_name.get().then(network.load.bind(network)).then(network_loaded).catch((function (err) {
+  network_name.get().then(readFile).then((networkBuffer) => {
+    const flag = new Int32Array(networkSAB, 0, 1);
+    Atomics.store(flag, 0, 0);
+    onnxWorker.postMessage({
+      command: 'init',
+      networkBuffer,
+    }, [byteArray]);
+    Atomics.wait(flag, 0, 0);
+    const result = Atomics.load(flag, 0);
+    if(result === 1)
+      postMessage('Network successfully loaded!');
+    else
+      postMessage('Network load failed!');
+  }).then(network_loaded).catch((function (err) {
     console.log("Error: " + new Error(err.message))
   }))
 }
@@ -504,19 +495,17 @@ Module["onRuntimeInitialized"] = module_ready;
 
 loadDependencies().then(load_network);
 
-let networkSAB = null;
-
 function lczero_forward(batch_size, input, policy, value) {
-  const flag = new Int32Array(sab, 0, 1);
-
   const flagSize = 1;
   const inputSize = 112 * 64 * batch_size;
   const policySize = 1858 * batch_size;
   const valueSize = batch_size;
   const totalBytes = 4 * (flagSize + inputSize + policySize + valueSize);
 
-  if(!networkSAB || networkSAB.byteLength < totalBytes)
+  if(networkSAB.byteLength < totalBytes)
     networkSAB = new SharedArrayBuffer(totalBytes);
+
+  const flag = new Int32Array(networkSAB, 0, 1);
 
   const inputArray = new Float32Array(Module.HEAPU8.buffer, input, inputSize);
   const policyArray = new Float32Array(Module.HEAPU8.buffer, policy, policySize);

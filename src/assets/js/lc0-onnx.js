@@ -3,8 +3,8 @@ importScripts("https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.
 let session = null;
 
 // Initialize the ONNX model
-async function init(modelUrl) {
-  session = await ort.InferenceSession.create(modelUrl);
+async function init(bytearray) {
+  this.model = await window.ort.InferenceSession.create(bytearray);
   postMessage({ type: 'init', status: 'done' });
 }
 
