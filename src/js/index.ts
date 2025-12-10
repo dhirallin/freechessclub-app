@@ -6106,8 +6106,8 @@ $('#left-panel-bottom').on('shown.bs.tab', '.nav-link', (e) => {
   games.focused.currentStatusTab = $(e.target);
 
   if($(e.target).attr('id') === 'eval-graph-tab') {
-    if(!evalEngine)
-      createEvalEngine(games.focused);
+    //if(!evalEngine)
+    //  createEvalEngine(games.focused);
 
     if(evalEngine)
       evalEngine.redraw();

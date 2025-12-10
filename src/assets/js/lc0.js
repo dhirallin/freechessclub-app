@@ -471,7 +471,9 @@ function start_engine() {
 }
 
 let networkSAB = new SharedArrayBuffer(4);
-let onnxWorker = new Worker('lc0-onnx.js');
+const onnxWorkerUrl = new URL("lc0-onnx.js", self.location.href).href;
+const onnxWorker = new Worker(onnxWorkerUrl, { type: "module" });
+//let onnxWorker = new Worker('lc0-onnx.js');
 
 function load_network() {
   network_name.get().then(readFile).then((networkBuffer) => {

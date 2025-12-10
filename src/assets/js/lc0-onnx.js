@@ -1,18 +1,20 @@
-importScripts("https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.js");
+//importScripts("https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.js");
+const ort = await import("https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.mjs");
 
 let session = null;
 
 // Initialize the ONNX model
 async function init(bytearray) {
-  session = await window.ort.InferenceSession.create(bytearray);
+  session = await ort.InferenceSession.create(bytearray, {
+    executionProviders: ["webgpu", "wasm"] 
+  });
 }
 
 // Run a forward pass
 async function forward(batchSize, input, policy, value) {
+  console.log('input names: ' + JSON.stringify(session.inputNames));
   const inputName = session.inputNames[0];
-  const dims = [...session.inputMetadata[inputName].dimensions];
-  dims[0] = batchSize;
-  const inputTensor = new ort.Tensor('float32', input, dims);
+  const inputTensor = new ort.Tensor('float32', input, [batchSize, 112, 8, 8]);
   const results = await session.run({ [inputName]: inputTensor });
 
   const pData = results[session.outputNames[0]].data;
@@ -39,6 +41,7 @@ onmessage = async (e) => {
         throw new Error('Unknown command: ' + command);
     }
   } catch (err) {
+    console.log(err.message);
     postMessage({ type: 'error', message: err.message });
     Atomics.store(doneFlag, 0, 2); 
     Atomics.notify(doneFlag, 0, 1); 
