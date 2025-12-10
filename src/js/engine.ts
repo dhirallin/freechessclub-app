@@ -213,15 +213,13 @@ export class Engine {
         if(!wasmSupported) 
           throw new TypeError('Failed to load Lc0. WebAssembly is not supported in this browser');
 
-        if(typeof OffscreenCanvas === 'undefined')
-          throw new TypeError('Failed to load Lc0. OffscreenCanvas is not supported in this browser');
-
         //const weightsUrl = 'assets/js/weights_11248.dat.gz';
         //const weightsUrl = 'assets/js/maia-1100.pb.gz';
         //const weightsUrl = 'assets/js/t1-256x10-distilled-swa-2432500.pb.gz';
         //const weightsUrl = 'https://raw.githubusercontent.com/CSSLab/maia-chess/main/maia_weights/maia-1100.pb.gz';
         
-        const weightsUrl = 'assets/js/t1-256x10-distilled-swa-2432500.onnx';
+        const weightsUrl = 'assets/js/weights_11248.onnx';
+        //const weightsUrl = 'assets/js/t1-256x10-distilled-swa-2432500.onnx';
         //const weightsUrl = 'assets/js/maia-1100.onnx';
         //const weightsUrl = 'assets/js/791556.onnx';
         

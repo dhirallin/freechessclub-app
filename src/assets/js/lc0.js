@@ -439,7 +439,6 @@ self.console = {
 };
 onmessage = (function (e) {
   try {
-    console.log('on message 1');
     var message = e.data;
     if (!started) {
       var match = message.match(/^load ([^ ]*)$/);
