@@ -218,8 +218,13 @@ export class Engine {
 
         //const weightsUrl = 'assets/js/weights_11248.dat.gz';
         //const weightsUrl = 'assets/js/maia-1100.pb.gz';
-        const weightsUrl = 'assets/js/t1-256x10-distilled-swa-2432500.pb.gz';
+        //const weightsUrl = 'assets/js/t1-256x10-distilled-swa-2432500.pb.gz';
         //const weightsUrl = 'https://raw.githubusercontent.com/CSSLab/maia-chess/main/maia_weights/maia-1100.pb.gz';
+        
+        const weightsUrl = 'assets/js/t1-256x10-distilled-swa-2432500.onnx';
+        //const weightsUrl = 'assets/js/maia-1100.onnx';
+        //const weightsUrl = 'assets/js/791556.onnx';
+        
         const weightsBuffer = await (await fetch(weightsUrl, { signal })).arrayBuffer();
         const weightsBlob = new Blob([weightsBuffer], { type: 'application/octet-stream' });
         Engine.weightsUrl = URL.createObjectURL(weightsBlob);     

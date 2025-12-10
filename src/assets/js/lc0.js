@@ -476,12 +476,12 @@ let onnxWorker = new Worker('lc0-onnx.js');
 function load_network() {
   network_name.get().then(readFile).then((networkBuffer) => {
     const doneFlag = new Int32Array(networkSAB, 0, 1);
-    Atomics.store(flag, 0, 0);
+    Atomics.store(doneFlag, 0, 0);
     onnxWorker.postMessage({
       command: 'init',
       doneFlag,
       networkBuffer,
-    }, [byteArray]);
+    }, [networkBuffer]);
     Atomics.wait(doneFlag, 0, 0);
     const result = Atomics.load(doneFlag, 0);
     if(result === 1)

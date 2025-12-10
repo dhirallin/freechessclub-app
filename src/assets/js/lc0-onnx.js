@@ -40,10 +40,10 @@ onmessage = async (e) => {
     }
   } catch (err) {
     postMessage({ type: 'error', message: err.message });
-    Atomics.store(this.doneFlag, 0, 2); 
-    Atomics.notify(this.doneFlag, 0, 1); 
+    Atomics.store(doneFlag, 0, 2); 
+    Atomics.notify(doneFlag, 0, 1); 
     return;
   }
-  Atomics.store(this.doneFlag, 0, 1); 
-  Atomics.notify(this.doneFlag, 0, 1);  
+  Atomics.store(doneFlag, 0, 1); 
+  Atomics.notify(doneFlag, 0, 1);  
 };
