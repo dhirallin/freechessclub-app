@@ -1,12 +1,12 @@
-//importScripts("https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.js");
-const ort = await import("https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.mjs");
+importScripts("https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.js");
 
 let session = null;
 
 // Initialize the ONNX model
 async function init(bytearray) {
+  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
   session = await ort.InferenceSession.create(bytearray, {
-    executionProviders: ["webgpu", "wasm"] 
+    executionProviders: ['webgpu', 'wasm'],
   });
 }
 
