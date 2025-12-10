@@ -472,42 +472,27 @@ function start_engine() {
   engine.Send("uci")
 }
 
-let networkSAB = new SharedArrayBuffer(4);
+let networkSAB = null;
 const onnxWorker = new Worker('lc0-onnx.js');
-let onnxWorkerReady;
-const onnxWorkerPromise = new Promise(resolve => { onnxWorkerReady = resolve; });
 onnxWorker.onmessage = (e) => {
-  console.log('on message 2');
-  if(e.data === 'ready') 
-    onnxWorkerReady();
+  if(e.data.status === 'init-success') {
+    postMessage('Network successfully loaded!');
+    network_loaded();
+  }
+  if(e.data.status === 'init-failed') {
+    postMessage('Network load failed! ' + e.data.error);
+  }
 };
 
 async function load_network() {
   try {
-    console.log('test 1');
     const url = await network_name.get();
-    console.log('test 2');
     const networkBuffer = await readFile(url); 
-    console.log('test 3');
-    await onnxWorkerPromise;
-    console.log('test 4');
 
-    const doneFlag = new Int32Array(networkSAB, 0, 1);
-    Atomics.store(doneFlag, 0, 0);
     onnxWorker.postMessage({
       command: 'init',
-      doneFlag,
       networkBuffer,
     }, [networkBuffer]);
-    //Atomics.wait(doneFlag, 0, 0);
-    console.log('test 5');
-    const result = Atomics.load(doneFlag, 0);
-    if(result === 1)
-      postMessage('Network successfully loaded!');
-    else
-      postMessage('Network load failed!');
-
-    network_loaded();
   }
   catch(err) {
     console.error('Error: ' + err.message);
@@ -525,7 +510,7 @@ function lczero_forward(batchSize, input, policy, value) {
   const valueSize = batchSize;
   const totalBytes = 4 * (flagSize + inputSize + policySize + valueSize);
 
-  if(networkSAB.byteLength < totalBytes)
+  if(!networkSAB || networkSAB.byteLength < totalBytes)
     networkSAB = new SharedArrayBuffer(totalBytes);
 
   const doneFlag = new Int32Array(networkSAB, 0, 1);
