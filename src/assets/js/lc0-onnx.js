@@ -12,7 +12,6 @@ async function init(bytearray) {
 
 // Run a forward pass
 async function forward(batchSize, input, policy, value) {
-  console.log('input names: ' + JSON.stringify(session.inputNames));
   const inputName = session.inputNames[0];
   const inputTensor = new ort.Tensor('float32', input, [batchSize, 112, 8, 8]);
   const results = await session.run({ [inputName]: inputTensor });
