@@ -2,12 +2,16 @@ importScripts("https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.min.
 
 let session = null;
 
+console.log('test sub');
+postMessage('ready');
+
 // Initialize the ONNX model
 async function init(bytearray) {
   ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
   session = await ort.InferenceSession.create(bytearray, {
     executionProviders: ['webgpu', 'wasm'],
   });
+  console.log('NETWORK BUILT TEST');
 }
 
 // Run a forward pass
@@ -26,11 +30,13 @@ async function forward(batchSize, input, policy, value) {
 
 // Message handler
 onmessage = async (e) => {
+  console.log('MESSAGE RECEIVED');
   const command = e.data.command;
   const doneFlag = e.data.doneFlag;
   try {
     switch (command) {
       case 'init':
+        console.log('load network received TEST');
         await init(e.data.networkBuffer);
         break;
       case 'forward':

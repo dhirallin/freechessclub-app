@@ -439,10 +439,12 @@ self.console = {
 };
 onmessage = (function (e) {
   try {
+    console.log('on message 1');
     var message = e.data;
     if (!started) {
       var match = message.match(/^load ([^ ]*)$/);
       if (match) network_name.set(match[1]);
+      
       return
     }
     engine.Send(message);
@@ -472,9 +474,24 @@ function start_engine() {
 
 let networkSAB = new SharedArrayBuffer(4);
 const onnxWorker = new Worker('lc0-onnx.js');
+let onnxWorkerReady;
+const onnxWorkerPromise = new Promise(resolve => { onnxWorkerReady = resolve; });
+onnxWorker.onmessage = (e) => {
+  console.log('on message 2');
+  if(e.data === 'ready') 
+    onnxWorkerReady();
+};
 
-function load_network() {
-  network_name.get().then(readFile).then((networkBuffer) => {
+async function load_network() {
+  try {
+    console.log('test 1');
+    const url = await network_name.get();
+    console.log('test 2');
+    const networkBuffer = await readFile(url); 
+    console.log('test 3');
+    await onnxWorkerPromise;
+    console.log('test 4');
+
     const doneFlag = new Int32Array(networkSAB, 0, 1);
     Atomics.store(doneFlag, 0, 0);
     onnxWorker.postMessage({
@@ -482,16 +499,21 @@ function load_network() {
       doneFlag,
       networkBuffer,
     }, [networkBuffer]);
-    Atomics.wait(doneFlag, 0, 0);
+    //Atomics.wait(doneFlag, 0, 0);
+    console.log('test 5');
     const result = Atomics.load(doneFlag, 0);
     if(result === 1)
       postMessage('Network successfully loaded!');
     else
       postMessage('Network load failed!');
-  }).then(network_loaded).catch((function (err) {
-    console.log("Error: " + new Error(err.message))
-  }))
+
+    network_loaded();
+  }
+  catch(err) {
+    console.error('Error: ' + err.message);
+  }
 }
+
 Module["onRuntimeInitialized"] = module_ready;
 
 loadDependencies().then(load_network);
