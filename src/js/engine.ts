@@ -182,8 +182,20 @@ export class Engine {
         }
       };
 
-      this.worker.postMessage(`load ${Engine.weightsUrl}`);
-      //this.worker.postMessage('uci');
+      if(engineName === 'Lc0') {
+        //const weightsUrl = 'assets/js/weights_11248.onnx';
+        const weightsUrl = 't1-256x10-distilled-swa-2432500.onnx';
+        //const weightsUrl = 'assets/js/791556.onnx';
+        //const weightsUrl = 'assets/js/maia-1100.onnx';
+
+        //const weightsBuffer = await (await fetch(weightsUrl, { signal })).arrayBuffer();
+        //const weightsBlob = new Blob([weightsBuffer], { type: 'application/octet-stream' });
+        //Engine.weightsUrl = URL.createObjectURL(weightsBlob);    
+
+        this.worker.postMessage(`load ${weightsUrl}`);
+      }
+      else
+        this.worker.postMessage('uci');
     });
   }
 
@@ -191,9 +203,7 @@ export class Engine {
    * Fetch engine files from CDN and create Blob URLs for them.
    * We only load one Blob at a time. 
    */
-  public static load(engineName?: string) {
-    engineName = 'Lc0';
-    
+  public static load(engineName?: string) {  
     if(!engineName)
       engineName = 'Stockfish 17.1 Lite';
 
@@ -212,21 +222,7 @@ export class Engine {
       if(engineName === 'Lc0') {
         if(!wasmSupported) 
           throw new TypeError('Failed to load Lc0. WebAssembly is not supported in this browser');
-
-        //const weightsUrl = 'assets/js/weights_11248.dat.gz';
-        //const weightsUrl = 'assets/js/maia-1100.pb.gz';
-        //const weightsUrl = 'assets/js/t1-256x10-distilled-swa-2432500.pb.gz';
-        //const weightsUrl = 'https://raw.githubusercontent.com/CSSLab/maia-chess/main/maia_weights/maia-1100.pb.gz';
         
-        const weightsUrl = 'assets/js/weights_11248.onnx';
-        //const weightsUrl = 'assets/js/t1-256x10-distilled-swa-2432500.onnx';
-        //const weightsUrl = 'assets/js/maia-1100.onnx';
-        //const weightsUrl = 'assets/js/791556.onnx';
-        
-        const weightsBuffer = await (await fetch(weightsUrl, { signal })).arrayBuffer();
-        const weightsBlob = new Blob([weightsBuffer], { type: 'application/octet-stream' });
-        Engine.weightsUrl = URL.createObjectURL(weightsBlob);     
-
         Engine.workerUrl = '/assets/js/lc0.js';
       }
       else if(engineName === 'Stockfish MV 2019') {

@@ -6246,9 +6246,11 @@ function startEngine() {
       ? `movetime ${settings.engineMaxTime}`
       : null;
 
-    const engineName = options.hasOwnProperty('UCI_Variant')
-      ? settings.variantsEngineName
-      : settings.analyzeEngineName;
+    //const engineName = options.hasOwnProperty('UCI_Variant')
+    //  ? settings.variantsEngineName
+    //  : settings.analyzeEngineName;
+
+    const engineName = 'Lc0';
    
     if(!engine)
       engine = new Engine(game, null, displayEnginePV, engineName, options, moveParams);
