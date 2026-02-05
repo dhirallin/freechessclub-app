@@ -490,6 +490,8 @@ async function onDeviceReady() {
   initInviteFromUrl();
 
   document.addEventListener('visibilitychange', updateForegroundServiceState);
+
+  playAtomicSprites(game, 'd4');
 }
 
 $(window).on('load', async () => {
@@ -8135,6 +8137,97 @@ export function setRematchUser(user: string) {
   rematchUser = user;
 }
 
+let atomicSpritePromise = null;
+let atomicSprite = null;
+
+function loadAtomicSprite() {
+  if(!atomicSpritePromise) {
+    atomicSprite = new Image();
+    atomicSprite.src = '/assets/img/atomic.webp';
+    atomicSpritePromise = atomicSprite.decode().then(() => atomicSprite);
+  }
+  return atomicSpritePromise;
+}
+
+async function playAtomicSprites(game: Game, squares: string[]) {
+  atomicSprite = await loadAtomicSprite();
+
+  const canvas = game.element.find('.board-sprites')[0];
+
+  const orientation = game.board.state.orientation === 'white' ? 'w' : 'b';
+  const destRects = [];
+  squares.forEach(sq => {
+    destRects.push(ChessHelper.getSquareRect(canvas.getBoundingClientRect(), sq, orientation);
+  });
+  
+  const options = {
+    canvas,
+    destRects,
+    sprite: atomicSprite,
+    frameWidth: 256,
+    frameHeight: 256,
+    cols: 6,
+    rows: 5,
+    totalFrames: 30,
+    duration: 2800 
+  }
+
+  playSprite(options);
+}
+
+function playSprite({canvas, destRects, sprite, frameWidth, frameHeight, cols, rows, totalFrames, duration}) {
+  let startTime;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect(); 
+  canvas.width = rect.width * dpr; 
+  canvas.height = rect.height * dpr; 
+  const ctx = canvas.getContext('2d'); 
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const animate = (time) => {
+    if(!startTime) 
+      startTime = time;
+    
+    const elapsed = time - startTime;
+
+    // current frame
+    const frame = Math.min(totalFrames - 1, Math.floor(elapsed / frameDuration));
+
+    // clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // draw on all 8 squares
+    destRects.forEach(rect => {
+      drawFrame(ctx, frame, rect.x, rect.y, rect.width, rect.height);
+    });
+
+    if(frame < totalFrames - 1) {
+      requestAnimationFrame(animate);
+    }
+  }
+
+  const drawFrame = (ctx, frameIndex, x, y, width, height) => {
+    const frameDuration = duration / totalFrames;
+
+    const col = frameIndex % cols;
+    const row = Math.floor(frameIndex / cols);
+
+    ctx.drawImage(
+      sprite,
+      col * frameWidth,
+      row * frameHeight,
+      frameWidth,
+      frameHeight,
+      x,
+      y,
+      width,
+      height
+    );
+  }
+
+  requestAnimationFrame(animate);
+}
 
 
 
