@@ -490,8 +490,6 @@ async function onDeviceReady() {
   initInviteFromUrl();
 
   document.addEventListener('visibilitychange', updateForegroundServiceState);
-
-  playAtomicSprites(game, ['d4']);
 }
 
 $(window).on('load', async () => {
@@ -4217,6 +4215,7 @@ async function getOpening(game: Game) {
 $('#fast-backward').off('click');
 $('#fast-backward').on('click', () => {
   fastBackward();
+  playAtomicSprites(games.focused, ['d4']);
 });
 
 function fastBackward() {
