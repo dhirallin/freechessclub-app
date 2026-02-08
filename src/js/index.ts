@@ -4215,7 +4215,7 @@ async function getOpening(game: Game) {
 $('#fast-backward').off('click');
 $('#fast-backward').on('click', () => {
   fastBackward();
-  playAtomicSprites(games.focused, ['d4']);
+  playAtomicSprites(games.focused, ['d4', 'e4']);
 });
 
 function fastBackward() {
@@ -8155,8 +8155,10 @@ async function playAtomicSprites(game: Game, squares: string[]) {
 
   const orientation = game.board.state.orientation === 'white' ? 'w' : 'b';
   const destRects = [];
+  const canvasRect = canvas.getBoundingClientRect();
+  canvasRect.x = canvasRect.y = 0;  
   squares.forEach(sq => {
-    destRects.push(ChessHelper.getSquareRect(canvas.getBoundingClientRect(), sq, orientation));
+    destRects.push(ChessHelper.getSquareRect(canvasRect, sq, orientation));
   });
   
   const options = {
@@ -8194,10 +8196,8 @@ function playSprite({canvas, destRects, sprite, frameWidth, frameHeight, cols, r
     // current frame
     const frame = Math.min(totalFrames - 1, Math.floor(elapsed / frameDuration));
 
-    // clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // draw on all 8 squares
     destRects.forEach(rect => {
       drawFrame(ctx, frame, rect.x, rect.y, rect.width, rect.height);
     });
@@ -8205,12 +8205,14 @@ function playSprite({canvas, destRects, sprite, frameWidth, frameHeight, cols, r
     if(frame < totalFrames - 1) {
       requestAnimationFrame(animate);
     }
+    else
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
   const drawFrame = (ctx, frameIndex, x, y, width, height) => {
     const col = frameIndex % cols;
     const row = Math.floor(frameIndex / cols);
-
+   
     ctx.drawImage(
       sprite,
       col * frameWidth,
