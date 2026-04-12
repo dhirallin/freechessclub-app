@@ -1218,3 +1218,22 @@ export class SpritePlayer {
     );
   }
 }
+
+export function splitIntoColumns(items, cols = 3) {
+  const sorted = [...items].sort((a, b) => a.localeCompare(b));
+
+  const n = sorted.length;
+  const base = Math.floor(n / cols);
+  const remainder = n % cols;
+
+  const result = [];
+  let index = 0;
+
+  for(let col = 0; col < cols; col++) {
+    const size = base + (col < remainder ? 1 : 0);
+    result.push(sorted.slice(index, index + size));
+    index += size;
+  }
+
+  return result;
+}
