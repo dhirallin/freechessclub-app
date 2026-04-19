@@ -1167,3 +1167,151 @@ export function isCapture(fen: string, src: string, dest: string) {
   // and moved diagonally (handles en passant).
   return (destPiece && srcPiece.color !== destPiece.color) || (srcPiece.type === 'p' && src[0] !== dest[0])
 }
+
+export function isPromotion(fen: string, from: string, to: string): boolean { 
+  if(!from)
+    return false;
+
+  const turnColor = getTurnColorFromFEN(fen);
+  if(from.charAt(1) === (turnColor === 'w' ? '7' : '2') && (!to || to.charAt(1) === (turnColor === 'w' ? '8' : '1'))) {
+    const pos = new Position(fen);
+    return pos.get(from)?.type === 'p';
+  }
+  return false;
+}; 
+
+export function getNumLegalMoves(fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: VariantData): number {
+  const numPromotionTypes = category === 'suicide' ? 5 : 4; 
+  let len = 0;
+  for(const [from, arr] of dests) {
+    len += arr.length;
+    if(!isPromotion(fen, from, null)) 
+      continue;
+
+    for(const to of arr) {
+      if(isPromotion(fen, from, to)) 
+        len += numPromotionTypes - 1;
+    }
+  }
+
+  if(variantData?.holdings) {
+    // Count piece placements
+
+    // Count empty squares where it's possible to place a piece or pwwn
+    let numEmptySquares = 0;
+    let numEmptyPawnSquares = 0;
+    const pos = new Position(fen);
+    for(const sq of Position.SQUARES) {
+      if(!pos.get(sq)) {
+        numEmptySquares++;
+        if(sq.charAt(1) !== '1' && sq.charAt(1) !== '8')
+          numEmptyPawnSquares++;
+      }
+    }
+
+    const turnColor = getTurnColorFromFEN(fen);
+    for(const [key, value] of Object.entries(variantData.holdings)) {
+      if((key.toUpperCase() === key && turnColor === 'w') || (key.toLowerCase() === key && turnColor === 'b') && value) 
+        len += (key.toLowerCase() === 'p') ? numEmptyPawnSquares : numEmptySquares;
+    }
+  }
+
+  return len;
+}
+
+export function moveToLegalMoveIndex(move: { from: string, to: string, promotion?: string }, fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: VariantData): number {
+  const promotionTypes = ['q', 'r', 'b', 'n', 'k'];
+  const numPromotionTypes = category === 'suicide' ? 5 : 4;
+
+  let promotion = null;
+  if(isPromotion(fen, move.from, move.to))
+    promotion = move.promotion || 'q';
+  
+  let index = 0;
+  for(const [from, arr] of dests) {
+    if(from !== move.from && !isPromotion(fen, from, null)) {
+      index += arr.length;
+      continue;
+    }
+    for(const to of arr) {
+      if(from === move.from && to === move.to) {
+        if(promotion) 
+          index += promotionTypes.indexOf(promotion);
+        return index;
+      }
+      index++;
+      if(isPromotion(fen, from, to)) 
+        index += numPromotionTypes - 1;
+    }
+  }
+
+  if(!move.from && variantData?.holdings) {
+    // piece placements (crazyhouse / bughouse)
+    const pos = new Position(fen);
+    
+    // get empty squares where it's possible to place a piece or pwwn
+    let emptySquares = [];
+    let emptyPawnSquares = [];
+
+    for(const sq of Position.SQUARES) {
+      if(!pos.get(sq)) {
+        emptySquares.push(sq);
+        if(sq.charAt(1) !== '1' && sq.charAt(1) !== '8')
+          emptyPawnSquares.push(sq);
+      }
+    }
+
+    const turnColor = getTurnColorFromFEN(fen);
+    const pieceType = pos.get(move.to).type;
+    for(const [key, value] of Object.entries(variantData.holdings)) {
+      if((key.toUpperCase() === key && turnColor === 'w') || (key.toLowerCase() === key && turnColor === 'b') && value) {
+        if(pieceType !== key.toLowerCase()) {
+          index += (key.toLowerCase() === 'p') ? emptyPawnSquares.length : emptySquares.length; 
+          continue;
+        }
+
+        const squareIndex = (pieceType === 'p')
+          ? emptyPawnSquares.indexOf(move.from)
+          : emptySquares.indexOf(move.from);
+        if(squareIndex !== -1) {
+          index += squareIndex;
+          return;
+        }       
+      }
+    }
+  }
+
+  return -1;
+}
+
+export function legalMoveIndexToMove(moveIndex: number, fen: string, dests: Map<string, string[]>, category = 'standard'): { from: string, to: string, promotion?: string } {
+  const promotionTypes = ['q', 'r', 'b', 'n', 'k'];
+  const numPromotionTypes = category === 'suicide' ? 5 : 4;
+  
+  let index = 0;
+  for(const [from, arr] of dests) {
+    if(moveIndex > index + arr.length && !isPromotion(fen, from, null)) {
+      index += arr.length;
+      continue;
+    }
+    for(const to of arr) {
+      index++;
+      const isProm = isPromotion(fen, from, to);
+      if(isProm) 
+        index += numPromotionTypes - 1;
+
+      if(moveIndex < index) {
+        const promotion = isProm ? promotionTypes[numPromotionTypes - (index - moveIndex)] : undefined;
+        
+        return {
+          from,
+          to,
+          promotion
+        };
+      }
+    }
+  }
+
+  return null;
+}
+

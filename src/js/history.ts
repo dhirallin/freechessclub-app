@@ -7,9 +7,10 @@ import { Role } from './game';
 import { Reason } from './parser';
 import { storage } from './storage';
 import { settings } from './settings';
-import { setCaretToEnd } from './utils';
-import { getPlyFromFEN, getMoveNoFromFEN, getTurnColorFromFEN, VariantData } from './chess-helper';
+import { setCaretToEnd, BitWriter, BitReader, zigzagEncode, zigzagDecode, logError } from './utils';
+import { getPlyFromFEN, getMoveNoFromFEN, getTurnColorFromFEN, updateVariantMoveData, VariantData, toDests, parseMove, getNumLegalMoves, moveToLegalMoveIndex, legalMoveIndexToMove } from './chess-helper';
 import { Clock } from './clock';
+import { Game } from './game';
 
 export class HEntry {
   public move: any;
@@ -200,6 +201,8 @@ export class History {
   public editMode: boolean;  // if true, allows adding multiple or nested subvariations to the move history
   public metatags: { [key: string]: any };
   public pgn: string; // The PGN associated with this History as a string, used for lazy loading the game
+  public static openings; // Opening names with corresponding moves
+  public static fetchOpeningsPromise = null;
 
   public static annotations = [
     {nags: '$1', symbol: '!', description: 'Good move'},
@@ -332,6 +335,9 @@ export class History {
     }
 
     this.updateClockTimes(newEntry, wtime, btime);
+    newEntry.variantData = updateVariantMoveData(newEntry.prev.fen, newEntry.move, newEntry.prev.variantData, this.game.category);
+    this.getOpening(newEntry);
+
     this.currEntry = newEntry;
 
     return this.currEntry;
@@ -1514,6 +1520,200 @@ export class History {
       hEntry = hEntry.prev;
     }
     this.setMetatags({Opening: hEntry.opening.name, ECO: hEntry.opening.eco});
+  }
+
+  public encode(): string {
+    const SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
+    
+    const writer = new BitWriter();
+
+    let hEntry = this.first();
+    const startFen = hEntry.fen;
+    const category = this.game.category;
+
+    const untimed = !hEntry.wtime && !hEntry.btime;
+    writer.writeVarint(hEntry.wtime / 1000);
+    writer.writeVarint(hEntry.btime / 1000);
+
+    let smallTimeBits = 0;
+    let clockDiffs = [];
+    if(!untimed) {
+      let hasIncrement = false;
+      while(hEntry.next) {
+        let clockDiff: number;
+        if(hEntry.turnColor === 'w') 
+          clockDiff = (hEntry.wtime / 1000) - (hEntry.next.wtime / 1000);
+        else 
+          clockDiff = (hEntry.btime / 1000) - (hEntry.next.btime / 1000);
+        if(clockDiff < 0) 
+          hasIncrement = true;
+        clockDiffs.push(clockDiff);
+        hEntry = hEntry.next;
+      }
+
+      if(hasIncrement)
+        clockDiffs = clockDiffs.map(diff => zigzagEncode(diff));
+
+      writer.write(Number(hasIncrement), 1);
+
+      const timesEncodingCost = (diffs: number[], bits: number): number => {
+        return diffs.reduce((sum, diff) => {
+          if(bits === 0)
+            return sum + 8;
+          
+          let max = (1 << bits) - 1;
+          const cost = (diff <= max) 
+            ? bits + 1
+            : 9;
+          return sum + cost;
+        }, 0);
+      };
+
+      let bestTimesCost = Infinity;
+      for(let i = 0; i < 7; i++) {
+        const cost = timesEncodingCost(clockDiffs, i);
+        if(cost < bestTimesCost) {
+          bestTimesCost = cost;
+          smallTimeBits = i;
+        }
+      }
+
+      writer.write(smallTimeBits, 3);
+    }
+    else 
+      writer.write(0, 4);
+
+    const smallTimeMax = (1 << smallTimeBits) - 1;
+
+    hEntry = this.first();
+    const numMoves = Math.min(this.length(), 1023);
+    writer.writeMax(numMoves, 1023);
+
+    for(let i = 0; i < numMoves; i++) {
+      const move = hEntry.next.move;
+      const dests = toDests(hEntry.fen, startFen, category, hEntry.variantData);
+      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category);
+      const legalMoveIndex = moveToLegalMoveIndex(move, hEntry.fen, dests, category);
+      writer.writeMax(legalMoveIndex, numLegalMoves);
+      if(!untimed) {
+        if(smallTimeBits > 0) {
+          if(clockDiffs[i] <= smallTimeMax) {
+            writer.write(0, 1);
+            writer.writeMax(clockDiffs[i], smallTimeMax);
+          }
+          else {
+            writer.write(1, 1);
+            writer.writeVarint(clockDiffs[i]);
+          }
+        }
+        else 
+          writer.writeVarint(clockDiffs[i]);
+      }
+      hEntry = hEntry.next;
+    }
+
+    const bytes = writer.finish();
+    const base64 = btoa(String.fromCharCode(...bytes));
+    const urlSafe = base64
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    return urlSafe;
+  }
+
+  public decode(movesStr: string): boolean {
+    const supportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
+
+    let base64 = movesStr
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    base64 += '='.repeat((4 - (base64.length % 4)) % 4);
+    const binary = atob(base64);
+    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+
+    const reader = new BitReader(bytes);
+    let hEntry = this.first();
+    const startFen = hEntry.fen;
+    const category = this.game.category;
+
+    const wInitialTime = reader.readVarint() * 1000;
+    const bInitialTime = reader.readVarint() * 1000;
+    this.updateClockTimes(hEntry, wInitialTime, bInitialTime);
+    const untimed = !hEntry.wtime && !hEntry.btime;
+
+    const hasIncrement = Boolean(reader.read(1));
+    const smallTimeBits = reader.read(3);
+    const smallTimeMax = (1 << smallTimeBits) - 1;
+
+    const numMoves = reader.readMax(1023); 
+
+    for(let i = 0; i < numMoves; i++) {
+      const dests = toDests(hEntry.fen, startFen, category, hEntry.variantData);
+      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category);
+      const index = reader.readMax(numLegalMoves);
+      const move = legalMoveIndexToMove(index, hEntry.fen, dests, category);
+      if(!move)
+        return false;
+      const parsed = parseMove(hEntry.fen, move, startFen, category, hEntry.variantData);
+      const newHEntry = new HEntry(parsed.move, parsed.fen);
+      this.addHEntry(newHEntry, hEntry);
+      if(!untimed) {
+        const smallTime = smallTimeBits > 0 && !Boolean(reader.read(1));
+        let clockDiff = smallTime 
+          ? reader.readMax(smallTimeMax)
+          : reader.readVarint();
+        if(hasIncrement)
+          clockDiff = zigzagDecode(clockDiff);
+
+        let wtime = hEntry.wtime;
+        let btime = hEntry.btime;
+        if(hEntry.turnColor === 'w') 
+          wtime -= (clockDiff * 1000);
+        else 
+          btime -= (clockDiff * 1000);
+        this.updateClockTimes(newHEntry, wtime, btime);
+      }
+      hEntry = newHEntry;
+    }
+
+    return true;
+  }
+
+  public async getOpening(hEntry: HEntry = this.current()) {    
+    const fetchOpenings = async () => {
+      const inputFilePath = 'assets/data/openings.tsv';
+      History.openings = new Map();
+      await fetch(inputFilePath)
+        .then(response => response.text())
+        .then(data => {
+          const rows = data.split('\n');
+          for(const row of rows) {
+            const cols = row.split('\t');
+            if(cols.length === 4 && cols[2].startsWith('1.')) {
+              const eco = cols[0];
+              const name = cols[1];
+              const moves = cols[2];
+              const fen = cols[3];
+              const fenNoPlyCounts = fen.split(' ').slice(0, -2).join(' ');
+              History.openings.set(fenNoPlyCounts, {eco, name, moves});
+            }
+          }
+        })
+        .catch(error => {
+          logError('Couldn\'t fetch opening:', error);
+        });
+    };
+  
+    if(!History.openings && !History.fetchOpeningsPromise) {
+      History.fetchOpeningsPromise = fetchOpenings();
+    }
+    await History.fetchOpeningsPromise;
+  
+    const shortFen = hEntry.fen.split(' ').slice(0, -2).join(' '); // Remove ply counts
+    const opening = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'].includes(this.game.category)
+      ? History.openings.get(shortFen) : null;
+    hEntry.opening = opening;
+    this.updateOpeningMetatags();
   }
 }
 
