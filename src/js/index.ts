@@ -1568,6 +1568,8 @@ function gameStart(game: Game) {
     if(game.role !== Role.NONE)
       showStatusPanel();
   }
+  if(game.isPlayingOnline())
+    $('.tournament-table-modal').modal('hide');
 
   if(!mainGame || game.id !== mainGame.partnerGameId)
     scrollToBoard(game);
@@ -2179,6 +2181,10 @@ function handleMiscMessage(data: any) {
     match = msg.match(/^Your opponent has no partner for bughouse\./m);
   if(!match)
     match = msg.match(/^You have no partner for bughouse\./m);
+  if(!match) 
+    match = msg.match(/^:Too frequent\. Can't send a '[^']+' game request to \S+ for another \d+ seconds/m);
+  if(match && $('.tournament-table-modal').hasClass('show')) 
+    tournaments?.handleCommandError(match[0]);
   if(match && (awaiting.has('history') || awaiting.has('obs') || awaiting.has('match') || awaiting.has('allobs'))) {
     if(pendingInviteObserve && match[0] === 'There is no such game.') {
       const host = pendingInviteObserve.host;
@@ -2692,6 +2698,7 @@ function handleMiscMessage(data: any) {
     users.userList = parseUserList(msg);
     users.updateUsers();
     chat.updateUserList(users.userList);
+    tournaments.userList = users.userList;
     return;
   }
 
@@ -4063,7 +4070,7 @@ function initGameControls(game: Game) {
   if(game !== games.focused)
     return;
 
-  Utils.removeWithTooltips($('.context-menu'));
+  Utils.removeWithPoppers($('.context-menu'));
   initAnalysis(game);
   initGameTools(game);
 

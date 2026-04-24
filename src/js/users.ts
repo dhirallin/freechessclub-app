@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 import { awaiting, storage } from './storage';
-import { createContextMenuTrigger, createContextMenu, getValue, removeWithTooltips, sortTable, scrollToTop, getTouchClickCoordinates } from './utils';
+import { createContextMenuTrigger, createContextMenu, getValue, removeWithPoppers, sortTable, scrollToTop, getTouchClickCoordinates } from './utils';
 import { showTab, setRematchUser, getFollowedUser, setFollowedUser } from './index';
 import { showDialog } from './dialogs';
 
@@ -127,7 +127,7 @@ export class Users {
           
           this.friendList = this.friendList.filter(item => item.name !== name);
           this.saveFriends();
-          removeWithTooltips(row);
+          removeWithPoppers(row);
         };
 
         if(this.notifyList.includes(name)) {
@@ -141,7 +141,7 @@ export class Users {
         else 
           removeFriend();
       }
-      removeWithTooltips(row);
+      removeWithPoppers(row);
     });
 
     $('.users-table').on('click', '.sortable-column', (e) => {
@@ -337,14 +337,14 @@ export class Users {
       item.find('td:eq(1)').text(user.rating);
       item.find('td:eq(2)').attr('data-sort-value', this.userStatusCodeToSortValue(user.status)); // Used to sort the status column by online vs offline
       const statusElem = item.find('.user-status');
-      statusElem.text(this.userStatusCodeToName(user.status));
+      statusElem.text(Users.userStatusCodeToName(user.status));
       statusElem.toggleClass('offline', user.status === 'x'); // Show offline status with a different color
     });
 
     // Remove entries that no longer have a matching user in the user list
     table.find('tbody tr').each((_, elem) => {
       if(!users.find(user => $(elem).attr('data-name') === user.name))
-        removeWithTooltips($(elem));
+        removeWithPoppers($(elem));
     });
 
     sortTable(table);
@@ -362,7 +362,7 @@ export class Users {
   /**
    * Convert 'who' status codes to names
    */
-  private userStatusCodeToName(code: string) {
+  public static userStatusCodeToName(code: string) {
     const statusNames = {
       'x': 'Offline',
       ' ': 'Online',

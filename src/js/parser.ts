@@ -236,8 +236,6 @@ export class Parser {
       return null;
     }
 
-    //console.log(msg);
-
     msg = msg.replace(/\[G\]\0/g, () => {
       this.session.send(String.fromCharCode(...[0x02, 0x39]), false);
       return '';

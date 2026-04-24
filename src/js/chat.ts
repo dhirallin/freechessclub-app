@@ -4,7 +4,7 @@
 
 import '@formatjs/intl-segmenter/polyfill-force.js';
 import { autoLink } from 'autolink-js';
-import { createTooltip, safeScrollTo, isSmallWindow, removeWithTooltips, insertAtCursor } from './utils';
+import { createTooltip, safeScrollTo, isSmallWindow, removeWithPoppers, insertAtCursor } from './utils';
 import { setGameWithFocus, maximizeGame, scrollToBoard } from './index';
 import { settings } from './settings';
 import { storage, awaiting } from './storage';
@@ -445,7 +445,7 @@ export class Chat {
     tab.parent().tooltip('dispose');
     tab.parent().remove();
     this.deleteTab(tab);
-    removeWithTooltips($(`#content-${name}`));
+    removeWithPoppers($(`#content-${name}`));
   }
 
   public createTab(name: string, showTab = false) {

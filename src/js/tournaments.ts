@@ -3,8 +3,9 @@
 // license that can be found in the LICENSE file.
 
 import { awaiting, storage } from './storage';
-import { createNotification, removeNotification, showDialog } from './dialogs';
-import { createTooltip, convertToServerDate, convertToLocalDate, parseDate, getDiffDays, getNextWeekDayDate, splitIntoColumns } from './utils';
+import { createNotification, removeNotification, showDialog, showInfoDialog } from './dialogs';
+import { removeWithPoppers, createTooltip, convertToServerDate, convertToLocalDate, parseDate, getDiffDays, getNextWeekDayDate, splitIntoColumns } from './utils';
+import { Users } from './users';
 
 /**
  * Controls the Play->Tournaments pane.
@@ -31,6 +32,8 @@ export class Tournaments {
   private notifyList = {};                      // Whether to show slide-down notifications when a specific tournaments start, i.e. if the user click the 'Notify Me' button on a tournament
   private pendingTournaments = [];              // Stores the tournament data from 'td listtourneys' temporarily until the title and other data is retrieved from 'td players' or 'td standardgrid'
   private selectedBlitzTourney: string = '';    // id of the blitztourney currnetly being interacted with
+  private blitzTourneyRemainingID: string = ''; // id of the blitztourney that we are currently parsing 't blitztourneys remaining' for 
+  public userList = null;                       // Store a copy of the user list in order to tell if tournament members are online or offline
 
   constructor() {
     /** Tournament pane shown */
@@ -644,6 +647,7 @@ export class Tournaments {
     if(msg === ':There are no tourneys right now.' && awaiting.resolve('td-listtourneys')) {
       awaiting.set('td-set');
       this.session.send('td set height 24');
+      return true;
     }
 
     pattern = ':mamer\'s tourney list:';
@@ -746,7 +750,7 @@ export class Tournaments {
                 </div>
                 <div class="modal-body">
                   <div class="tournament-players tournament-table-container" class="mb-1">
-                    <table class="table table-sm table-borderless table-striped modal-table">
+                    <table class="table table-sm table-borderless table-striped modal-table tournament-table">
                       <thead>
                         <tr>
                           <th scope="col" class="text-end">Seed</th>
@@ -794,7 +798,7 @@ export class Tournaments {
             cell.innerHTML = checkCrossIcon;
           });
           
-          playersModal.on('hidden.bs.modal', () => playersModal.remove());
+          playersModal.on('hidden.bs.modal', () => removeWithPoppers(playersModal));
           playersModal.appendTo('body').modal('show');        
         }
         this.tdMessage = '';
@@ -893,12 +897,12 @@ export class Tournaments {
                 </div>
                 <div class="modal-body">
                   <div class="tournament-standings tournament-table-container" class="mb-1">
-                    <table class="table table-sm table-borderless table-striped modal-table">
+                    <table class="table table-sm table-borderless table-striped modal-table tournament-table">
                       <thead>
                         <tr>
                           <th scope="col" class="text-end">Pos</th>
                           <th scope="col">Player</th>
-                          <th scope="col" class="text-end">Score</th>
+                          <th scope="col" class="text-end">Points</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -963,7 +967,7 @@ export class Tournaments {
             }); 
           });
           
-          standingsModal.on('hidden.bs.modal', () => standingsModal.remove());
+          standingsModal.on('hidden.bs.modal', () => removeWithPoppers(standingsModal));
           standingsModal.appendTo('body').modal('show');        
         }
       }
@@ -1001,7 +1005,7 @@ export class Tournaments {
                 </div>
                 <div class="modal-body">
                   <div class="tournament-games tournament-table-container" class="mb-1">
-                    <table class="table table-sm table-borderless table-striped modal-table">
+                    <table class="table table-sm table-borderless table-striped modal-table tournament-table">
                       <thead>
                         <tr>
                           <th scope="col" class="text-end">Board</th>
@@ -1042,7 +1046,7 @@ export class Tournaments {
           if(byes) 
             gamesModal.find('.modal-body').append(`<div class="mt-1" style="white-space: pre-wrap"><span class="tournament-card-label">Byes:</span>  ${byes}</div>`);
           
-          gamesModal.on('hidden.bs.modal', () => gamesModal.remove());
+          gamesModal.on('hidden.bs.modal', () => removeWithPoppers(gamesModal));
           gamesModal.appendTo('body').modal('show');        
         }
         else if(pairing && !wasAwaiting && !$(`.notification[data-tournament-id="${id}"]`).length) {
@@ -1083,9 +1087,102 @@ export class Tournaments {
       const id = `${match[2]}${match[3] !== 'Chess' ? ` ${match[3]}` : ''}`
       const interested = match[1] === 'added to';
       this.updateBlitzTourney(id, { interested });
+      return false;
+    }
+
+    match = msg.match(/^:Remaining games for tourney #(\d+) \(.*?\), YOU \S+ need to play:/m);
+    if(match && awaiting.has('blitztourney-remaining')) {
+      this.blitzTourneyRemainingID = match[1];
+      if(this.blitzTourneyRemainingID === this.selectedBlitzTourney)
+        awaiting.resolve('blitztourney-remaining');
+      if(!$('#blitztourney-play-game-modal').length) {
+        const modal = $(`<div id="blitztourney-play-game-modal" class="modal fade tournament-table-modal" tabindex="-1">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Remaining Games</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="pane-status" id="blitztourney-play-game-status" style="display: none"></div>
+                <div class="tournament-players tournament-table-container" class="mb-1">
+                  <table class="table table-sm table-borderless table-striped modal-table tournament-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Opponent</th>
+                        <th scope="col" class="text-center">Games</th>
+                        <th scope="col" class="text-center">Status</th>
+                        <th scope="col" class="text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`);        
+        modal.on('hidden.bs.modal', () => removeWithPoppers(modal));
+        modal.appendTo('body').modal('show');   
+      }
+      return true;
+    }
+
+    if(this.blitzTourneyRemainingID === this.selectedBlitzTourney && $('#blitztourney-play-game-modal').length) {
+      const tbody = $('#blitztourney-play-game-modal').find('tbody')[0];
+      
+      let tourneyData = null;
+      const tourney = $('.tournament-card[data-tournament-type="blitztourney"').each((index, element) => {
+        const data = $(element).data('tournament-data');  
+        if(this.selectedBlitzTourney === data.id)
+          tourneyData = data;
+      });
+    
+      const currMatches = msg.matchAll(/^:\(as (white|black|white and black)\) v (\S+)/gm);
+      let wasMatch = false;
+      for(const m of currMatches) {
+        wasMatch = true;
+        const remaining = m[1];
+        const opponent = m[2];
+        const opponentNoTitle = opponent.split('(')[0];
+        const status = this.userList.find(u => u.name.toLowerCase() === opponentNoTitle.toLowerCase())?.status || 'x';
+
+        const row = tbody.insertRow();      
+        let cell = row.insertCell();
+        cell.innerHTML = `<span class="tournament-table-name clickable-user">${opponent}</span>`; 
+
+        cell = row.insertCell();   
+        cell.classList.add('text-center');
+        cell.innerHTML = remaining;
+
+        cell = row.insertCell();
+        cell.classList.add('text-center');
+        if(status === 'x')
+          cell.classList.add('offline');
+        cell.innerHTML = Users.userStatusCodeToName(status);
+
+        cell = row.insertCell();
+        cell.classList.add('text-center');
+        // x#:&^
+        cell.innerHTML = `<a${''.includes(status) ? ' style="visibility: hidden"': ''} class="blitztourney-challenge" data-opponent="${opponentNoTitle}" href="javascript:void(0)" onClick="sessionSend('t blitztourneys game ${opponentNoTitle} ${tourneyData.type}')">Challenge</a>`;
+      }
+      return wasMatch;
     }
   }
   
+  public handleCommandError(msg: string): boolean {
+    if($('#blitztourney-play-game-modal').hasClass('show')) {
+      if(msg.startsWith(':Too frequent'))
+        msg = 'Too frequent. Please wait 60 seconds';
+      const status = $('#blitztourney-play-game-modal #blitztourney-play-game-status');
+      status.text(msg);
+      status.show();
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Parse and store 'td variables'. Mainly used to store the user's
    * TourneyInfo, TourneyUpdates and KOTHInfo variables. We set these variables
@@ -1726,26 +1823,34 @@ export class Tournaments {
     const tourneys = [];
     // EXAMPLE
     // 5: tourney #11 '2-19-blitz-apr-2026' SOLO-RR2 '2 19' 2026-04-10 12:00 END-DATE=2026-04-21 23:59 EDT; STATUS: ONGOING (games progress=7/20) ===STANDINGS==> Position:Name,Points,Win-Draw-Loss 1:atlasNTST,3,3-0-2 2:Naomi,2,2-0-2 3=:pingupenguin,1,1-0-0 3=:splokk,1,1-0-3 5:patriotscout,0,0-0-0; ===LATEST-GAMES==>; 2026-04-12-11:48,atlasNTST-splokk,1-0 2026-04-12-09:32,Naomi-atlasNTST,0-1 2026-04-12-08:51,atlasNTST-Naomi,1-0 2026-04-12-07:20,splokk-atlasNTST,1-0 2026-04-11-07:35,Naomi-splokk,1-0 2026-04-11-07:28,splokk-Naomi,0-1; ===REMAINING-GAMES==>; patriotscout-Naomi Naomi-pingupenguin pingupenguin-splokk Naomi-patriotscout pingupenguin-atlasNTST pingupenguin-Naomi atlasNTST-patriotscout patriotscout-atlasNTST; (and 5 other(s))
-    const currMatches = msg.matchAll(/^\s*\d+: tourney #(\d+) \'[\w\-]+\' ([\w\-]+) \'(.*?)\' ([\d\-]+ [\d:]+) END-DATE=([\d\-]+ [\d:]+) [A-Z]+; STATUS: (\w+)(?: \(games progress=(\d+\/\d+)\))? ===STANDINGS==> Position:Name,Points,Win-Draw-Loss ([^;]+); ===LATEST-GAMES==>; ([^;]+)(?:; ===REMAINING-GAMES==>; (.*))?/gm);
+    const currMatches = msg.matchAll(/^\s*\d+: tourney #(\d+) \'([\w\-]+)\' ([\w\-]+) \'(.*?)\' ([\d\-]+ [\d:]+) END-DATE=([\d\-]+ [\d:]+) [A-Z]+; STATUS: (\w+)(?: \(games progress=(\d+\/\d+)\))? ===STANDINGS==> Position:Name,Points,Win-Draw-Loss ([^;]+); ===LATEST-GAMES==>; ([^;]+)(?:; ===REMAINING-GAMES==>; (.*))?/gm);
     for(const m of currMatches) {
-      const standingsStrings = m[8].split(/\s+/);       
+      const standingsStrings = m[9].split(/\s+/);       
       const standings = [];
       standingsStrings.forEach(st => {
         st = st.trim();
         // EXAMPLE
         // 1=:**JOINT-WINNER**krell,7,7-0-3
         const sMatch = st.match(/^(\d+)=?:(?:\*\*[\w\-]+\*\*)?([^,]+),([\d.]+),(\d+)-(\d+)-(\d+)/);
+        const points = +sMatch[3];
+        const wins = +sMatch[4];
+        const draws = +sMatch[5];
+        const losses = +sMatch[6];
+        const played = wins + draws + losses;
+        const pointsPercent = played ? points / played : 0;
         standings.push({
           name: sMatch[2],
           pos: sMatch[1],
-          score: sMatch[3],
-          wins: sMatch[4],
-          draws: sMatch[5],
-          losses: sMatch[6]
+          points,
+          wins,
+          draws,
+          losses,
+          played,
+          pointsPercent 
         });
       });
 
-      const gameStrings = m[9].split(/\s+/); 
+      const gameStrings = m[10].split(/\s+/); 
       const games = [];
       gameStrings.forEach(g => {
         // EXAMPLE
@@ -1768,7 +1873,7 @@ export class Tournaments {
         }
       });
 
-      let dateMatch = m[4].match(/(\d+)-(\d+)-(\d+) (\d+):(\d+)/);
+      let dateMatch = m[5].match(/(\d+)-(\d+)-(\d+) (\d+):(\d+)/);
       const date = parseDate({
         year: dateMatch[1],
         month: dateMatch[2],
@@ -1777,7 +1882,7 @@ export class Tournaments {
         minute: dateMatch[5],
       }, true);
 
-      dateMatch = m[5].match(/(\d+)-(\d+)-(\d+) (\d+):(\d+)/);
+      dateMatch = m[6].match(/(\d+)-(\d+)-(\d+) (\d+):(\d+)/);
       const endDate = parseDate({
         year: dateMatch[1],
         month: dateMatch[2],
@@ -1786,18 +1891,21 @@ export class Tournaments {
         minute: dateMatch[5],
       }, true);
 
+      const title = m[2].split('-').map(word => word ? word[0].toUpperCase() + word.slice(1) : '').join(' ');
+
+      standings.sort((a, b) => b.pointsPercent - a.pointsPercent);
       tourneys.push({
         id: m[1],
-        format: m[2],
-        type: m[3],
-        title: `BlitzTourney #${m[1]} ${m[3]}`,
+        format: m[3],
+        type: m[4],
+        title,
         date,
         endDate,
-        status: m[6],
-        round: m[7],
+        status: m[7],
+        progress: m[8],
         standings,
         games,
-        remaining: m[10]
+        remaining: m[11]
       });
     }
 
@@ -1828,7 +1936,7 @@ export class Tournaments {
             tourneys.push({
               id: type,
               type,
-              title: `BlitzTourney ${type}`,
+              title: `Next ${type}`,
               date,
               status: 'FUTURE',
             });
@@ -1853,7 +1961,7 @@ export class Tournaments {
         const currentTourney = tourneys.find(t => t.type === type && t.status !== 'FUTURE');
         if(currentTourney)
           currentTourney.players = currentTourneyPlayers; 
-        const nextTourneyPlayers = playerStrings.filter(p => p.slice(-1) === '+').map(p => p.slice(0, -1)); 
+        const nextTourneyPlayers = playerStrings.map(p => p.slice(0, -1)); 
         const nextTourney = tourneys.find(t => t.type === type && t.status === 'FUTURE');
         if(nextTourney)
           nextTourney.players = nextTourneyPlayers; 
@@ -1968,9 +2076,12 @@ export class Tournaments {
 
       /** 'Play Game' button */
       card.find('.tournament-play-game').on('click', () => {
+        if(awaiting.has('blitztourney-remaining'))
+          return;
+
         const tourney = card.data('tournament-data');
         this.selectedBlitzTourney = tourney.id;
-        awaiting.set('blitztourney-play-game');
+        awaiting.set('blitztourney-remaining');
         awaiting.set('userlist');
         this.session.send('who');
         this.session.send(`tell blitztourneys remaining`);
@@ -2081,17 +2192,20 @@ export class Tournaments {
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">${data.status === 'FINISHED' ? 'Final Standings' : 'Standings'} (Round ${data.round})</h5>
+            <h5 class="modal-title">${data.status === 'FINISHED' ? 'Final Standings' : 'Standings'} (${data.progress} Completed)</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="tournament-standings tournament-table-container" class="mb-1">
-              <table class="table table-sm table-borderless table-striped modal-table">
+              <table class="table table-sm table-borderless table-striped modal-table tournament-table">
                 <thead>
                   <tr>
                     <th scope="col" class="text-end">Pos</th>
                     <th scope="col">Player</th>
-                    <th scope="col" class="text-end">Score</th>
+                    <th scope="col" class="text-end">Points</th>
+                    <th scope="col" class="text-end">Played</th>
+                    <th scope="col" class="text-end">Pct</th>
+                    <th scope="col" class="text-end">W-D-L</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2102,28 +2216,40 @@ export class Tournaments {
         </div>
       </div>
     </div>`);
-    
+         
     const tbody = standingsModal.find('tbody')[0];
-
-    // Display the position of each player by score
-    let lastPos = null;
+    // Display the position of each player by points %
+    let lastPointsPercent = 0;
+    let position = 1;
     standings.forEach(player => {
-      const posStr = player.pos === lastPos ? '' : player.pos;
-      lastPos = player.pos;
+      let posStr = '';
+      if(player.pointsPercent !== lastPointsPercent) { // If points % is the same as previous player don't display their position
+        posStr = position.toString();
+        lastPointsPercent = player.pointsPercent;
+      }
+      position++;  
             
       let row = tbody.insertRow();
       let cell = row.insertCell();
       cell.classList.add('text-end');
       cell.innerHTML = `<span class="tournament-table-pos">${posStr}</span>`;            
-    
       cell = row.insertCell();
       cell.innerHTML = `<span class="tournament-table-name clickable-user">${player.name}</span>`; 
       cell = row.insertCell();
       cell.classList.add('text-end');
-      cell.innerHTML = `<span class="tournament-table-score">${player.score}</span>`;
+      cell.innerHTML = `<span class="tournament-table-score">${player.points}</span>`;
+      cell = row.insertCell();
+      cell.classList.add('text-end');
+      cell.innerHTML = `<span>${player.played}</span>`;
+      cell = row.insertCell();
+      cell.classList.add('text-end');
+      cell.innerHTML = `<span>${player.pointsPercent.toPrecision(3).replace(/^0\./, '.')}</span>`;
+      cell = row.insertCell();
+      cell.classList.add('text-end');
+      cell.innerHTML = `<span>${player.wins}-${player.draws}-${player.losses}</span>`;
     });
     
-    standingsModal.on('hidden.bs.modal', () => standingsModal.remove());
+    standingsModal.on('hidden.bs.modal', () => removeWithPoppers(standingsModal));
     standingsModal.appendTo('body').modal('show');        
   }
 
@@ -2134,16 +2260,16 @@ export class Tournaments {
     const data = card.data('tournament-data');
     const games = data.games;
 
-    const gamesModal = $(`<div class="modal fade tournament-games-modal tournament-table-modal" tabindex="-1">
+    const gamesModal = $(`<div id="blitztourney-games-modal" class="modal fade tournament-games-modal tournament-table-modal" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Recent Games (Round ${data.round})</h5>
+            <h5 class="modal-title">Recent Games (${data.progress} Completed)</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="tournament-games tournament-table-container" class="mb-1">
-              <table class="table table-sm table-borderless table-striped modal-table">
+              <table class="table table-sm table-borderless table-striped modal-table tournament-table">
                 <thead>
                   <tr>
                     <th scope="col">Time</th>
@@ -2179,7 +2305,16 @@ export class Tournaments {
       cell.innerHTML = `<span class="tournament-table-result">${game.result === 'DRAW' ? '&frac12-&frac12' : game.result}</span>`;       
     });
 
-    gamesModal.on('hidden.bs.modal', () => gamesModal.remove());
+    if(data.remaining) {
+      const link = $('<a href="javascript:void(0)" id="remaining-games-link">Remaining Games</a>');
+      const body = gamesModal.find('.modal-body');
+      body.append(link);
+      link.on('click', () => {
+        showInfoDialog('Remaining Games', data.remaining);
+      });
+    }
+
+    gamesModal.on('hidden.bs.modal', () => removeWithPoppers(gamesModal));
     gamesModal.appendTo('body').modal('show');    
   }
 
@@ -2210,7 +2345,7 @@ export class Tournaments {
         colElement.append(`<div class="clickable-user">${player}</div>`); 
       });
     });
-    playersModal.on('hidden.bs.modal', () => playersModal.remove());
+    playersModal.on('hidden.bs.modal', () => removeWithPoppers(playersModal));
     playersModal.appendTo('body').modal('show');      
   }
 
@@ -2666,6 +2801,22 @@ export class Tournaments {
             this.session.send(`accept ${kothData.offer}`);
         }
       });
+
+      const btModal = $('#blitztourney-play-game-modal');
+      if(btModal.hasClass('show')) {
+        $('#blitztourney-play-game-status').hide();
+        const challengeLink = btModal.find(`.blitztourney-challenge[data-opponent="${offer.opponent}"]`);
+        if(challengeLink.length) {
+          btModal.find('[data-bs-toggle="popover"]').popover('dispose');
+          challengeLink.attr('data-bs-toggle', 'popover');
+          challengeLink.popover({
+            content: "Match request sent",
+            placement: "left",
+            trigger: "manual"
+          }).popover('show');
+          setTimeout(() => challengeLink.popover('dispose'), 1500);
+        }
+      }
     });
    
     // Removals
