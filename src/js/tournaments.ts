@@ -5,7 +5,7 @@
 import { awaiting, storage } from './storage';
 import { createNotification, removeNotification, showDialog, showInfoDialog } from './dialogs';
 import { removeWithPoppers, createTooltip, convertToServerDate, convertToLocalDate, parseDate, getDiffDays, getNextWeekDayDate, splitIntoColumns } from './utils';
-import { Users } from './users';
+import { users, Users } from './users';
 import { session } from './session';
 
 /**
@@ -33,7 +33,7 @@ export class Tournaments {
   private pendingTournaments = [];              // Stores the tournament data from 'td listtourneys' temporarily until the title and other data is retrieved from 'td players' or 'td standardgrid'
   private selectedBlitzTourney: string = '';    // id of the blitztourney currnetly being interacted with
   private blitzTourneyRemainingID: string = ''; // id of the blitztourney that we are currently parsing 't blitztourneys remaining' for 
-  public userList = null;                       // Store a copy of the user list in order to tell if tournament members are online or offline
+  private userList = null;                       // Store a copy of the user list in order to tell if tournament members are online or offline
 
   constructor() {
     /** Tournament pane shown */
@@ -1121,7 +1121,10 @@ export class Tournaments {
             </div>
           </div>
         </div>`);        
-        modal.on('hidden.bs.modal', () => removeWithPoppers(modal));
+        modal.on('hidden.bs.modal', () => {
+          users.stopRequestUsersTimer();
+          removeWithPoppers(modal);
+        });
         modal.appendTo('body').modal('show');   
       }
       return true;
@@ -1146,7 +1149,8 @@ export class Tournaments {
         const opponentNoTitle = opponent.split('(')[0];
         const status = this.userList.find(u => u.name.toLowerCase() === opponentNoTitle.toLowerCase())?.status || 'x';
 
-        const row = tbody.insertRow();      
+        const row = tbody.insertRow();     
+        row.setAttribute('data-opponent', opponentNoTitle);
         let cell = row.insertCell();
         cell.innerHTML = `<span class="tournament-table-name clickable-user">${opponent}</span>`; 
 
@@ -1155,15 +1159,14 @@ export class Tournaments {
         cell.innerHTML = remaining;
 
         cell = row.insertCell();
-        cell.classList.add('text-center');
+        cell.classList.add('text-center', 'status-col');
         if(status === 'x')
           cell.classList.add('offline');
-        cell.innerHTML = Users.userStatusCodeToName(status);
+        cell.innerHTML = users.userStatusCodeToName(status);
 
         cell = row.insertCell();
         cell.classList.add('text-center');
-        // x#:&^
-        cell.innerHTML = `<a${''.includes(status) ? ' style="visibility: hidden"': ''} class="blitztourney-challenge" data-opponent="${opponentNoTitle}" href="javascript:void(0)" onClick="sessionSend('t blitztourneys game ${opponentNoTitle} ${tourneyData.type}')">Challenge</a>`;
+        cell.innerHTML = `<a class="blitztourney-challenge" href="javascript:void(0)" onClick="sessionSend('t blitztourneys game ${opponentNoTitle} ${tourneyData.type}')">Challenge</a>`;
       }
       return wasMatch;
     }
@@ -2079,9 +2082,8 @@ export class Tournaments {
 
         const tourney = card.data('tournament-data');
         this.selectedBlitzTourney = tourney.id;
+        users.startRequestUsersTimer();
         awaiting.set('blitztourney-remaining');
-        awaiting.set('userlist');
-        session.send('who');
         session.send(`tell blitztourneys remaining`);
       });
     }
@@ -2345,6 +2347,20 @@ export class Tournaments {
     });
     playersModal.on('hidden.bs.modal', () => removeWithPoppers(playersModal));
     playersModal.appendTo('body').modal('show');      
+  }
+
+  public updateBlitzTourneyUsers() {
+    const modal = $('#blitztourney-play-game-modal');
+    if(modal.hasClass('show')) {
+      const rows = modal.find('tr[data-opponent]');
+      rows.each((_, elem) => {
+        const opponent = $(elem).data('opponent');
+        const status = this.userList.find(u => u.name.toLowerCase() === opponent.toLowerCase())?.status || 'x';
+        const statusCell = $(elem).find('.status-col');
+        statusCell.toggleClass('offline', status === 'x');
+        statusCell.html(users.userStatusCodeToName(status));
+      });   
+    }
   }
 
   /** 
@@ -2803,7 +2819,7 @@ export class Tournaments {
       const btModal = $('#blitztourney-play-game-modal');
       if(btModal.hasClass('show')) {
         $('#blitztourney-play-game-status').hide();
-        const challengeLink = btModal.find(`.blitztourney-challenge[data-opponent="${offer.opponent}"]`);
+        const challengeLink = btModal.find(`[data-opponent="${offer.opponent}"] .blitztourney-challenge`);
         if(challengeLink.length) {
           btModal.find('[data-bs-toggle="popover"]').popover('dispose');
           challengeLink.attr('data-bs-toggle', 'popover');
@@ -2849,6 +2865,11 @@ export class Tournaments {
         }
       });
     });
+  }
+
+  public updateUserList(userList: any[]) {
+    this.userList = userList;
+    this.updateBlitzTourneyUsers();
   }
 }
 

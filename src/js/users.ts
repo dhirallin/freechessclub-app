@@ -42,26 +42,10 @@ export class Users {
     $('#users-modal').on('shown.bs.modal', () => {
       $('#add-friend-input').val('');
       $('#friends-table tr').removeClass('highlighted');
-
-      const requestUsers = () => {
-        if(session?.isConnected()) {
-          awaiting.set('userlist');
-          session.send('who');
-          if($('#top-players-tab').hasClass('active')) {
-            awaiting.set('hbest');
-            session.send('hbest lbsxBzLSw');
-          }
-        }
-      };
-
-      requestUsers();
-      this.updateUsersTimer = setInterval(() => {
-        requestUsers();
-      }, 60000);  
     });
 
     $('#users-modal').on('hide.bs.modal', () => {
-      clearInterval(this.updateUsersTimer);
+      this.stopRequestUsersTimer();
       $('.above-modal-dialog').remove();
     });
 
@@ -217,6 +201,28 @@ export class Users {
     }
   }
 
+  public requestUsers() {
+    if(session?.isConnected()) {
+      awaiting.set('userlist');
+      session.send('who');
+      if($('#top-players-tab').hasClass('active')) {
+        awaiting.set('hbest');
+        session.send('hbest lbsxBzLSw');
+      }
+    }
+  }
+
+  public startRequestUsersTimer() {
+    this.requestUsers();
+    this.updateUsersTimer = setInterval(() => {
+      this.requestUsers();
+    }, 60000);  
+  }
+
+  public stopRequestUsersTimer() {
+    clearInterval(this.updateUsersTimer);
+  }
+
   /**
    * Update friendList and topPlayersList entries from the userList (result of 'who' command) 
    * Then update the tables in the Users modal with latest friendList, userList and topPlayersList
@@ -334,7 +340,7 @@ export class Users {
       item.find('td:eq(1)').text(user.rating);
       item.find('td:eq(2)').attr('data-sort-value', this.userStatusCodeToSortValue(user.status)); // Used to sort the status column by online vs offline
       const statusElem = item.find('.user-status');
-      statusElem.text(Users.userStatusCodeToName(user.status));
+      statusElem.text(this.userStatusCodeToName(user.status));
       statusElem.toggleClass('offline', user.status === 'x'); // Show offline status with a different color
     });
 
@@ -359,7 +365,7 @@ export class Users {
   /**
    * Convert 'who' status codes to names
    */
-  public static userStatusCodeToName(code: string) {
+  public userStatusCodeToName(code: string) {
     const statusNames = {
       'x': 'Offline',
       ' ': 'Online',

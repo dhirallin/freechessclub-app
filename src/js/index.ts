@@ -2178,7 +2178,7 @@ function handleMiscMessage(data: any) {
     match = msg.match(/^You have no partner for bughouse\./m);
   if(!match) 
     match = msg.match(/^:Too frequent\. Can't send a '[^']+' game request to \S+ for another \d+ seconds/m);
-  if(match && $('.tournament-table-modal').hasClass('show')) 
+  if(match) 
     tournaments?.handleCommandError(match[0]);
   if(match && (awaiting.has('history') || awaiting.has('obs') || awaiting.has('match') || awaiting.has('allobs'))) {
     if(pendingInviteObserve && match[0] === 'There is no such game.') {
@@ -2693,7 +2693,7 @@ function handleMiscMessage(data: any) {
     users.userList = parseUserList(msg);
     users.updateUsers();
     chat.updateUserList(users.userList);
-    tournaments.userList = users.userList;
+    tournaments.updateUserList(users.userList);
     return;
   }
 
