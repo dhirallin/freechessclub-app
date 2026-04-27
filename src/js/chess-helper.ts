@@ -1180,61 +1180,26 @@ export function isPromotion(fen: string, from: string, to: string): boolean {
   return false;
 }; 
 
-export function getNumLegalMoves(fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: VariantData): number {
-  const numPromotionTypes = category === 'suicide' ? 5 : 4; 
-  let len = 0;
-  for(const [from, arr] of dests) {
-    len += arr.length;
-    if(!isPromotion(fen, from, null)) 
-      continue;
-
-    for(const to of arr) {
-      if(isPromotion(fen, from, to)) 
-        len += numPromotionTypes - 1;
-    }
-  }
-
-  if(variantData?.holdings) {
-    // Count piece placements
-
-    // Count empty squares where it's possible to place a piece or pwwn
-    let numEmptySquares = 0;
-    let numEmptyPawnSquares = 0;
-    const pos = new Position(fen);
-    for(const sq of Position.SQUARES) {
-      if(!pos.get(sq)) {
-        numEmptySquares++;
-        if(sq.charAt(1) !== '1' && sq.charAt(1) !== '8')
-          numEmptyPawnSquares++;
-      }
-    }
-
-    const turnColor = getTurnColorFromFEN(fen);
-    for(const [key, value] of Object.entries(variantData.holdings)) {
-      if((key.toUpperCase() === key && turnColor === 'w') || (key.toLowerCase() === key && turnColor === 'b') && value) 
-        len += (key.toLowerCase() === 'p') ? numEmptyPawnSquares : numEmptySquares;
-    }
-  }
-
-  return len;
+export function getNumLegalMoves(fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: Partial<VariantData>): number {
+  return moveToLegalMoveIndex(null, fen, dests, category, variantData);
 }
 
-export function moveToLegalMoveIndex(move: { from: string, to: string, promotion?: string }, fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: VariantData): number {
+export function moveToLegalMoveIndex(move: { from: string, to: string, piece?: string, promotion?: string }, fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: Partial<VariantData>): number {
   const promotionTypes = ['q', 'r', 'b', 'n', 'k'];
   const numPromotionTypes = category === 'suicide' ? 5 : 4;
 
   let promotion = null;
-  if(isPromotion(fen, move.from, move.to))
+  if(move && isPromotion(fen, move.from, move.to))
     promotion = move.promotion || 'q';
   
   let index = 0;
   for(const [from, arr] of dests) {
-    if(from !== move.from && !isPromotion(fen, from, null)) {
+    if(from !== move?.from && !isPromotion(fen, from, null)) {
       index += arr.length;
       continue;
     }
     for(const to of arr) {
-      if(from === move.from && to === move.to) {
+      if(from === move?.from && to === move?.to) {
         if(promotion) 
           index += promotionTypes.indexOf(promotion);
         return index;
@@ -1245,14 +1210,14 @@ export function moveToLegalMoveIndex(move: { from: string, to: string, promotion
     }
   }
 
-  if(!move.from && variantData?.holdings) {
+  if(!move?.from && variantData?.holdings) {
     // piece placements (crazyhouse / bughouse)
-    const pos = new Position(fen);
     
     // get empty squares where it's possible to place a piece or pwwn
     let emptySquares = [];
     let emptyPawnSquares = [];
 
+    const pos = new Position(fen);
     for(const sq of Position.SQUARES) {
       if(!pos.get(sq)) {
         emptySquares.push(sq);
@@ -1262,9 +1227,9 @@ export function moveToLegalMoveIndex(move: { from: string, to: string, promotion
     }
 
     const turnColor = getTurnColorFromFEN(fen);
-    const pieceType = pos.get(move.to).type;
+    const pieceType = move?.piece?.toLowerCase();
     for(const [key, value] of Object.entries(variantData.holdings)) {
-      if((key.toUpperCase() === key && turnColor === 'w') || (key.toLowerCase() === key && turnColor === 'b') && value) {
+      if(value && ((key.toUpperCase() === key && turnColor === 'w') || (key.toLowerCase() === key && turnColor === 'b'))) {
         if(pieceType !== key.toLowerCase()) {
           index += (key.toLowerCase() === 'p') ? emptyPawnSquares.length : emptySquares.length; 
           continue;
@@ -1275,39 +1240,68 @@ export function moveToLegalMoveIndex(move: { from: string, to: string, promotion
           : emptySquares.indexOf(move.from);
         if(squareIndex !== -1) {
           index += squareIndex;
-          return;
+          return index;
         }       
       }
     }
   }
-
-  return -1;
+  return move ? -1 : index;
 }
 
-export function legalMoveIndexToMove(moveIndex: number, fen: string, dests: Map<string, string[]>, category = 'standard'): { from: string, to: string, promotion?: string } {
+export function legalMoveIndexToMove(moveIndex: number, fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: Partial<VariantData>): { from: string, to: string, piece?: string, promotion?: string } {
   const promotionTypes = ['q', 'r', 'b', 'n', 'k'];
   const numPromotionTypes = category === 'suicide' ? 5 : 4;
   
   let index = 0;
   for(const [from, arr] of dests) {
-    if(moveIndex > index + arr.length && !isPromotion(fen, from, null)) {
+    if(moveIndex >= index + arr.length && !isPromotion(fen, from, null)) {
       index += arr.length;
       continue;
     }
     for(const to of arr) {
-      index++;
       const isProm = isPromotion(fen, from, to);
       if(isProm) 
         index += numPromotionTypes - 1;
 
-      if(moveIndex < index) {
-        const promotion = isProm ? promotionTypes[numPromotionTypes - (index - moveIndex)] : undefined;
-        
-        return {
-          from,
-          to,
-          promotion
-        };
+      if(moveIndex <= index) {
+        const promotion = isProm ? promotionTypes[numPromotionTypes - (index - moveIndex) - 1] : undefined;      
+        return { from, to, promotion };
+      }
+      index++;
+    }
+  }
+
+  if(variantData?.holdings) {
+    // piece placements (crazyhouse / bughouse)
+    
+    // get empty squares where it's possible to place a piece or pwwn
+    let emptySquares = [];
+    let emptyPawnSquares = [];
+
+    const pos = new Position(fen);
+    for(const sq of Position.SQUARES) {
+      if(!pos.get(sq)) {
+        emptySquares.push(sq);
+        if(sq.charAt(1) !== '1' && sq.charAt(1) !== '8')
+          emptyPawnSquares.push(sq);
+      }
+    }
+
+    const turnColor = getTurnColorFromFEN(fen);
+    for(const [key, value] of Object.entries(variantData.holdings)) {
+      if(value && ((key.toUpperCase() === key && turnColor === 'w') || (key.toLowerCase() === key && turnColor === 'b'))) {
+        const piece = key.toLowerCase();
+        const squares = (piece === 'p') ? emptyPawnSquares : emptySquares; 
+        if(moveIndex >= index + squares.length) {
+          index += squares.length;
+          continue;
+        }
+
+        for(const to of squares) {
+          if(moveIndex <= index) 
+            return { from: null, to, piece };
+          index++;
+        }
       }
     }
   }

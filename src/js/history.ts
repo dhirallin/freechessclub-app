@@ -1592,8 +1592,8 @@ export class History {
     for(let i = 0; i < numMoves; i++) {
       const move = hEntry.next.move;
       const dests = toDests(hEntry.fen, startFen, category, hEntry.variantData);
-      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category);
-      const legalMoveIndex = moveToLegalMoveIndex(move, hEntry.fen, dests, category);
+      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category, hEntry.variantData);
+      const legalMoveIndex = moveToLegalMoveIndex(move, hEntry.fen, dests, category, hEntry.variantData);
       writer.writeMax(legalMoveIndex, numLegalMoves);
       if(!untimed) {
         if(smallTimeBits > 0) {
@@ -1649,14 +1649,14 @@ export class History {
 
     for(let i = 0; i < numMoves; i++) {
       const dests = toDests(hEntry.fen, startFen, category, hEntry.variantData);
-      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category);
+      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category, hEntry.variantData);
       const index = reader.readMax(numLegalMoves);
-      const move = legalMoveIndexToMove(index, hEntry.fen, dests, category);
+      const move = legalMoveIndexToMove(index, hEntry.fen, dests, category, hEntry.variantData);
       if(!move)
         return false;
       const parsed = parseMove(hEntry.fen, move, startFen, category, hEntry.variantData);
-      const newHEntry = new HEntry(parsed.move, parsed.fen);
-      this.addHEntry(newHEntry, hEntry);
+      let wtime = hEntry.wtime;
+      let btime = hEntry.btime;
       if(!untimed) {
         const smallTime = smallTimeBits > 0 && !Boolean(reader.read(1));
         let clockDiff = smallTime 
@@ -1665,15 +1665,12 @@ export class History {
         if(hasIncrement)
           clockDiff = zigzagDecode(clockDiff);
 
-        let wtime = hEntry.wtime;
-        let btime = hEntry.btime;
         if(hEntry.turnColor === 'w') 
           wtime -= (clockDiff * 1000);
         else 
           btime -= (clockDiff * 1000);
-        this.updateClockTimes(newHEntry, wtime, btime);
       }
-      hEntry = newHEntry;
+      hEntry = this.add(parsed.move, parsed.fen, false, wtime, btime);
     }
 
     return true;
