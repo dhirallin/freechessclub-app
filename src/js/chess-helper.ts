@@ -596,9 +596,12 @@ function variantToDests(fen: string, startFen: string, category: string, variant
   const piece = chess.get(kingSquare);
   if(piece && piece.type === 'k' && piece.color === getTurnColorFromFEN(fen)) {
     let kingDests = dests.get(kingSquare);
-    if(kingDests)
+    if(kingDests) {
       kingDests = adjustKingDests(kingDests, fen, startFen, category);
-    dests.set(kingSquare, kingDests);    
+      dests.set(kingSquare, kingDests);    
+    }
+    else 
+      dests.delete(kingSquare);
   }
   return dests;
 }
@@ -1214,8 +1217,8 @@ export function moveToLegalMoveIndex(move: { from: string, to: string, piece?: s
     // piece placements (crazyhouse / bughouse)
     
     // get empty squares where it's possible to place a piece or pwwn
-    let emptySquares = [];
-    let emptyPawnSquares = [];
+    const emptySquares = [];
+    const emptyPawnSquares = [];
 
     const pos = new Position(fen);
     for(const sq of Position.SQUARES) {
@@ -1236,8 +1239,8 @@ export function moveToLegalMoveIndex(move: { from: string, to: string, piece?: s
         }
 
         const squareIndex = (pieceType === 'p')
-          ? emptyPawnSquares.indexOf(move.from)
-          : emptySquares.indexOf(move.from);
+          ? emptyPawnSquares.indexOf(move.to)
+          : emptySquares.indexOf(move.to);
         if(squareIndex !== -1) {
           index += squareIndex;
           return index;
@@ -1245,6 +1248,7 @@ export function moveToLegalMoveIndex(move: { from: string, to: string, piece?: s
       }
     }
   }
+
   return move ? -1 : index;
 }
 
@@ -1275,8 +1279,8 @@ export function legalMoveIndexToMove(moveIndex: number, fen: string, dests: Map<
     // piece placements (crazyhouse / bughouse)
     
     // get empty squares where it's possible to place a piece or pwwn
-    let emptySquares = [];
-    let emptyPawnSquares = [];
+    const emptySquares = [];
+    const emptyPawnSquares = [];
 
     const pos = new Position(fen);
     for(const sq of Position.SQUARES) {
@@ -1298,7 +1302,7 @@ export function legalMoveIndexToMove(moveIndex: number, fen: string, dests: Map<
         }
 
         for(const to of squares) {
-          if(moveIndex <= index) 
+          if(moveIndex === index) 
             return { from: null, to, piece };
           index++;
         }

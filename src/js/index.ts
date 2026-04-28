@@ -5565,13 +5565,16 @@ function initSharedGameFromUrl() {
     category = variants[variantParam];
   }
 
-  newGame(false, game, category, null);
+  const fen = params.get('f');
+  newGame(false, game, category, fen);
   const metatags = game.history.metatags;
-  metatags.White = decodeURIComponent(params.get('w') || '');
-  metatags.Black = decodeURIComponent(params.get('b') || '');
+  metatags.White = params.get('w') || '';
+  metatags.Black = params.get('b') || '';
+  metatags.WhiteElo = params.get('wr') || '';
+  metatags.BlackElo = params.get('br') || '';
   let time = params.get('t');
   if(time) {
-    const splitTime = time.split('-');
+    const splitTime = time.split(' ');
     metatags.TimeControl = `${+splitTime[0] * 60}+${splitTime[1]}`  
   }
   updateGameFromMetatags(game);
@@ -6210,6 +6213,9 @@ function initGameTools(game: Game) {
     updateGamePreserved(game);
     updateEditMode(game);
     $('#game-open-chat').prop('disabled', !canOpenAssociatedChat(game));
+
+    $('#game-share').prop('disabled', !SupportedCategories.includes(game.category));
+
     $('#game-tools-clone').parent().toggle(settings.multiboardToggle); // Only show 'Duplicate GAme' option in multiboard mode
     $('#game-tools-clone').toggleClass('disabled', game.isPlaying()); // Don't allow cloning of a game while playing (could allow cheating)
 
@@ -6379,13 +6385,26 @@ $('#game-share').on('click', () => {
     'wild/8': 'w8',
     'wild/8a': 'w8a'
   }
-  const v = variants[game.category];
 
   const metatags = game.history.metatags;
-  const w = encodeURIComponent(metatags.White || game.wname || '');
-  const b = encodeURIComponent(metatags.Black || game.bname || '');
-  const t = (game.time !== 0 && game.inc !== 0 ? `${game.time}-${game.inc}` : '');
-  const url = `${getBaseUrl()}?${w ? `w=${w}&` : ''}${b ? `b=${b}&` : ''}${t ? `t=${t}&` : ''}${v ? `v=${v}&` : ''}g=${moves}`;
+  const params = new URLSearchParams();
+  if(metatags.White || game.wname) 
+    params.set('w', metatags.White || game.wname || '');
+  if(game.wrating)
+    params.set('wr', game.wrating);
+  if(metatags.Black || game.bname) 
+    params.set('b', metatags.Black || game.bname || '');
+  if(game.brating)
+    params.set('br', game.brating);
+  if(game.time !== 0 || game.inc !== 0) 
+    params.set('t', `${game.time} ${game.inc}`);
+  if(variants[game.category]) 
+    params.set('v', variants[game.category]);
+  if(game.history.first().fen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+    params.set('f', game.history.first().fen);
+  params.set('g', moves);
+  const url = `${getBaseUrl()}?${params.toString()}`;
+  
   const dialogHtml = `
   <div class="position-relative">
     <input type="text" class="share-game-input form-control" value="${url}" style="padding-right: 2.5rem;" spellcheck="false" readonly>

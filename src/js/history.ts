@@ -1523,8 +1523,6 @@ export class History {
   }
 
   public encode(): string {
-    const SupportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
-    
     const writer = new BitWriter();
 
     let hEntry = this.first();
@@ -1622,8 +1620,6 @@ export class History {
   }
 
   public decode(movesStr: string): boolean {
-    const supportedCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard', 'crazyhouse', 'bughouse', 'losers', 'wild/fr', 'wild/0', 'wild/1', 'wild/2', 'wild/3', 'wild/4', 'wild/5', 'wild/8', 'wild/8a'];
-
     let base64 = movesStr
       .replace(/-/g, '+')
       .replace(/_/g, '/');
@@ -1652,8 +1648,10 @@ export class History {
       const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category, hEntry.variantData);
       const index = reader.readMax(numLegalMoves);
       const move = legalMoveIndexToMove(index, hEntry.fen, dests, category, hEntry.variantData);
-      if(!move)
+      if(!move) {
+        this.goto(this.first());
         return false;
+      }
       const parsed = parseMove(hEntry.fen, move, startFen, category, hEntry.variantData);
       let wtime = hEntry.wtime;
       let btime = hEntry.btime;
@@ -1672,6 +1670,7 @@ export class History {
       }
       hEntry = this.add(parsed.move, parsed.fen, false, wtime, btime);
     }
+    this.goto(this.first());
 
     return true;
   }
