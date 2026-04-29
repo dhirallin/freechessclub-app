@@ -40,6 +40,7 @@ export class Users {
     });
 
     $('#users-modal').on('shown.bs.modal', () => {
+      this.startRequestUsersTimer();
       $('#add-friend-input').val('');
       $('#friends-table tr').removeClass('highlighted');
     });

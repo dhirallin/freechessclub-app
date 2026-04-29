@@ -1102,7 +1102,7 @@ export class Tournaments {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
-                <div class="pane-status" id="blitztourney-play-game-status" style="display: none"></div>
+                <div class="pane-status" id="blitztourney-play-game-status" style="display: none; max-width: 400px;"></div>
                 <div class="tournament-players tournament-table-container" class="mb-1">
                   <table class="table table-sm table-borderless table-striped modal-table tournament-table">
                     <thead>
