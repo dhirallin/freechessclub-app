@@ -6365,6 +6365,7 @@ function updateGamePreserved(game: Game, preserved?: boolean) {
   }
 }
 
+/** Create and display a share game URL */
 $('#game-share').on('click', () => {
   const game = games.focused;
   const moves = game.history.encode();  

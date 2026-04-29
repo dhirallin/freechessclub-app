@@ -1522,6 +1522,22 @@ export class History {
     this.setMetatags({Opening: hEntry.opening.name, ECO: hEntry.opening.eco});
   }
 
+  /**
+   * Encodes the move list and clock times into a URL safe base64 string. Only the main line is included.
+   * The data is packed into a bit stream. The encoding format is as follows:
+   * // Starting clocks
+   * [white_starting_clock:Varint] // White's starting time in seconds
+   * [black_starting_clock:Varint] // Black's starting time in seconds
+   * // clock encoding flags (only for a timed game).
+   * [has_increment:1-bit] // Whether there are any moves in the game with a time gain (i.e. due to increment)
+   * [clock_diff_fast_path_bits:3-bits] // number of bits to use for the fast-path for encoding clock times
+   * [number_of_moves:10-bits] // the number of moves in the game (maximum 1023)
+   * // For each move. Clocks for each move are stored as time diffs from the previous move in seconds, e.g. if the user took 1s, we store 1.
+   * [legal_move_index:num_legal_moves] // An index out of the number of legal moves for the position
+   * [clock_diff_control_bit:1-bit] // 0 if the clock diff can fit into the clock_diff_fast_path, otherwise 1 to store in escape varint. 
+   *                                // If clock_diff_fast_path_bits is 0 then there is no control bit here and all clock diffs are stored as Varints
+   * [clock_diff:(fast_path_bits or Varint)] If has_increment is 1, then we store as a zigzag encoding in order to account for negative clock diffs
+   */
   public encode(): string {
     const writer = new BitWriter();
 
@@ -1530,13 +1546,14 @@ export class History {
     const category = this.game.category;
 
     const untimed = !hEntry.wtime && !hEntry.btime;
-    writer.writeVarint(hEntry.wtime / 1000);
-    writer.writeVarint(hEntry.btime / 1000);
+    writer.writeVarint(hEntry.wtime / 1000); // White's starting clock in seconds
+    writer.writeVarint(hEntry.btime / 1000); // Black's starting clock in seconds
 
     let smallTimeBits = 0;
     let clockDiffs = [];
     if(!untimed) {
       let hasIncrement = false;
+      // Calculate clock diffs between moves
       while(hEntry.next) {
         let clockDiff: number;
         if(hEntry.turnColor === 'w') 
@@ -1549,24 +1566,29 @@ export class History {
         hEntry = hEntry.next;
       }
 
+      // If the game has an increment (any time gain between moves) then use a zigzag encoding for clock diffs
       if(hasIncrement)
         clockDiffs = clockDiffs.map(diff => zigzagEncode(diff));
 
-      writer.write(Number(hasIncrement), 1);
+      writer.write(Number(hasIncrement), 1); // encode has_increment flag
 
       const timesEncodingCost = (diffs: number[], bits: number): number => {
         return diffs.reduce((sum, diff) => {
-          if(bits === 0)
+          // If 0 bits used for fast-path (typical for long time controls) then all clock diffs are
+          // stored in Varint of at least 8 bits and no control bit is used. 
+          if(bits === 0) 
             return sum + 8;
           
-          let max = (1 << bits) - 1;
+          let max = (1 << bits) - 1; // The maximum value for this number of bits
           const cost = (diff <= max) 
-            ? bits + 1
-            : 9;
+            ? bits + 1 // diff fits into fast-path -- bits + 1 control bit
+            : 9; // diff doesn't fit into fast-path -- 8 bits for Varint + 1 control bit
           return sum + cost;
         }, 0);
       };
 
+      // Calculate the cost of encoding clock diffs using different encoding schemes and pick the cheapest.
+      // i.e. how many bits to use for fast-path, 0-6 bits.
       let bestTimesCost = Infinity;
       for(let i = 0; i < 7; i++) {
         const cost = timesEncodingCost(clockDiffs, i);
@@ -1576,41 +1598,40 @@ export class History {
         }
       }
 
-      writer.write(smallTimeBits, 3);
+      writer.write(smallTimeBits, 3); // encode clock_diff_fast_path_bits
     }
-    else 
-      writer.write(0, 4);
 
-    const smallTimeMax = (1 << smallTimeBits) - 1;
+    const smallTimeMax = (1 << smallTimeBits) - 1; // The largest clock diff that can fit in the fast-path
 
     hEntry = this.first();
     const numMoves = Math.min(this.length(), 1023);
-    writer.writeMax(numMoves, 1023);
+    writer.writeMax(numMoves, 1023); // encode number of moves, max 1023
 
+    // encode each move with clock diff
     for(let i = 0; i < numMoves; i++) {
       const move = hEntry.next.move;
-      const dests = toDests(hEntry.fen, startFen, category, hEntry.variantData);
-      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category, hEntry.variantData);
-      const legalMoveIndex = moveToLegalMoveIndex(move, hEntry.fen, dests, category, hEntry.variantData);
-      writer.writeMax(legalMoveIndex, numLegalMoves);
+      const dests = toDests(hEntry.fen, startFen, category, hEntry.variantData); 
+      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category, hEntry.variantData); // count all legal moves including promotions and piece placements (crazyhouse/bughouse)
+      const legalMoveIndex = moveToLegalMoveIndex(move, hEntry.fen, dests, category, hEntry.variantData); // get this move's index out of all legal moves
+      writer.writeMax(legalMoveIndex, numLegalMoves); // encode legal move index
       if(!untimed) {
-        if(smallTimeBits > 0) {
-          if(clockDiffs[i] <= smallTimeMax) {
-            writer.write(0, 1);
+        if(smallTimeBits > 0) { // use fast-path
+          if(clockDiffs[i] <= smallTimeMax) { // encode clock diff in fast-path
+            writer.write(0, 1); // control bit
             writer.writeMax(clockDiffs[i], smallTimeMax);
           }
-          else {
-            writer.write(1, 1);
+          else { // encode clock diff in escape varint
+            writer.write(1, 1); // control bit
             writer.writeVarint(clockDiffs[i]);
           }
         }
-        else 
+        else // no fast-path
           writer.writeVarint(clockDiffs[i]);
       }
       hEntry = hEntry.next;
     }
 
-    const bytes = writer.finish();
+    const bytes = writer.finish(); // flush the writer
     const base64 = btoa(String.fromCharCode(...bytes));
     const urlSafe = base64
       .replace(/\+/g, '-')
@@ -1637,9 +1658,9 @@ export class History {
     this.updateClockTimes(hEntry, wInitialTime, bInitialTime);
     const untimed = !hEntry.wtime && !hEntry.btime;
 
-    const hasIncrement = Boolean(reader.read(1));
-    const smallTimeBits = reader.read(3);
-    const smallTimeMax = (1 << smallTimeBits) - 1;
+    const hasIncrement = untimed ? false : Boolean(reader.read(1));
+    const smallTimeBits = untimed ? 0 : reader.read(3);
+    const smallTimeMax = untimed ? 0 : (1 << smallTimeBits) - 1;
 
     const numMoves = reader.readMax(1023); 
 
