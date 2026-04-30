@@ -4874,6 +4874,11 @@ function playMaiaMove(game: Game, policy: [string, number][], value: number) {
   playComputerBestMove(game, candidates[candidates.length - 1][0], String(value));
 }
 
+/**
+ * Shows a progress bar while the Maia weights file is downloading
+ * @param game The game we are attempting to start
+ * @param progress A percentage value between 0 and 100
+ */
 function downloadMaiaProgress(game: Game, progress: number) {
   if(progress === 100) {
     $('#download-maia-dialog').remove();
@@ -5531,14 +5536,20 @@ function hasInviteParams(): boolean {
   return params.has('invite') || params.has('seek');
 }
 
+/**
+ * Check if the URL search params contains a shared game 
+ */
 function hasSharedGameParams(): boolean {
   const params = new URLSearchParams(window.location.search);
   return params.has('g');
 }
 
+/**
+ * Loads a game from a URL that was created with Share Game button 
+ */
 function initSharedGameFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  const gameParam = params.get('g');
+  const gameParam = params.get('g'); // encoded move list
   if(!gameParam)
     return null;
   const game = games.focused;
@@ -6368,7 +6379,7 @@ function updateGamePreserved(game: Game, preserved?: boolean) {
 /** Create and display a share game URL */
 $('#game-share').on('click', () => {
   const game = games.focused;
-  const moves = game.history.encode();  
+  const moves = game.history.encode(); // Encode moves as a URL safe string
   
   const variants = {
     'atomic': 'x',

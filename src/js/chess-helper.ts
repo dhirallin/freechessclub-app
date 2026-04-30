@@ -1183,18 +1183,37 @@ export function isPromotion(fen: string, from: string, to: string): boolean {
   return false;
 }; 
 
+/**
+ * Get the number of legal moves in the position specified by fen, including unique promotions and piece placements for crazyhouse/bughouse
+ * @param fen the position to check
+ * @param dests legal moves returned by toDests (not including promotions or piece placements)
+ * @param category the variant
+ * @param variantData variant data for the position
+ * @returns number of legal moves
+ */
 export function getNumLegalMoves(fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: Partial<VariantData>): number {
   return moveToLegalMoveIndex(null, fen, dests, category, variantData);
 }
 
+/**
+ * Get a unique index for the specified move out of all legal moves in the position specified by fen,
+ * including all possible promotions and piece placements
+ * @param fen the position to check
+ * @param dests legal moves returned by toDests (not including promotions or piece placements)
+ * @param category variant
+ * @param variantData variant data for the position
+ * @returns an index
+ */
 export function moveToLegalMoveIndex(move: { from: string, to: string, piece?: string, promotion?: string }, fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: Partial<VariantData>): number {
   const promotionTypes = ['q', 'r', 'b', 'n', 'k'];
   const numPromotionTypes = category === 'suicide' ? 5 : 4;
 
+  // check if this move is a promotion or not
   let promotion = null;
   if(move && isPromotion(fen, move.from, move.to))
     promotion = move.promotion || 'q';
   
+  // get index if move is a regular move or promotion
   let index = 0;
   for(const [from, arr] of dests) {
     if(from !== move?.from && !isPromotion(fen, from, null)) {
@@ -1252,10 +1271,19 @@ export function moveToLegalMoveIndex(move: { from: string, to: string, piece?: s
   return move ? -1 : index;
 }
 
+/**
+ * Get the move corresponding to the specified index out of all legal moves in the position specified by fen.
+ * @param fen the position to check
+ * @param dests legal moves returned by toDests (not including promotions or piece placements)
+ * @param category variant
+ * @param variantData variant data for the position
+ * @returns a move object
+ */
 export function legalMoveIndexToMove(moveIndex: number, fen: string, dests: Map<string, string[]>, category = 'standard', variantData?: Partial<VariantData>): { from: string, to: string, piece?: string, promotion?: string } {
   const promotionTypes = ['q', 'r', 'b', 'n', 'k'];
   const numPromotionTypes = category === 'suicide' ? 5 : 4;
   
+  // get move when index is a regular move or promotion
   let index = 0;
   for(const [from, arr] of dests) {
     if(moveIndex >= index + arr.length && !isPromotion(fen, from, null)) {

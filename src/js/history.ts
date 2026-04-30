@@ -1640,6 +1640,12 @@ export class History {
     return urlSafe;
   }
 
+  /**
+   * Decodes the move list from the provided encoded string and sets it as this
+   * History's move list. See encode() for enncoding format. 
+   * @param movesStr the string to decode
+   * @returns true if decode succeeds, otherwise false
+   */
   public decode(movesStr: string): boolean {
     let base64 = movesStr
       .replace(/-/g, '+')
@@ -1653,21 +1659,21 @@ export class History {
     const startFen = hEntry.fen;
     const category = this.game.category;
 
-    const wInitialTime = reader.readVarint() * 1000;
-    const bInitialTime = reader.readVarint() * 1000;
+    const wInitialTime = reader.readVarint() * 1000; // White's initial time, converted back to ms
+    const bInitialTime = reader.readVarint() * 1000; // Black's initial time, converted back to ms
     this.updateClockTimes(hEntry, wInitialTime, bInitialTime);
     const untimed = !hEntry.wtime && !hEntry.btime;
 
     const hasIncrement = untimed ? false : Boolean(reader.read(1));
-    const smallTimeBits = untimed ? 0 : reader.read(3);
-    const smallTimeMax = untimed ? 0 : (1 << smallTimeBits) - 1;
+    const smallTimeBits = untimed ? 0 : reader.read(3); // Number of fast-path bits for each clock diff
+    const smallTimeMax = untimed ? 0 : (1 << smallTimeBits) - 1; // Maximum clock diff that can fit in the fast-path
 
     const numMoves = reader.readMax(1023); 
 
     for(let i = 0; i < numMoves; i++) {
       const dests = toDests(hEntry.fen, startFen, category, hEntry.variantData);
-      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category, hEntry.variantData);
-      const index = reader.readMax(numLegalMoves);
+      const numLegalMoves = getNumLegalMoves(hEntry.fen, dests, category, hEntry.variantData); // count all legal moves including promotions and piece placements (crazyhouse/bughouse)
+      const index = reader.readMax(numLegalMoves); // read in the legal move index
       const move = legalMoveIndexToMove(index, hEntry.fen, dests, category, hEntry.variantData);
       if(!move) {
         this.goto(this.first());
@@ -1677,12 +1683,12 @@ export class History {
       let wtime = hEntry.wtime;
       let btime = hEntry.btime;
       if(!untimed) {
-        const smallTime = smallTimeBits > 0 && !Boolean(reader.read(1));
+        const smallTime = smallTimeBits > 0 && !Boolean(reader.read(1)); // read clock diff control bit
         let clockDiff = smallTime 
-          ? reader.readMax(smallTimeMax)
-          : reader.readVarint();
+          ? reader.readMax(smallTimeMax) // read clock diff from fast-path
+          : reader.readVarint(); // read clock diff from escape
         if(hasIncrement)
-          clockDiff = zigzagDecode(clockDiff);
+          clockDiff = zigzagDecode(clockDiff); 
 
         if(hEntry.turnColor === 'w') 
           wtime -= (clockDiff * 1000);
@@ -1696,6 +1702,9 @@ export class History {
     return true;
   }
 
+  /**
+   * Gets the opening name for the specified move
+   */
   public async getOpening(hEntry: HEntry = this.current()) {    
     const fetchOpenings = async () => {
       const inputFilePath = 'assets/data/openings.tsv';
@@ -1722,7 +1731,7 @@ export class History {
     };
   
     if(!History.openings && !History.fetchOpeningsPromise) {
-      History.fetchOpeningsPromise = fetchOpenings();
+      History.fetchOpeningsPromise = fetchOpenings(); // lazy load the opening names database
     }
     await History.fetchOpeningsPromise;
   
