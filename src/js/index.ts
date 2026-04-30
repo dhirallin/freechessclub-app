@@ -4876,13 +4876,13 @@ function playMaiaMove(game: Game, policy: [string, number][], value: number) {
 
 function downloadMaiaProgress(game: Game, progress: number) {
   if(progress === 100) {
-    $('#download-maia-progress').remove();
+    $('#download-maia-dialog').remove();
     return;
   }
 
-  if(progress === 0 && !$('#download-maia-progress').length) {
+  if(progress === 0 && !$('#download-maia-dialog').length) {
     const msg = `
-      <div class="center w-100" style="height: 50px">
+      <div id="download-maia-progress" class="center w-100" style="height: 50px">
         <div class="progress h-100 w-100">
           <div class="progress-bar" role="progressbar" aria-label="Downloading Maia" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
         </div>
@@ -4898,7 +4898,7 @@ function downloadMaiaProgress(game: Game, progress: number) {
       btnFailure: [abortHandler, 'Abort'],
       htmlMsg: true
     });
-    dialog.attr('id', 'download-maia-progress');
+    dialog.attr('id', 'download-maia-dialog');
   }
   
   $('#download-maia-progress .progress-bar')
