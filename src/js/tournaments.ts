@@ -1104,7 +1104,7 @@ export class Tournaments {
               <div class="modal-body">
                 <div class="pane-status" id="blitztourney-play-game-status" style="display: none; max-width: 400px;"></div>
                 <div class="tournament-table-container" class="mb-1">
-                  <table id="blitztourney-play-game-table" class="table table-sm table-borderless table-striped modal-table">
+                  <table id="blitztourney-play-game-table" class="table table-sm table-borderless table-striped modal-table tournament-table">
                     <thead>
                       <tr>
                         <th scope="col">Opponent</th>
