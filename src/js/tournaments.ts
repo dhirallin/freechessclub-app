@@ -1094,7 +1094,7 @@ export class Tournaments {
       if(this.blitzTourneyRemainingID === this.selectedBlitzTourney)
         awaiting.resolve('blitztourney-remaining');
       if(!$('#blitztourney-play-game-modal').length) {
-        const modal = $(`<div id="blitztourney-play-game-modal" class="modal fade tournament-table-modal" tabindex="-1">
+        const modal = $(`<div id="blitztourney-play-game-modal" class="modal fade" tabindex="-1">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
               <div class="modal-header">
@@ -1103,8 +1103,8 @@ export class Tournaments {
               </div>
               <div class="modal-body">
                 <div class="pane-status" id="blitztourney-play-game-status" style="display: none; max-width: 400px;"></div>
-                <div class="tournament-players tournament-table-container" class="mb-1">
-                  <table class="table table-sm table-borderless table-striped modal-table tournament-table">
+                <div class="tournament-table-container" class="mb-1">
+                  <table id="blitztourney-play-game-table" class="table table-sm table-borderless table-striped modal-table">
                     <thead>
                       <tr>
                         <th scope="col">Opponent</th>
@@ -1156,7 +1156,12 @@ export class Tournaments {
 
         cell = row.insertCell();   
         cell.classList.add('text-center');
-        cell.innerHTML = remaining;
+        let remainingHtml = '';
+        if(remaining.includes('white'))
+          remainingHtml += '<div class="color-box" style="border: 1px solid currentColor; background-color: white;"></div>';
+        if(remaining.includes('black'))
+          remainingHtml += '<div class="color-box" style="border: 1px solid currentColor; background-color: black;"></div>';
+        cell.innerHTML = remainingHtml;
 
         cell = row.insertCell();
         cell.classList.add('text-center', 'status-col');
