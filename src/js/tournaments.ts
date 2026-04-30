@@ -1075,23 +1075,26 @@ export class Tournaments {
       return false;
     }
 
+    // Add blitztourney cards from 'finger Blitztourneys'
     if(/^\s*Finger of BlitzTourneys\(TD\):/m.test(msg) && awaiting.resolve('finger-blitztourneys')) {
       this.parseBlitzTourneys(msg);
       return true;
     }
 
+    // Response to Join/Withdraw button on cards for future blitztourneys
     match = msg.match(/^:Congrats. You \(\w+\) have been (added to|removed from) the list for future tournaments of '(.*?)' (\w+)\./m);
     if(match && awaiting.resolve('blitztourney-interested')) {
-      const id = `${match[2]}${match[3] !== 'Chess' ? ` ${match[3]}` : ''}`
+      const id = `${match[2]}${match[3] !== 'Chess' ? ` ${match[3]}` : ''}` // the tourney id, e.g. '3 0'
       const interested = match[1] === 'added to';
       this.updateBlitzTourney(id, { interested });
       return false;
     }
 
+    // Response to 't blitztourneys remaining' triggered by 'Play Game' button on Blitztourneys cards
     match = msg.match(/^:Remaining games for tourney #(\d+) \(.*?\), YOU \S+ need to play:/m);
     if(match && awaiting.has('blitztourney-remaining')) {
-      this.blitzTourneyRemainingID = match[1];
-      if(this.blitzTourneyRemainingID === this.selectedBlitzTourney)
+      this.blitzTourneyRemainingID = match[1]; // Keep track of which tournament ID we are currently parsing
+      if(this.blitzTourneyRemainingID === this.selectedBlitzTourney) // Check that the id matches the triggering tournament card
         awaiting.resolve('blitztourney-remaining');
       if(!$('#blitztourney-play-game-modal').length) {
         const modal = $(`<div id="blitztourney-play-game-modal" class="modal fade" tabindex="-1">
@@ -1130,6 +1133,8 @@ export class Tournaments {
       return true;
     }
 
+    // A 'Remaining opponent' returned by 't blitztourneys remaining'. Note these are split across multiple
+    // server messages, so we need to keep track of which tournament ID we are currently parsing.
     if(this.blitzTourneyRemainingID === this.selectedBlitzTourney && $('#blitztourney-play-game-modal').length) {
       const tbody = $('#blitztourney-play-game-modal').find('tbody')[0];
       
@@ -1146,14 +1151,16 @@ export class Tournaments {
         wasMatch = true;
         const remaining = m[1];
         const opponent = m[2];
-        const opponentNoTitle = opponent.split('(')[0];
-        const status = this.userList.find(u => u.name.toLowerCase() === opponentNoTitle.toLowerCase())?.status || 'x';
+        const opponentNoTitle = opponent.split('(')[0]; // remove title
+        const status = this.userList.find(u => u.name.toLowerCase() === opponentNoTitle.toLowerCase())?.status || 'x'; // get user status (offline/playing etc) from userlist
 
+        // Opponent name column
         const row = tbody.insertRow();     
         row.setAttribute('data-opponent', opponentNoTitle);
         let cell = row.insertCell();
         cell.innerHTML = `<span class="tournament-table-name clickable-user">${opponent}</span>`; 
 
+        // Games remaining column, display a white square for game as white remaining, black square for game as black
         cell = row.insertCell();   
         cell.classList.add('text-center');
         let remainingHtml = '';
@@ -1163,12 +1170,14 @@ export class Tournaments {
           remainingHtml += '<div class="color-box" style="border: 1px solid currentColor; background-color: black;"></div>';
         cell.innerHTML = remainingHtml;
 
+        // User status
         cell = row.insertCell();
         cell.classList.add('text-center', 'status-col');
         if(status === 'x')
           cell.classList.add('offline');
         cell.innerHTML = users.userStatusCodeToName(status);
 
+        // Challenge link
         cell = row.insertCell();
         cell.classList.add('text-center');
         cell.innerHTML = `<a class="blitztourney-challenge" href="javascript:void(0)" onClick="sessionSend('t blitztourneys game ${opponentNoTitle} ${tourneyData.type}')">Challenge</a>`;
@@ -1177,6 +1186,10 @@ export class Tournaments {
     }
   }
   
+  /**
+   * Display reason for failed match requests, such as from 'Challenge' in the 
+   * BlitzTourneys, 'Play Game' modal. E.g. '<name> is currently playing a game.'
+   */
   public handleCommandError(msg: string): boolean {
     if($('#blitztourney-play-game-modal').hasClass('show')) {
       if(msg.startsWith(':Too frequent'))
