@@ -748,7 +748,7 @@ export class Tournaments {
                 </div>
                 <div class="modal-body">
                   <div class="tournament-players tournament-table-container" class="mb-1">
-                    <table class="table table-sm table-borderless table-striped modal-table tournament-table">
+                    <table class="table table-sm table-borderless table-striped table-standard tournament-table">
                       <thead>
                         <tr>
                           <th scope="col" class="text-end">Seed</th>
@@ -895,7 +895,7 @@ export class Tournaments {
                 </div>
                 <div class="modal-body">
                   <div class="tournament-standings tournament-table-container" class="mb-1">
-                    <table class="table table-sm table-borderless table-striped modal-table tournament-table">
+                    <table class="table table-sm table-borderless table-striped table-standard tournament-table">
                       <thead>
                         <tr>
                           <th scope="col" class="text-end">Pos</th>
@@ -1003,7 +1003,7 @@ export class Tournaments {
                 </div>
                 <div class="modal-body">
                   <div class="tournament-games tournament-table-container" class="mb-1">
-                    <table class="table table-sm table-borderless table-striped modal-table tournament-table">
+                    <table class="table table-sm table-borderless table-striped table-standard tournament-table">
                       <thead>
                         <tr>
                           <th scope="col" class="text-end">Board</th>
@@ -1117,7 +1117,7 @@ export class Tournaments {
                 <div class="modal-body">
                   <div class="pane-status" id="blitztourney-play-game-status" style="display: none; max-width: 400px;"></div>
                   <div class="tournament-table-container" class="mb-1">
-                    <table id="blitztourney-play-game-table" class="table table-sm table-borderless table-striped modal-table tournament-table">
+                    <table id="blitztourney-play-game-table" class="table table-sm table-borderless table-striped table-standard tournament-table">
                       <thead>
                         <tr>
                           <th scope="col">Opponent</th>
@@ -2244,7 +2244,7 @@ export class Tournaments {
           </div>
           <div class="modal-body">
             <div class="tournament-standings tournament-table-container" class="mb-1">
-              <table class="table table-sm table-borderless table-striped modal-table tournament-table">
+              <table class="table table-sm table-borderless table-striped table-standard tournament-table">
                 <thead>
                   <tr>
                     <th scope="col" class="text-end">Pos</th>
@@ -2319,7 +2319,7 @@ export class Tournaments {
           </div>
           <div class="modal-body">
             <div class="tournament-games tournament-table-container" class="mb-1">
-              <table class="table table-sm table-borderless table-striped modal-table tournament-table">
+              <table class="table table-sm table-borderless table-striped table-standard tournament-table">
                 <thead>
                   <tr>
                     <th scope="col">Time</th>
