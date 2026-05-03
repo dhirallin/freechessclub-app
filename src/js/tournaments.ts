@@ -1090,43 +1090,56 @@ export class Tournaments {
       return false;
     }
 
+    // When uses presses 'Play Game' button if all game completed.
+    match = msg.match(/^:Congrats!\s+You've completed all your games for tourney '#(\d+)'/m);
+    if(match && (awaiting.has('blitztourney-remaining') || $('#blitztourney-play-game-modal').length)) {
+      if(match[1] === this.selectedBlitzTourney) {
+        awaiting.resolve('blitztourney-remaining');
+        showDialog({ type: 'No games remaining', msg: 'Congrats! You\'ve completed all your games for this tourney'});
+      }
+      return true;
+    }
+
     // Response to 't blitztourneys remaining' triggered by 'Play Game' button on Blitztourneys cards
     match = msg.match(/^:Remaining games for tourney #(\d+) \(.*?\), YOU \S+ need to play:/m);
-    if(match && (awaiting.resolve('blitztourney-remaining') || $('#blitztourney-play-game-modal').length)) {
+    if(match && (awaiting.has('blitztourney-remaining') || $('#blitztourney-play-game-modal').length)) {
       this.blitzTourneyRemainingID = match[1]; // Keep track of which tournament ID we are currently parsing
-      if(!$('#blitztourney-play-game-modal').length) {
-        const modal = $(`<div id="blitztourney-play-game-modal" class="modal fade" tabindex="-1">
-          <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title">Remaining Games</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                <div class="pane-status" id="blitztourney-play-game-status" style="display: none; max-width: 400px;"></div>
-                <div class="tournament-table-container" class="mb-1">
-                  <table id="blitztourney-play-game-table" class="table table-sm table-borderless table-striped modal-table tournament-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Opponent</th>
-                        <th scope="col" class="text-center">Games</th>
-                        <th scope="col" class="text-center">Status</th>
-                        <th scope="col" class="text-center"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                  </table>
+      if(this.blitzTourneyRemainingID === this.selectedBlitzTourney) {
+        awaiting.resolve('blitztourney-remaining');
+        if(!$('#blitztourney-play-game-modal').length) {
+          const modal = $(`<div id="blitztourney-play-game-modal" class="modal fade" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Remaining Games</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="pane-status" id="blitztourney-play-game-status" style="display: none; max-width: 400px;"></div>
+                  <div class="tournament-table-container" class="mb-1">
+                    <table id="blitztourney-play-game-table" class="table table-sm table-borderless table-striped modal-table tournament-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Opponent</th>
+                          <th scope="col" class="text-center">Games</th>
+                          <th scope="col" class="text-center">Status</th>
+                          <th scope="col" class="text-center"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>`);        
-        modal.on('hidden.bs.modal', () => {
-          users.stopRequestUsersTimer();
-          removeWithPoppers(modal);
-        });
-        modal.appendTo('body').modal('show');   
+          </div>`);        
+          modal.on('hidden.bs.modal', () => {
+            users.stopRequestUsersTimer();
+            removeWithPoppers(modal);
+          });
+          modal.appendTo('body').modal('show');   
+        }
       }
       return true;
     }
@@ -1181,13 +1194,6 @@ export class Tournaments {
         cell.innerHTML = `<a class="blitztourney-challenge" href="javascript:void(0)" onClick="sessionSend('t blitztourneys game ${opponentNoTitle} ${tourneyData.type}')">Challenge</a>`;
       }
       return wasMatch;
-    }
-
-    // When uses presses 'Play Game' button if all game completed.
-    match = msg.match(/^:Congrats!\s+You've completed all your games for tourney '#(\d+)'/m);
-    if(match && awaiting.resolve('blitztourney-remaining')) {
-      showDialog({ type: 'No games remaining', msg: 'Congrats! You\'ve completed all your games for this tourney'});
-      return true;
     }
   }
   
