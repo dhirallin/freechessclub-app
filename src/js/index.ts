@@ -7692,15 +7692,7 @@ $('#left-panel-bottom').on('click', (e) => {
 
 function showStatusPanel() {
   showPanel('#left-panel-bottom');
-  slideUpStatusPanel();
-}
-
-function hideStatusPanel() {
-  slideDownStatusPanel();
-  stopEngine();
-}
-
-function slideUpStatusPanel() {
+  
   if($('#left-panel-bottom-content').is(':visible'))
     return;
 
@@ -7721,7 +7713,7 @@ function slideUpStatusPanel() {
   $('#left-panel').height(leftPanelHeight - leftBottomHeight);
 }
 
-function slideDownStatusPanel() {
+function hideStatusPanel() {
   if(!$('#left-panel-bottom-content').is(':visible'))
     return;
 
@@ -7734,6 +7726,7 @@ function slideDownStatusPanel() {
     $('#left-panel-bottom-content').css('transition', '');
     $('#left-panel-bottom-content').hide();
     $('#left-panel').css('transition', '');
+    stopEngine();
   });
   const leftBottomHeight = $('#left-panel-bottom-content').height();
   const leftPanelHeight = $('#left-panel').height();
