@@ -7693,7 +7693,6 @@ $('#left-panel-bottom').on('click', (e) => {
 function showStatusPanel() {
   showPanel('#left-panel-bottom');
   slideUpStatusPanel();
-  initStatusPanel();
 }
 
 function hideStatusPanel() {
@@ -7713,6 +7712,7 @@ function slideUpStatusPanel() {
   $('#left-panel-bottom-content').one('transitionend', () => {
     $('#left-panel-bottom-content').css('transition', '');
     $('#left-panel').css('transition', '');
+    initStatusPanel();
   });
   $('#left-panel-bottom-content').show();
   $('#left-panel-bottom-content').css('height', '');
