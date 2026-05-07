@@ -326,6 +326,10 @@ cg-board {
   background-color: rgba(0, 0, 0, 0.05);
 }
 
+#close-status {
+  color: color-mix(in srgb, var(--fg-color) 50%, white 50%);
+}
+
 .premove-target::before {
   color: white;
 }

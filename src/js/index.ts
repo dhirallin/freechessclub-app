@@ -7681,8 +7681,33 @@ function initStatusPanel() {
   }
 }
 
+$('#left-panel-bottom').on('click', (e) => {
+  if(!$('#left-panel-bottom-content').is(':visible'))
+    showStatusPanel();
+  else {
+    if(!$(e.target).closest('#left-panel-bottom-content').length && !$(e.target).closest('.nav-item').length)
+      hideStatusPanel();
+  }
+});
+
 function showStatusPanel() {
   showPanel('#left-panel-bottom');
+  slideUpStatusPanel();
+  initStatusPanel();
+}
+
+function hideStatusPanel() {
+  slideDownStatusPanel();
+  stopEngine();
+}
+
+function slideUpStatusPanel() {
+  if($('#left-panel-bottom-content').is(':visible'))
+    return;
+
+  $('#close-status-icon').removeClass('fa-angle-up');
+  $('#close-status-icon').addClass('fa-angle-down');
+
   $('#left-panel-bottom-content').css('transition', 'height 0.35s ease');
   $('#left-panel').css('transition', 'height 0.35s ease');
   $('#left-panel-bottom-content').one('transitionend', () => {
@@ -7694,13 +7719,15 @@ function showStatusPanel() {
   const leftBottomHeight = $('#left-panel-bottom-content').data('original-height');
   const leftPanelHeight = $('#left-panel').height();
   $('#left-panel').height(leftPanelHeight - leftBottomHeight);
-  initStatusPanel();
 }
 
-function hideStatusPanel() {
-  $('#show-status-panel').text('Status/Analysis');
-  $('#show-status-panel').attr('title', 'Show Status Panel');
-  $('#show-status-panel').show();
+function slideDownStatusPanel() {
+  if(!$('#left-panel-bottom-content').is(':visible'))
+    return;
+
+  $('#close-status-icon').removeClass('fa-angle-down');
+  $('#close-status-icon').addClass('fa-angle-up');
+
   $('#left-panel-bottom-content').css('transition', 'height 0.35s ease');
   $('#left-panel').css('transition', 'height 0.35s ease');
   $('#left-panel-bottom-content').one('transitionend', () => {
@@ -7713,7 +7740,6 @@ function hideStatusPanel() {
   $('#left-panel-bottom-content').data('original-height', leftBottomHeight);
   $('#left-panel-bottom-content').height(0);
   $('#left-panel').height(leftPanelHeight + leftBottomHeight);
-  stopEngine();
 }
 
 /**

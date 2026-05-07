@@ -844,8 +844,8 @@ body {
 @media (min-width: 768px) {
   #close-status {
     font-size: 20px;
-    top: 9px;
-    right: 3px;
+    top: 5px;
+    right: 9px;
     line-height: 0px;
     padding: 0px;
   }

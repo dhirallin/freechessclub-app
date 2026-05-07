@@ -397,6 +397,10 @@ a {
   background-color: rgba(0, 0, 0, 0.05);
 }
 
+#close-status {
+  color: color-mix(in srgb, var(--fg-color) 50%, black 50%);
+}
+
 .btn-close {
   filter: invert(1) grayscale(100%) brightness(200%);
 }
