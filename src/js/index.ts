@@ -850,7 +850,7 @@ function setLeftColumnSizes() {
   // set height of left menu panel inside collapsable
   if (boardHeight) {
     if($('#left-panel').height() === 0)
-      $('#left-panel-bottom').css('height', '');
+      $('#left-panel-bottom-content').css('height', '');
 
     if(Utils.isSmallWindow())
       $('#left-panel').css('height', ''); // Reset back to CSS defined height
@@ -862,7 +862,7 @@ function setLeftColumnSizes() {
       // If we've made the left panel height as small as possible, reduce size of status panel instead
       // Note leftPanelHeight is negative in that case
       if(leftPanelHeight < 0)
-        $('#left-panel-bottom').height($('#left-panel-bottom').height() + leftPanelHeight);
+        $('#left-panel-bottom-content').height($('#left-panel-bottom-content').height() + leftPanelHeight);
     }
 
     seekGraph.update();
@@ -7668,7 +7668,7 @@ function initStatusPanel() {
     $('#close-status').hide();
     hideAnalysis();
   }
-  else if($('#left-panel-bottom').is(':visible')) {
+  else if($('#left-panel-bottom-content').is(':visible')) {
     if(games.focused.analyzing)
       showAnalysis();
     else
@@ -7681,8 +7681,23 @@ function initStatusPanel() {
   }
 }
 
+let firstTime = false;
 function showStatusPanel() {
-  showPanel('#left-panel-bottom');
+  if(firstTime) 
+    showPanel('#left-panel-bottom');
+  if(!firstTime) {
+    $('#left-panel-bottom-content').css('transition', 'height 0.35s ease');
+    $('#left-panel').css('transition', 'height 0.35s ease');
+    $('#left-panel-bottom-content').one('transitionend', () => {
+      $('#left-panel-bottom-content').css('transition', '');
+      $('#left-panel').css('transition', '');
+    });
+    $('#left-panel-bottom-content').show();
+    $('#left-panel-bottom-content').css('height', '');
+    const leftBottomHeight = $('#left-panel-bottom-content').outerHeight();
+    const leftPanelHeight = $('#left-panel').height();
+    $('#left-panel').height(leftPanelHeight - leftBottomHeight);
+  }
   initStatusPanel();
 }
 
@@ -7690,8 +7705,18 @@ function hideStatusPanel() {
   $('#show-status-panel').text('Status/Analysis');
   $('#show-status-panel').attr('title', 'Show Status Panel');
   $('#show-status-panel').show();
+  $('#left-panel-bottom-content').css('transition', 'height 0.35s ease');
+  $('#left-panel').css('transition', 'height 0.35s ease');
+  $('#left-panel-bottom-content').one('transitionend', () => {
+    $('#left-panel-bottom-content').css('transition', '');
+    $('#left-panel-bottom-content').hide();
+    $('#left-panel').css('transition', '');
+  });
+  const leftBottomHeight = $('#left-panel-bottom-content').outerHeight();
+  const leftPanelHeight = $('#left-panel').height();
+  $('#left-panel-bottom-content').height(0);
+  $('#left-panel').height(leftPanelHeight + leftBottomHeight);
   stopEngine();
-  hidePanel('#left-panel-bottom');
 }
 
 /**
@@ -8255,14 +8280,14 @@ $('#close-status').on('click', () => {
 });
 
 function showAnalyzeButton() {
-  if($('#left-panel-bottom').is(':visible')) {
+  if($('#left-panel-bottom-content').is(':visible')) {
     $('#show-status-panel').text('Analyze');
     $('#show-status-panel').attr('title', 'Analyze Game');
   }
 
   if(!$('#engine-tab').is(':visible') && Engine.categorySupported(games.focused.category))
     $('#show-status-panel').show();
-  else if($('#left-panel-bottom').is(':visible'))
+  else if($('#left-panel-bottom-content').is(':visible'))
     $('#show-status-panel').hide();
 }
 

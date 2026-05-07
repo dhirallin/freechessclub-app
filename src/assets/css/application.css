@@ -194,8 +194,10 @@ body {
   height: 200px;
 }
 #left-panel-bottom {
-  height: 192px;
   width: 100%;
+}
+#left-panel-bottom-content {
+  height: 160px;
 }
 
 .chat-text strong.mine {
