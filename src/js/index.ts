@@ -929,6 +929,7 @@ function setLeftColumnSizes(redrawBoard = true) {
   
     seekGraph.update();
     resizeExplorer();
+    History.scroller.fixScroll();
   }
 }
 
@@ -1461,7 +1462,7 @@ function gameStart(game: Game) {
       gameType = 'Observing';
     game.element.find('.title-bar-text').text(`Game ${game.id} (${gameType})`);
     const gameStatus = game.statusElement.find('.game-status');
-    if(gameStatus.text())
+    if(gameStatus.html())
       gameStatus.prepend(`<span class="game-id">Game ${game.id}: </span>`);
   }
   else if(game.role === Role.PLAYING_COMPUTER)
@@ -1489,7 +1490,7 @@ function gameStart(game: Game) {
     activeInviteDialog = null;
   }
   game.statusElement.find('.game-watchers').empty();
-  game.statusElement.find('.opening-name').hide();
+  game.statusElement.find('.game-watchers').hide();
 
   if(game.isPlaying() || game.isExamining()) {
     clearMatchRequests();
@@ -1636,6 +1637,8 @@ function gameStart(game: Game) {
     showTab($('#pills-game-tab'));
     if(game.role !== Role.NONE)
       showStatusPanel();
+    else
+      hideStatusPanel();
   }
   if(game.isPlayingOnline())
     $('.tournament-table-modal').modal('hide');
@@ -2005,6 +2008,7 @@ function handleMiscMessage(data: any) {
         }
       }
       game.statusElement.find('.game-watchers').html(req);
+      game.statusElement.find('.game-watchers').toggle(!!req);
       return;
     }
     chat.newMessage('console', data);
@@ -2446,7 +2450,7 @@ function handleMiscMessage(data: any) {
         game.element.find('.white-status .rating').text(game.wrating);
         game.element.find('.black-status .rating').text(game.brating);
 
-        const time = initialTime === '0' && increment === '0' ? '' : ` ${initialTime} ${increment}`;
+        const time = initialTime === '0' && increment === '0' ? '' : ` ${initialTime}\u00A0${increment}`;
 
         const statusMsg = `<span class="game-id">Game ${id}: </span>${wname} (${wrating}) ${bname} (${brating}) `
           + `${rated} ${game.category}${time}`;
@@ -2568,6 +2572,7 @@ function handleMiscMessage(data: any) {
       game.category = match[7];
 
       let status = match[0].substring(match[0].indexOf(':') + 1);
+      status = status.replace(/ (?=[^ ]*$)/, '\u00A0');
       if(game.role !== Role.NONE)
         status = `<span class="game-id">Game ${game.id}: </span>${status}`;
       showStatusMsg(game, status);
@@ -3358,9 +3363,6 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
     game.history.display(game.history.last(), false);
     return;
   }
-
-  // Show 'Analyze' button once any moves have been made on the board
-  showAnalyzeButton();
 
   if(game.setupBoard)
     return;
@@ -4336,6 +4338,7 @@ function cleanupGame(game: Game) {
   game.watchersInterval = null;
   game.watchers = [];
   game.statusElement.find('.game-watchers').empty();
+  game.statusElement.find('.game-watchers').hide();
 
   game.id = null;
   game.partnerGameId = null;
@@ -4849,7 +4852,7 @@ function playComputer(params: any) {
     wname = computerName;
 
   const time = params.playerTime === 0 && params.playerInc === 0
-    ? '' : ` ${params.playerTime} ${params.playerInc}`;
+    ? '' : ` ${params.playerTime}\u00A0${params.playerInc}`;
   const gameType = params.gameType !== 'Standard' ? ` ${params.gameType}` : '';
 
   const statusMsg = `${wname} vs. ${bname}${gameType}${time}`;
@@ -5683,6 +5686,7 @@ function initSharedGameFromUrl() {
     metatags.TimeControl = `${+splitTime[0] * 60}+${splitTime[1]}`  
   }
   updateGameFromMetatags(game);
+  showPanel($('#left-panel-bottom'));
   game.history.decode(gameParam);
   game.history.display();
 }
@@ -7065,7 +7069,6 @@ function newGame(createNewBoard: boolean, game?: Game, category = 'untimed', fen
   }
   Object.assign(game, data);
   game.statusElement.find('.game-status').html('');
-  game.statusElement.find('.info-panel-status').show();
   gameStart(game);
 
   return game;
@@ -7249,6 +7252,7 @@ async function parseGameFiles(game: Game, gameFileStrings: string[], createNewBo
 
   if(game.historyList.length) 
     setCurrentHistory(game, 0); // Display the first game from the PGN file(s)
+  showPanel($('#left-panel-bottom'));
 }
 
 /**
@@ -7295,6 +7299,7 @@ async function loadPGN(pgnStr: string, game?: Game) {
   game = newGame(createNewBoard, game);
   game.history.setMetatags(pgn.tags, true);
   updateGameFromMetatags(game);
+  showPanel($('#left-panel-bottom'));
   parsePGNVariation(game, pgn.moves);
   game.history.goto(game.history.first());
 
@@ -7427,13 +7432,12 @@ function updateGameFromMetatags(game: Game) {
           else {
             const match = metatags.TimeControl.match(/^(\d+)(?:\+(\d+))?$/);
             if(match)
-              status += ` ${+match[1] / 60} ${match[2] || '0'}`;
+              status += ` ${+match[1] / 60}\u00A0${match[2] || '0'}`;
           }
         }
       }
 
-      game.statusElement.find('.info-panel-status').hide();
-      game.statusElement.find('.game-status').text(status);
+      game.statusElement.find('.game-status').html(status);
     }
   }
 }
@@ -7758,6 +7762,7 @@ function cloneGame(game: Game): Game {
   clonedGame.history = game.history.clone(clonedGame);
   clonedGame.history.display();
   clonedGame.statusElement.find('.game-watchers').empty();
+  clonedGame.statusElement.find('.game-watchers').hide();
   clonedGame.statusElement.find('.game-id').remove();
 
   scrollToBoard(clonedGame);
@@ -8180,6 +8185,8 @@ $('#left-panel-bottom').on('click', (e) => {
  * @param animate If true the panel slides up, if false it pops up immediately
  */
 function showStatusPanel(animate = false) { 
+  showPanel($('#left-panel-bottom'));
+
   $('#close-status-icon').removeClass('fa-angle-up');
   $('#close-status-icon').addClass('fa-angle-down');
 
@@ -8264,6 +8271,14 @@ function hideStatusPanel(animate = false) {
     $('#left-panel-bottom').addClass('minimized');
     hidePanel('#left-panel-bottom-content');
   }
+
+  if(!infoPanelHasContent())
+    hidePanel('#left-panel-bottom');  
+}
+
+function infoPanelHasContent() {
+  return $('#left-panel-bottom').hasClass('analyzing') 
+    || games.focused.statusElement.find('.game-status').html()
 }
 
 /**
@@ -8333,21 +8348,24 @@ async function showOpeningName(game: Game) {
   
   while(!hEntry.opening) {
     if(!hEntry.move) {
-      game.statusElement.find('.opening-name').text('');
-      game.statusElement.find('.opening-name').hide();
-      if(game === games.focused && !isStart) 
-        $('#explorer-opening-name').text('');
+      if(game === games.focused) {
+        $('#game-opening-name').text('');
+        $('#game-opening-name').hide();
+        if(!isStart) 
+          $('#explorer-opening-name').text('');
+      }  
       return;
     }
     hEntry = hEntry.prev;
   }
-
-  game.statusElement.find('.info-panel-status').hide();
-  game.statusElement.find('.opening-name').text(hEntry.opening.name);
-  game.statusElement.find('.opening-name').show();
-  if(game === games.focused && !isStart) {
-    $('#explorer-opening-name').text(hEntry.opening.name);
-    $('#explorer-opening-name').removeClass('starting-pos');
+  if(game === games.focused) {
+    $('#game-opening-name').text(hEntry.opening.name);
+    $('#game-opening-name').show();
+    History.scroller.fixScroll();
+    if(!isStart) {
+      $('#explorer-opening-name').text(hEntry.opening.name);
+      $('#explorer-opening-name').removeClass('starting-pos');
+    }
   }
 }
 
@@ -8371,6 +8389,7 @@ function showAnalysis() {
     $('#engine-pvs').append('<li>&nbsp;</li>');
   $('#engine-pvs').css('white-space', (settings.engineLines === 1 ? 'normal' : 'nowrap'));
   games.focused.analyzing = true;
+  $('#left-panel-bottom').addClass('analyzing');
 
   if(currentStatusTab && currentStatusTab.attr('id') !== 'eval-graph-tab')
     currentStatusTab.tab('show');
@@ -8385,6 +8404,9 @@ function hideAnalysis() {
   closeLeftBottomTab($('#eval-graph-tab'));
   showAnalyzeButton();
   games.focused.analyzing = false;
+  $('#left-panel-bottom').removeClass('analyzing');
+  if(!infoPanelHasContent())
+    hidePanel($('#left-panel-bottom'));
   games.focused.currentStatusTab = null;
 }
 
@@ -8394,10 +8416,8 @@ function initAnalysis(game: Game) {
     stopEvalEngine();
 
     if(game.category) {
-      if(Engine.categorySupported(game.category)) {
-        if(game.id || game.history.length())
-          showAnalyzeButton();
-      }
+      if(Engine.categorySupported(game.category)) 
+        showAnalyzeButton();
       else
         hideAnalysis();
     }
