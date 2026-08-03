@@ -88,6 +88,7 @@ type InviteGameInfo = {
   updatedAt: number;
 };
 
+let appReady: boolean = false; // Has onDeviceReady finished 
 let engine: Engine | null;
 let evalEngine: EvalEngine | null;
 let playEngine: Engine | MaiaEngine | null;
@@ -182,13 +183,6 @@ let followedTarget: string | null = null;
 (window as any).sessionSend = (cmd: string) => {
   session.send(cmd);
 };
-
-/** Request persistent storage for indexedDB */
-if(navigator.storage?.persist) {
-  const persisted = await navigator.storage.persisted();
-  if(!persisted)
-    await navigator.storage.persist();
-}
 
 function updateFollowedUserStatus() {
   const stopFollowButton = $('#follow-stop-btn');
@@ -562,6 +556,9 @@ async function onDeviceReady() {
   }, 0);
 
   Utils.initDropdownSubmenus();
+  document.addEventListener('visibilitychange', updateForegroundServiceState);
+
+  appReady = true;
 
   credential = new CredentialStorage();
   const hasInvite = hasInviteParams();
@@ -735,40 +732,68 @@ $(document).on("keydown", (e) => {
 /**
  * Fix scroll position when focusing input-text in mobile browsers.
  * Android Capacitor handles IME resizing natively; manually scrolling the footer
- * there fights the WebView resize and can move the composer to the top.
+ * there fights the WebView resize and can move the composer to the top. The app's resize handler 
+ * was also fighting IME. Now resizing is disabled while the keyboard is opening/open.
  */
+let keyboardOpen = false;
+let inputTextOpenedKeyboard = false;
+
 let lastViewPortHeight = window.visualViewport.height;
-let inputTextFocused = false;
 window.visualViewport.addEventListener('resize', () => {
   const newHeight = window.visualViewport.height;
   const heightDiff = newHeight - lastViewPortHeight;
   if(Utils.isSmallWindow()) {
-    if(heightDiff < -100) {
-      setTimeout(() => {
-        if($('#input-text').is(':focus')) {
-          inputTextFocused = true;
-          if(!Utils.isAndroidCapacitor()) {
-            $('body').css('padding-bottom', 0);
-            setTimeout(() => {
-              $('#right-panel-footer')[0].scrollIntoView({ behavior: 'instant', block: 'end' });
-            }, 0);
-          }
-        }
-      }, 50);
+    if(heightDiff < -100 && isInputFocused()) {
+      keyboardOpen = true;
+      inputTextOpenedKeyboard = $('#input-text').is(':focus');
     }
-    else if(heightDiff > 100) {
-      if(inputTextFocused) {
-        inputTextFocused = false;
-        $('body').css('padding-bottom', '');
-        setRightColumnSizes();
-        setTimeout(() => {
-          $(document.scrollingElement).scrollTop(document.scrollingElement.scrollHeight);
-        }, 50);
+    else if(heightDiff > 100 && !isInputFocused()) {
+      keyboardOpen = false;
+      if(inputTextOpenedKeyboard) {
+        inputTextOpenedKeyboard = false;
+        waitForSafeAreaRestoration().then(() => { 
+          setRightColumnSizes();
+          Utils.scrollToBottom(false);
+        });
       }
     }
   }
   lastViewPortHeight = newHeight;
 });
+
+/**
+ * Returns true if any editable element currently has focus 
+ */
+function isInputFocused() {
+  return document.activeElement?.matches(
+    'input, textarea, [contenteditable="true"]'
+  );
+}
+
+let originalBottomPadding = null;
+$('input, textarea, [contenteditable="true"]').on('focus', function() {
+  originalBottomPadding = $('#content').css('padding-bottom');
+});
+/**
+ * When the on-screen keyboard is shown, the bottom safe area padding is removed.
+ * When the keyboard closes, we need to wait for the bottom padding to be added back
+ * so that we can scroll to the bottom afterwards.
+ * @returns a Promise that resolves when the bottom safe area is restored
+ */
+async function waitForSafeAreaRestoration(): Promise<void> {
+  return new Promise(resolve => {
+    let count = 0;    
+    function check() {
+      if(count > 10 || !originalBottomPadding || $('#content').css('bottom-padding') === originalBottomPadding) {
+        resolve();
+        return;
+      }
+      count++;
+      requestAnimationFrame(check);
+    }
+    check();
+  });
+}
 
 /**
  * Temporary fix for a bug in bootstrap when closing modals. Bootstrap sets aria-hidden on the modal
@@ -814,6 +839,9 @@ console.log = (...args) => {
  *******************************/
 
 $(window).on('resize', () => {
+  if(!appReady || keyboardOpen || (Utils.isSmallWindow() && isInputFocused()))
+    return;
+
   if(!$('#mid-col').hasClass('d-none')) {
     if(Utils.isSmallWindow() && layout !== Layout.Mobile)
       useMobileLayout();
@@ -830,6 +858,9 @@ $(window).on('resize', () => {
 });
 
 function setPanelSizes(redrawBoard = true) {
+  if(!appReady)
+    return;
+
   // Reset player status panels that may have been previously slimmed down on single column screen
   const maximizedGame = games.getMainGame();
   const maximizedGameCard = maximizedGame.element;
@@ -844,17 +875,17 @@ function setPanelSizes(redrawBoard = true) {
   // Make sure the board is smaller than the window height and also leaves room for the other columns' min-widths
   if(!Utils.isSmallWindow()) {
     const scrollBarWidth = Utils.getScrollbarWidth();
-    const scrollBarVisible = (window.innerWidth - window.visualViewport.width) > 1;
+    const scrollBarVisible = $('#app')[0].offsetWidth - $('#app')[0].clientWidth > 0;
     const scrollBarReservedArea = (scrollBarVisible ? 0 : scrollBarWidth);
-    const viewportWidth = window.visualViewport.width;
+    const contentWidth = $('#content').innerWidth();
 
     // Set board width a bit smaller in order to leave room for a scrollbar on <body>. This is because
     // we don't want to resize all the panels whenever a dropdown or something similar overflows the body.
     const rightColWidth = ($('#right-col').is(':visible') && !$('body').hasClass('chat-hidden'))
       ? parseFloat($('#right-col').css('min-width')) : 0;
     const cardMaxWidth = Utils.isMediumWindow() // display 2 columns on md (medium) display
-      ? viewportWidth - $('#left-col').outerWidth() - scrollBarReservedArea
-      : viewportWidth - $('#left-col').outerWidth() - rightColWidth - scrollBarReservedArea;
+      ? contentWidth - $('#left-col').outerWidth() - scrollBarReservedArea
+      : contentWidth - $('#left-col').outerWidth() - rightColWidth - scrollBarReservedArea;
 
     const cardMaxHeight = $(window).height() - Utils.getRemainingHeight(maximizedGameCard);
     setGameCardSize(maximizedGame, cardMaxWidth, cardMaxHeight);
@@ -872,8 +903,7 @@ function setPanelSizes(redrawBoard = true) {
       + Math.round(parseFloat($('#left-card').css('border-bottom-width')))
       + Math.round(parseFloat($('#right-card').css('border-top-width')));
     const playerStatusBorder = maximizedGameCard.find('.top-panel').outerHeight() - maximizedGameCard.find('.top-panel').height();
-    const safeAreas = $('body').innerHeight() - $('body').height();
-    let playerStatusHeight = ($(window).height() - safeAreas - $('#board-card').outerHeight(true) - $('#left-panel-footer').outerHeight() - $('#right-panel-header').outerHeight() - cardBorders) / 2 - playerStatusBorder;
+    let playerStatusHeight = ($(window).height() - Utils.safeAreaHeight() - $('#board-card').outerHeight(true) - $('#left-panel-footer').outerHeight() - $('#right-panel-header').outerHeight() - cardBorders) / 2 - playerStatusBorder;
     playerStatusHeight = Math.min(Math.max(playerStatusHeight, originalStatusHeight - 20), originalStatusHeight);
 
     topPanel.height(playerStatusHeight);
@@ -891,11 +921,11 @@ function setPanelSizes(redrawBoard = true) {
 
   // Adjust Notifications drop-down width
   if(Utils.isSmallWindow())
-    $('#notifications').css('width', '100%');
+    $('#notifications').css('width', 'calc(100% - var(--safe-area-width)');
   else if(Utils.isMediumWindow() || !$('#collapse-chat').hasClass('show'))
-    $('#notifications').css('width', '50%');
-  else if(Utils.isLargeWindow())
-    $('#notifications').width($(document).outerWidth(true) - $('#left-col').outerWidth(true) - $('#mid-col').outerWidth(true));
+    $('#notifications').css('width', 'calc(50% - var(--safe-area-width)');
+  else if(Utils.isLargeWindow()) 
+    $('#notifications').width($('#app').outerWidth(true) - Utils.safeAreaWidth() - $('#left-col').outerWidth(true) - $('#mid-col').outerWidth(true));
 
   if(redrawBoard)
     setTimeout(() => { games.getMainGame()?.board?.redrawAll(); }, 0);
@@ -904,6 +934,9 @@ function setPanelSizes(redrawBoard = true) {
 }
 
 function setLeftColumnSizes(redrawBoard = true) {
+  if(!appReady)
+    return;
+
   const boardHeight = $('#main-board-area .board').innerHeight();
 
   // set height of left menu panel inside collapsable
@@ -973,6 +1006,9 @@ function setGameCardSize(game: Game, cardMaxWidth?: number, cardMaxHeight?: numb
 }
 
 function setRightColumnSizes() {
+  if(!appReady)
+    return;
+
   const chatVisible = !$('body').hasClass('chat-hidden') && $('#collapse-chat').hasClass('show');
   const boardHeight = $('#main-board-area .board').innerHeight();
 
@@ -1105,10 +1141,7 @@ function useMobileLayout() {
 function useDesktopLayout() {
   layout = Layout.Desktop;
 
-  if(!$('#collapse-chat').hasClass('show')) {
-    $('#collapse-chat').addClass('show');
-    $('#collapse-chat').trigger('show.bs.collapse');
-  }
+  chat?.showChatInstantly();
 
   setPanelHeaderOrder(false);
   moveLeftPanelSetupBoard();
@@ -3341,7 +3374,7 @@ function squareSelected(square: string) {
 /**
  * Scroll to the game board which currently has focus
  */
-export function scrollToBoard(game?: Game) {
+export function scrollToBoard(game?: Game, smooth = true) {
   if(Utils.isSmallWindow()) {
     if(!game || game.element.parent().attr('id') === 'main-board-area') {
       if($('#collapse-chat').hasClass('show')) {
@@ -3349,10 +3382,10 @@ export function scrollToBoard(game?: Game) {
         return;
       }
       const windowHeight = window.visualViewport ? window.visualViewport.height : $(window).height();
-      Utils.safeScrollTo($('#right-panel-header').offset().top + $('#right-panel-header').outerHeight() + parseFloat($('body').css('padding-bottom')) - windowHeight);
+      Utils.safeScrollTo($('#right-panel-header').offset().top + $('#right-panel-header').outerHeight() + parseFloat($('#content').css('padding-bottom')) - windowHeight, smooth);
     }
     else
-      Utils.safeScrollTo(game.element.offset().top);
+      Utils.safeScrollTo(game.element, smooth);
   }
 }
 
@@ -6231,12 +6264,12 @@ let explorerShrunk = true;
 $('#explorer-shrink-grow').on('click', () => {
   explorerShrunk = !explorerShrunk;
   if(explorerShrunk) {
-    $('#explorer-shrink-grow-icon').removeClass('fa-angle-up');
-    $('#explorer-shrink-grow-icon').addClass('fa-angle-down');
-  }
-  else {
     $('#explorer-shrink-grow-icon').removeClass('fa-angle-down');
     $('#explorer-shrink-grow-icon').addClass('fa-angle-up');
+  }
+  else {
+    $('#explorer-shrink-grow-icon').removeClass('fa-angle-up');
+    $('#explorer-shrink-grow-icon').addClass('fa-angle-down');
   }
   $('#left-panel').toggleClass('shrunk-explorer-showing', explorerShrunk);
 });
@@ -6686,6 +6719,24 @@ function createMoveContextMenu(cmEvent: any) {
 
   const coords = Utils.getTouchClickCoordinates(cmEvent);
   Utils.createContextMenu(contextMenu, coords.x, coords.y, moveContextMenuItemSelected, moveContextMenuClose);
+}
+
+/** 
+ * Show 'Game Tools' context menu when right-clicking player status bars above/below the board or 
+ * a game's title bar.
+*/
+Utils.createContextMenuTrigger((event) => {
+  const target = $(event.target);
+  return !!(target.closest('.player-status, .game-card .title-bar, .setup-board').length 
+      && !target.closest('.name, button, piece, .captured-piece').length
+      && event.type === 'contextmenu');
+}, createGameToolsContextMenu);
+
+function createGameToolsContextMenu(cmEvent: any) {
+  $('#more-game-tools').dropdown('hide');
+  const contextMenu = $('#more-game-tools-menu');
+  const coords = Utils.getTouchClickCoordinates(cmEvent);
+  Utils.createContextMenu(contextMenu, coords.x, coords.y, null, null, null, null, true);
 }
 
 /**
@@ -8286,7 +8337,7 @@ function infoPanelHasContent() {
  */
 function scrollToLeftPanelBottom() {
   if(Utils.isSmallWindow())
-    Utils.safeScrollTo($('#left-panel-bottom').offset().top);
+    Utils.safeScrollTo($('#left-panel-bottom'));
 }
 
 $('#left-panel-bottom').on('shown.bs.tab', '.nav-link', (e) => {
@@ -9189,7 +9240,7 @@ function initSettings() {
   History.initSettings();
 }
 
-$('#flip-toggle').on('click', () => {
+$('#flip-toggle, #game-tools-flip-board').on('click', () => {
   flipBoard(games.focused);
 });
 
