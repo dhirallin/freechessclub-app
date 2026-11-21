@@ -3646,14 +3646,9 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
       game.pendingMoves.push(game.history.current());
 
     if(game.linkedGame && !linkedMove) {
-      const equivLinkedMove = getEquivalentLinkedMove(prevHEntry.fen, currentGameMove(game.linkedGame).fen, parsedMove.move);
-      if(equivLinkedMove) {
-        if(parsedMove.move.flags?.includes('c') === equivLinkedMove.flags?.includes('c')
-            && prevHEntry.turnColor === currentGameMove(game.linkedGame).turnColor)
-          movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, game.linkedGame, true);
-        else
-          addPremove(game.linkedGame, equivLinkedMove, prevHEntry.turnColor);
-      }
+      const equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, currentGameMove(game.linkedGame).fen, parsedMove.move);
+      if(equivLinkedMove) 
+        movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, game.linkedGame, true);
     }
   }
 
@@ -4890,31 +4885,20 @@ export function gotoLinkedMove(to: HEntry) {
   gotoMove(linkedCurr, false, linkedGame, true);
 }
 
-function getEquivalentLinkedMove(origFen: string, linkedFen: string, move: any): any { 
+function findEquivalentLinkedMove(origFen: string, linkedFen: string, move: any): any { 
   const origPos = new ChessHelper.Position(origFen);
   const from = move.from;
   const to = move.to;
   const linkedPos = new ChessHelper.Position(linkedFen);
-  const origFromPiece = origPos.get(move.from);
-  const equivMove = { ...move };
+  const origPiece = origPos.get(move.from);
 
-  const origToPiece = origPos.get(move.to);
-  const isOrigCapture = origToPiece && origToPiece.color !== origFromPiece.color;
-  const linkedToPiece = linkedPos.get(move.to);
-  const isLinkedCapture = linkedToPiece && linkedToPiece.color !== origFromPiece.color;
-
-  if(isOrigCapture && !isLinkedCapture)
-    equivMove.flags = equivMove.flags.replace('c', '');
-  else if(!isOrigCapture && isLinkedCapture)
-    equivMove.flags += 'c';
-
-  const linkedFromPiece = linkedPos.get(move.from);
-  if(linkedFromPiece && linkedFromPiece.type === origFromPiece.type && linkedFromPiece.color === origFromPiece.color)
-    return equivMove;
+  const linkedPiece = linkedPos.get(move.from);
+  if(linkedPiece && linkedPiece.type === origPiece.type && linkedPiece.color === origPiece.color)
+    return move;
 
   for(const sq of ChessHelper.Position.SQUARES) {
     const piece = linkedPos.get(sq);
-    if(!piece || piece.type !== origFromPiece.type || piece.color !== origFromPiece.color)
+    if(!piece || piece.type !== origPiece.type || piece.color !== origPiece.color)
       continue;
 
     const op = origPos.get(sq);
@@ -4922,6 +4906,7 @@ function getEquivalentLinkedMove(origFen: string, linkedFen: string, move: any):
       continue;
 
     if(ChessHelper.isReachable(sq, to, piece.type, piece.color)) {
+      const equivMove = { ...move };
       equivMove.from = sq;
       return equivMove;
     }
