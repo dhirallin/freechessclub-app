@@ -27,6 +27,7 @@ export class HEntry {
   public moveListCellElement: any;
   public opening: any;
   public variantData: Partial<VariantData> = {};
+  public linkAnchor: HEntry | null;
   private _next: HEntry;
   private _prev: HEntry;
   private _parent: HEntry;
@@ -616,7 +617,7 @@ export class History {
       }
     }
 
-    // Check whether the move is a continuation following the currnet move
+    // Check whether the move is a continuation following the current move
     for(const s of this.currEntry.subvariations) {
       if(isMatching(s.fen))
         return s;
