@@ -3642,11 +3642,16 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
   }
 
   if(parsedMove && parsedMove.move) {
+    if(game.linkedGame && !linkedMove) {
+      cancelMultiplePremoves(game);
+      gotoLinkedMove(game.history.current());
+    }
+
     movePieceAfter(game, move, fen, false);
     if(game.isExamining()) 
       game.pendingMoves.push(game.history.current());
 
-    if(game.linkedGame && !linkedMove) {
+    if(game.linkedGame && !linkedMove) {   
       const equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, currentGameMove(game.linkedGame).fen, parsedMove.move);
       if(equivLinkedMove) {
         const pieceMoved = movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, game.linkedGame, true);
