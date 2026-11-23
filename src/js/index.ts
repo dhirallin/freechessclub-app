@@ -42,6 +42,7 @@ import {
 import type { AndroidNotificationAction, AndroidNotificationTarget } from './android';
 import './ui';
 import packageInfo from '../../package.json';
+import { createSecureServer } from 'http2';
 
 export const enum Layout {
   Desktop = 0,
@@ -3311,7 +3312,7 @@ export function updateBoard(game: Game, playMove = false, setBoard = true, anima
 
   if(setBoard && !game.setupBoard) {   
     // Display premoves (when multiple premoves setting enabled)
-    if(game.premoves.length && game.history.current() === game.history.last()) {
+    if(game.premoves.length && (!game.isPlaying() || game.history.current() === game.history.last())) {
       fen = game.premoves[game.premoves.length - 1].fen;
 
       for(let i = 0; i < game.premoves.length; i++) {
@@ -3652,6 +3653,8 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
         game.history.current().linkAnchor = game.linkedGame.history.current();
         if(pieceMoved) 
           game.linkedGame.history.current().linkAnchor = game.history.current();
+        else 
+          game.history.current().linkPremove = true;
       }
     }
   }
@@ -4872,7 +4875,7 @@ export function gotoLinkedMove(to: HEntry) {
     curr = curr.prev;
   }
 
-  let backNum = curr.visited;
+  let backNum = curr?.visited ?? 0;
   if(!linkedCurr)
     linkedCurr = curr.lastLinked || linkedGame.history.current();
 
@@ -4897,7 +4900,18 @@ export function gotoLinkedMove(to: HEntry) {
     linkedCurr = nextEntry;
   }
   
+  cancelMultiplePremoves(linkedGame);
+
   gotoMove(linkedCurr, false, linkedGame, true);
+
+  const premoves = [];
+  curr = to;
+  while(curr?.linkPremove) {
+    premoves.push(curr);
+    curr = curr.prev;
+  }
+  for(let i = premoves.length - 1; i >= 0; i--)
+    addPremove(linkedGame, premoves[i].move, ChessHelper.swapColor(premoves[i].turnColor));
 }
 
 function findEquivalentLinkedMove(origFen: string, linkedFen: string, move: any): any { 
