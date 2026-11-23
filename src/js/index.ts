@@ -4839,25 +4839,32 @@ export function gotoLinkedMove(to: HEntry) {
   if(!to && to !== game.history.current())
     return;
 
-  let linkedCurr = linkedGame ? linkedGame.history.current() : null;
   let from = game.history.current();
 
   let curr = from;
 
   let index = 0;
+  let lastLinked: HEntry | null;
+
   while(curr) {
-    curr.visited = index;
-    curr = curr.prev;
-    index++;
     if(curr.linkAnchor) {
-      linkedCurr = curr.linkAnchor;
+      lastLinked = curr.linkAnchor;
       index = 0;
     }
+    curr.visited = index;
+    curr.lastLinked = lastLinked;
+
+    curr = curr.prev;
+    index++;
   }
+
+  let linkedCurr: HEntry | null;
+
   const path = [];
   curr = to;
   while(curr && curr.visited === undefined) {
     if(curr.linkAnchor) {
+      curr.visited = 0;
       linkedCurr = curr.linkAnchor;
       break;
     }
@@ -4866,6 +4873,9 @@ export function gotoLinkedMove(to: HEntry) {
   }
 
   let backNum = curr.visited;
+  if(!linkedCurr)
+    linkedCurr = curr.lastLinked || linkedGame.history.current();
+
   if(backNum > 0) {
     while(backNum && linkedCurr.prev) {
       linkedCurr = linkedCurr.prev;
@@ -4875,6 +4885,7 @@ export function gotoLinkedMove(to: HEntry) {
 
   while(from) {
     from.visited = undefined;
+    from.lastLinked = undefined;
     from = from.prev;
   }
 
@@ -8525,7 +8536,7 @@ function unlinkGame(game: Game) {
   $('#game-link-boards').prop('checked', false);
 
   game.history.traverse((entry: HEntry) => entry.linkAnchor = null);
-  game.linkedGame.history.traverse((entry: HEntry) => entry.linkAnchor = null));
+  game.linkedGame.history.traverse((entry: HEntry) => entry.linkAnchor = null);
 
   game.linkedGame.linkedGame = null;
   game.linkedGame = null;
