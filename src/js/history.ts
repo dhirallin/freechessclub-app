@@ -377,6 +377,9 @@ export class History {
 
       this.removeMoveTableElement(c);
       this.removeMoveListElement(c);
+
+      if(c.linkAnchor)
+        c.linkAnchor.linkAnchor = undefined;
     }, entry);
 
     entry.remove();
