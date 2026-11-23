@@ -3563,6 +3563,25 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
     piece: isSourcePieceName ? pieceRole : undefined,
   };
 
+  if(linkedMove) {
+    const orig = game.linkedGame.history.current();
+    const origIsCapture = !!orig.move?.flags?.includes('c'); 
+    const turnColor = ChessHelper.swapColor(orig.turnColor);
+
+    const linkedPos = new ChessHelper.Position(prevHEntry.fen);
+    const linkedToPiece = linkedPos.get(inMove.to);
+    const linkedIsCapture = !!linkedToPiece && linkedToPiece.color !== turnColor;
+
+    console.log('origIsCapture:', origIsCapture);
+    console.log('linkedIsCapture:', linkedIsCapture);
+
+    if(origIsCapture !== linkedIsCapture) {
+      addPremove(game, inMove, turnColor); 
+      updateBoard(game, false, true, false);
+      return;
+    }
+  }
+
   const parsedMove = parseGameMove(game, prevHEntry.fen, inMove);
   const fen = parsedMove ? parsedMove.fen : null;
   const move = parsedMove ? parsedMove.move : inMove;
@@ -3572,8 +3591,8 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
       if(premove)
         return;
 
-      const linkedMoveColor = ChessHelper.swapColor(currentGameMove(game.linkedGame).turnColor);
-      addPremove(game, inMove, linkedMoveColor); 
+      const origMoveColor = ChessHelper.swapColor(currentGameMove(game.linkedGame).turnColor);
+      addPremove(game, inMove, origMoveColor); 
     }
     
     if(premove)
@@ -3787,7 +3806,7 @@ function playPremove(game: Game) {
         const premove = game.premoves.splice(premoveIndex, 1)[0];
         const move = premove.move;
 
-        const pieceMoved = movePiece(move.from || ChessHelper.shortToLongPieceName(move.piece), move.to, null, move.piece, move.promotion, game, true, true);
+        const pieceMoved = movePiece(move.from || ChessHelper.shortToLongPieceName(move.piece), move.to, null, move.piece, move.promotion, game, !!game.linkedGame, true);
         if(!pieceMoved)
           game.premoves.splice(premoveIndex, 0, premove);
 
