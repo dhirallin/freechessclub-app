@@ -3713,7 +3713,12 @@ function movePieceAfter(game: Game, move: any, fen: string, serverIssued: boolea
     checkPremoves(game, fen); // For multiple premoves, prunes premoves that are no longer possible (e.g. the piece was captured)
 
   updateHistory(game, move, fen, serverIssued);
-  playPremove(game);
+  
+  if(serverIssued) 
+    playPremove(game);
+  else
+    setTimeout(() => { playPremove(game); }, 0);
+
   checkGameEnd(game); // Check whether game is over when playing against computer (offline mode)
 }
 
