@@ -663,10 +663,12 @@
                                 <button class="btn btn-outline-secondary btn-sm btn-transparent" id="game-clone" data-bs-toggle="tooltip" data-bs-placement="top" data-fallback-placements="left,right" title="Clone Board" data-description="Duplicate the current position onto a second board.">
                                   <span class="fa-solid fa-clone" aria-hidden="false"></span>
                                 </button>
-                                <input type="checkbox" class="btn-check" id="game-link-boards" autocomplete=" aria-checked="false">
-                                <label class="btn btn-outline-secondary btn-sm btn-transparent" for="game-link-boards" data-bs-toggle="tooltip" data-bs-placement="top" data-fallback-placements="right,left" title="Link Boards" data-description="Links two open boards. When a move is made on one board it is automatically made on the other. Engine visuals will be shown for both boards simultaneously. This is an analysis tool for comparing variations.">
-                                  <span class="fa-solid fa-link" aria-hidden="false"></span>
-                                </label>
+                                <div data-bs-toggle="tooltip" data-bs-placement="top" data-fallback-placements="right,left" title="Link Boards" data-description="Links two open boards. When a move is made on one board it is automatically made on the other. Engine visuals will be shown for both boards simultaneously. This is an analysis tool for comparing variations.">
+                                  <input type="checkbox" class="btn-check" id="game-link-boards" autocomplete=" aria-checked="false">
+                                  <label class="btn btn-outline-secondary btn-sm btn-transparent" for="game-link-boards">
+                                    <span class="fa-solid fa-link" aria-hidden="false"></span>
+                                  </label>
+                                </div>
                               </div>
                               <input type="checkbox" class="btn-check" id="game-preserved" autocomplete="off" aria-checked="false">
                               <label class="btn btn-outline-secondary btn-sm btn-transparent" for="game-preserved" data-bs-toggle="tooltip" data-bs-placement="top" title="Preserve Game" data-description="Stop this game being over-written when starting a new game.">

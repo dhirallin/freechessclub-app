@@ -108,6 +108,7 @@ export class Game extends GameData {
   lastComputerMoveEval: string = null; // Keeps track of the current eval for a game against the Computer. Used for draw offers
   partnerGameId: number = null;        // bughouse partner's game id
   linkedGame: Game = null;             // Used for Linked Mode analysis
+  clonedGame: Game = null;             // Keeps track of the last game cloned from this one
   newVariationMode = NewVariationMode.ASK;
   preserved = false;                   // if true, prevents a game/board from being overwritten
   trainingBot: TrainingBotState = null; // state for a board opened by a training bot
@@ -176,13 +177,23 @@ export class GameList {
     return this.gamelist.find(g => g.isPlayingOnline() || g.isExamining());
   }
 
-  public getFreeGame(excludeFocused = false, category?: string): Game {
-    const game = this.getMainGame();
-    if((!excludeFocused || (game !== games.focused)) && (!category || game.category === category) && game.role === Role.NONE && !game.preserved && !game.history?.editMode && !game.setupBoard)
-      return game;
+  public getFreeGame(excludeFocused = false, excludeGame?: Game, category?: string): Game {
+    const standardCategories = ['blitz', 'lightning', 'untimed', 'standard', 'nonstandard'];
 
-    return this.gamelist.find(g => (!excludeFocused || (g !== games.focused)) && (!category || g.category === category) && g.role === Role.NONE && !g.preserved && !g.history?.editMode && !g.setupBoard);
+    const isEligible = (g: Game) =>
+      (!excludeFocused || g !== games.focused) &&
+      g !== excludeGame &&
+      (!category || (standardCategories.includes(g.category) && standardCategories.includes(category)) || g.category === category) &&
+      this.isFreeGame(g);
+
+    const mainGame = this.getMainGame();
+
+    return isEligible(mainGame) ? mainGame : this.gamelist.find(isEligible);
   }
+
+  public isFreeGame(game: Game) {
+    return game.role === Role.NONE && !game.preserved && !game.history?.editMode && !game.setupBoard && !game.linkedGame;
+  } 
 
   public getComputerGame(): Game {
     return this.gamelist.find(g => g.role === Role.PLAYING_COMPUTER);

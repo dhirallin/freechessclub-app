@@ -7537,6 +7537,9 @@ function initGameTools(game: Game) {
 
     $('#game-tools-clone, #game-clone').parent().toggle(settings.multiboardToggle); // Only show 'Duplicate Game' option in multiboard mode
     $('#game-tools-clone, #game-clone-and-link .btn').toggleClass('disabled', game.isPlaying()); // Don't allow cloning of a game while playing (could allow cheating)
+   
+    $('#game-link-boards').toggleClass('disabled', !canLinkGames(game));
+    $('#game-link-boards').next().toggleClass('disabled', !canLinkGames(game));
 
     const mainGame = games.getPlayingExaminingGame();
     $('#game-tools-examine').toggleClass('disabled', (mainGame && mainGame.isPlayingOnline()) || game.isPlaying() || game.isExamining()
@@ -8542,9 +8545,13 @@ $('#game-clone, #game-tools-clone').on('click', () => {
  * The clone will not be in examine or observe mode, regardless of the original.
  */
 function cloneGame(game: Game): Game {
-  let clonedGame = games.getFreeGame(true);
+  let clonedGame = game.linkedGame;
+  if(!clonedGame)
+    clonedGame = games.getFreeGame(true);
   if(!clonedGame)
     clonedGame = createGame();
+
+  game.clonedGame = clonedGame;
 
   // Copy GameData properties
   const gameData = new GameData(); // Create temp instance in order to iterate its proeprties
@@ -8560,6 +8567,10 @@ function cloneGame(game: Game): Game {
   clonedGame.statusElement.find('.game-id').remove();
 
   scrollToBoard(clonedGame);
+
+  $('#game-link-boards').toggleClass('disabled', !canLinkGames(games.focused));
+  $('#game-link-boards').next().toggleClass('disabled', !canLinkGames(games.focused));
+
   return clonedGame;
 }
 
@@ -8581,7 +8592,11 @@ $('#game-link-boards').on('change', (e) => {
 });
 
 function linkGame(game: Game) {
-  const otherGame = games.getFreeGame(true, game.category);
+  let otherGame: Game;
+  if(game.clonedGame && games.includes(game.clonedGame) && games.isFreeGame(game.clonedGame))
+    otherGame = game.clonedGame;
+  else 
+    otherGame = games.getFreeGame(true, null, game.category);
   $('#game-link-boards').prop('checked', !!otherGame);
   if(!otherGame)
     return false;
@@ -8594,16 +8609,31 @@ function linkGame(game: Game) {
 }
 
 function unlinkGame(game: Game) {
-  if(!game.linkedGame)
-    return;
+  if(game.linkedGame) {
+    $('#game-link-boards').prop('checked', false);
 
-  $('#game-link-boards').prop('checked', false);
+    game.history.traverse((entry: HEntry) => {
+      entry.linkAnchor = null;
+      entry.linkPremove = false;
+    });
+    game.linkedGame.history.traverse((entry: HEntry) => {
+      entry.linkAnchor = null;
+      entry.linkPremove = false;
+    });
 
-  game.history.traverse((entry: HEntry) => entry.linkAnchor = null);
-  game.linkedGame.history.traverse((entry: HEntry) => entry.linkAnchor = null);
+    game.linkedGame.linkedGame = null;
+    game.linkedGame = null;
+  }
 
-  game.linkedGame.linkedGame = null;
-  game.linkedGame = null;
+  $('#game-link-boards').toggleClass('disabled', !canLinkGames(games.focused));
+  $('#game-link-boards').next().toggleClass('disabled', !canLinkGames(games.focused));
+}
+
+function canLinkGames(game: Game) {
+  console.log(SupportedCategories.includes(game.category));
+  console.log(games.getFreeGame(false, game, game.category));
+
+  return !game.linkedGame && SupportedCategories.includes(game.category) && !!games.getFreeGame(false, game, game.category);
 }
 
 /**
