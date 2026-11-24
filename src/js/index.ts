@@ -6,7 +6,7 @@
 import 'assets/css/application.css'; 
 
 import { Chessground } from 'chessground';
-import type * as PgnParser from '@mliebelt/pgn-parser';
+import * as PgnParser from '@mliebelt/pgn-parser';
 import NoSleep from '@uriopass/nosleep.js'; // Prevent screen dimming
 import * as Utils from './utils';
 import * as ChessHelper from './chess-helper';
@@ -3573,8 +3573,10 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
     const linkedIsCapture = !!linkedToPiece && linkedToPiece.color !== turnColor;
 
     if(origIsCapture !== linkedIsCapture) {
-      addPremove(game, inMove, turnColor); 
-      updateBoard(game, false, true, false);
+      if(!premove) {
+        addPremove(game, inMove, turnColor); 
+        updateBoard(game, false, true, false);
+      }
       return;
     }
   }
@@ -3895,6 +3897,14 @@ function unsetPremove() {
  * Triggered by right mouse click or long press on touch screen
  */
 function cancelMultiplePremoves(game: Game, keepPromotionPanel = false) {
+  if(game.premoves && game.linkedGame) {
+    let linked = game.linkedGame.history.current();
+    while(linked.linkPremove) {
+      linked.linkPremove = false;
+      linked = linked.prev;
+    }
+  }
+  
   game.premoves = [];
   game.premovesObserver?.disconnect();
   game.premovesObserver = null;
