@@ -3563,7 +3563,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
     piece: isSourcePieceName ? pieceRole : undefined,
   };
 
-  /*if(linkedMove) {
+  if(linkedMove) {
     const orig = game.linkedGame.history.current();
     const origIsCapture = !!orig.move?.flags?.includes('c'); 
     const turnColor = ChessHelper.swapColor(orig.turnColor);
@@ -3572,15 +3572,12 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
     const linkedToPiece = linkedPos.get(inMove.to);
     const linkedIsCapture = !!linkedToPiece && linkedToPiece.color !== turnColor;
 
-    console.log('origIsCapture:', origIsCapture);
-    console.log('linkedIsCapture:', linkedIsCapture);
-
     if(origIsCapture !== linkedIsCapture) {
       addPremove(game, inMove, turnColor); 
       updateBoard(game, false, true, false);
       return;
     }
-  }*/
+  }
 
   const parsedMove = parseGameMove(game, prevHEntry.fen, inMove);
   const fen = parsedMove ? parsedMove.fen : null;
@@ -3684,13 +3681,13 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
       }
       else if(premove) {
         const currMove = game.history.current();
-        let linkedPremove = game.linkedGame.history.prev();
+        let linked = game.linkedGame.history.current();
         let first: HEntry;
-        while(linkedPremove.linkPremove) {
-          first = linkedPremove;
-          linkedPremove.linkAnchor = currMove;          
-          linkedPremove = linkedPremove.prev;
-        }
+        do {
+          first = linked;
+          linked.linkAnchor = currMove;          
+          linked = linked.prev;
+        } while(linked.linkPremove);
         currMove.linkAnchor = first;
         first.linkPremove = false;
       }
