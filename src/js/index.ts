@@ -3835,7 +3835,7 @@ function playPremove(game: Game) {
 
             linkedMove = linkedMove.prev;
           }
-          currMove.linkAnchor = premove.linkedMove;
+          currMove.linkAnchor = first;
           premove.linkedMove.linkPremove = false;
         }        
         else
