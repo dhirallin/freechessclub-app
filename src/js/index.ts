@@ -3816,30 +3816,32 @@ function playPremove(game: Game) {
 
         const pieceMoved = movePiece(move.from || ChessHelper.shortToLongPieceName(move.piece), move.to, null, move.piece, move.promotion, game, !!game.linkedGame, true);
         if(game.linkedGame) {
-          const currMove = game.history.current();
-          let linkedMove = game.linkedGame.history.current();
-                   
-          let first: HEntry;
-          while(linkedMove) {
-            if(linkedMove.premove)
-              first = linkedMove; 
-            linkedMove = linkedMove.prev;
-          }
+          if(pieceMoved) {
+            const currMove = game.history.current();
+            let linkedMove = game.linkedGame.history.current();
+                    
+            let first: HEntry;
+            while(linkedMove) {
+              if(linkedMove.premove)
+                first = linkedMove; 
+              linkedMove = linkedMove.prev;
+            }
 
-          linkedMove = game.linkedGame.history.current();
-          while(linkedMove) {
-            linkedMove.linkAnchor = currMove;          
+            linkedMove = game.linkedGame.history.current();
+            while(linkedMove) {
+              linkedMove.linkAnchor = currMove;          
 
-            if(linkedMove === first)
-              break;
+              if(linkedMove === first)
+                break;
 
-            linkedMove = linkedMove.prev;
-          }
-          currMove.linkAnchor = first;
-          premove.linkedMove.linkPremove = false;
-        }        
-        else
-          game.premoves.splice(premoveIndex, 0, premove);
+              linkedMove = linkedMove.prev;
+            }
+            currMove.linkAnchor = first;
+            premove.linkedMove.linkPremove = false;
+          }        
+          else
+            game.premoves.splice(premoveIndex, 0, premove);
+        }
 
         if(!game.premoves.length) {
           const unfinishedPromotion = game.element.find('.promotion-panel').length;
@@ -4966,6 +4968,7 @@ export function gotoLinkedMove(to: HEntry) {
       premoves.push(curr);
     curr = curr.prev;
   }
+
   for(let i = premoves.length - 1; i >= 0; i--)
     addPremove(linkedGame, premoves[i].move, premoves[i]);
 }
