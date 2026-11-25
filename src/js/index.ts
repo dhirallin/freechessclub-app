@@ -840,6 +840,7 @@ $(document).on('mousedown', '.board', (event) => {
     const element = $(event.target).closest('.game-card');
     for(const g of games) {
       if(g.element.is(element) && g.premoves.length) {
+        removeLinkedPremoves(g);
         cancelMultiplePremoves(g);
         updateBoard(g, false, true, false);
       }
@@ -3488,6 +3489,7 @@ function squareSelected(square: string) {
 
   if(!prevPieceSelected && (!game.pieceSelected || prevSmartMove) && prevSquareSelected === square && prevSquareSelectedTime && game.squareSelectedTime - prevSquareSelectedTime < 300) {
     cancellingPremove = true;
+    removeLinkedPremoves(game);
     cancelMultiplePremoves(game);
     updateBoard(game, false, true, false);
   }
@@ -3896,15 +3898,7 @@ function unsetPremove() {
  * Cancels all premoves when multiple premoves mode is enabled 
  * Triggered by right mouse click or long press on touch screen
  */
-function cancelMultiplePremoves(game: Game, keepPromotionPanel = false) {
-  if(game.premoves && game.linkedGame) {
-    let linked = game.linkedGame.history.current();
-    while(linked.linkPremove) {
-      linked.linkPremove = false;
-      linked = linked.prev;
-    }
-  }
-  
+function cancelMultiplePremoves(game: Game, keepPromotionPanel = false) { 
   game.premoves = [];
   game.premovesObserver?.disconnect();
   game.premovesObserver = null;
@@ -4992,6 +4986,16 @@ function findEquivalentLinkedMove(origFen: string, linkedFen: string, move: any)
   }
 
   return null;
+}
+
+function removeLinkedPremoves(game: Game) {
+  if(game.premoves && game.linkedGame) {
+    let linked = game.linkedGame.history.current();
+    while(linked.linkPremove) {
+      linked.linkPremove = false;
+      linked = linked.prev;
+    }
+  }
 }
 
 function sendMove(move: any) {
