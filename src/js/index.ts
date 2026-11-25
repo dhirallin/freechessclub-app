@@ -3313,7 +3313,8 @@ export function updateBoard(game: Game, playMove = false, setBoard = true, anima
 
   if(setBoard && !game.setupBoard) {   
     // Display premoves (when multiple premoves setting enabled)
-    if(game.premoves.length && (!game.isPlaying() || game.history.current() === game.history.last())) {
+    if(game.premoves.length && ((!game.isPlaying() || game.history.current() === game.history.last())
+        /*|| game.linkedGame?.history.current().linkPremove*/ )) {
       fen = game.premoves[game.premoves.length - 1].fen;
 
       for(let i = 0; i < game.premoves.length; i++) {
@@ -3592,8 +3593,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
       if(premove)
         return;
 
-      const origMoveColor = ChessHelper.swapColor(currentGameMove(game.linkedGame).turnColor);
-      addPremove(game, inMove, origMoveColor); 
+      addPremove(game, inMove, currentGameMove(game.linkedGame)); 
     }
     
     if(premove)
@@ -3683,18 +3683,6 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
             game.history.current().linkPremove = true;
         }
       }
-      else if(premove) {
-        const currMove = game.history.current();
-        let linked = game.linkedGame.history.current();
-        let first: HEntry;
-        do {
-          first = linked;
-          linked.linkAnchor = currMove;          
-          linked = linked.prev;
-        } while(linked.linkPremove);
-        currMove.linkAnchor = first;
-        first.linkPremove = false;
-      }
     }
   }
 
@@ -3773,9 +3761,8 @@ function preMovePiece(source: any, target: any, metadata: any) {
  * Update the final premove FEN and display it on the board
  * @move a move object (with to, from, piece, promotion etc)
  */
-function addPremove(game: Game, move: any, color?: string) {
-  if(!color)
-    color = game.color;
+function addPremove(game: Game, move: any, linkedMove?: HEntry) {
+  const color = ChessHelper.swapColor(linkedMove?.turnColor || game.color);
 
   let fen = game.premoves.length ? game.premoves[game.premoves.length - 1].fen : currentGameMove(game).fen;
   fen = ChessHelper.setFENTurnColor(fen, color);
@@ -3785,7 +3772,7 @@ function addPremove(game: Game, move: any, color?: string) {
     if(!game.premoves.length) 
       createPremovesObserver(game); // Tracks chessground square DOM elements to add premove numbers to the squares
 
-    game.premoves.push({move: moveFen.move, fen: moveFen.fen, color });
+    game.premoves.push({move: moveFen.move, fen: moveFen.fen, linkedMove });
   }
   updateBoard(game, false, true, false);
 }
@@ -3800,7 +3787,8 @@ function checkPremoves(game: Game, fen: string) {
 
   for(let i = 0; i < game.premoves.length; i++) {
     const premove = game.premoves[i];
-    fen = ChessHelper.setFENTurnColor(fen, premove.color);
+    const color = ChessHelper.swapColor(premove.linkedMove?.turnColor || game.color);
+    fen = ChessHelper.setFENTurnColor(fen, color);
     let moveFen = parseGameMove(game, fen, premove.move, true);
     if(!moveFen) { // Remove impossible premove and all following premoves
       game.premoves.splice(i);
@@ -3821,13 +3809,36 @@ function playPremove(game: Game) {
   if(settings.multiplePremovesToggle || game.linkedGame) {
     const turnColor = currentGameMove(game).turnColor;
     if(!game.isPlaying() || currentGameMove(game).turnColor === game.color) {
-      const premoveIndex = game.premoves.findIndex(p => p.color === turnColor);
+      const premoveIndex = game.premoves.findIndex(p => !p.linkedMove || p.linkedMove.turnColor !== turnColor);
       if(premoveIndex !== -1) {
         const premove = game.premoves.splice(premoveIndex, 1)[0];
         const move = premove.move;
 
         const pieceMoved = movePiece(move.from || ChessHelper.shortToLongPieceName(move.piece), move.to, null, move.piece, move.promotion, game, !!game.linkedGame, true);
-        if(!pieceMoved)
+        if(game.linkedGame) {
+          const currMove = game.history.current();
+          let linkedMove = game.linkedGame.history.current();
+                   
+          let first: HEntry;
+          while(linkedMove) {
+            if(linkedMove.premove)
+              first = linkedMove; 
+            linkedMove = linkedMove.prev;
+          }
+
+          linkedMove = game.linkedGame.history.current();
+          while(linkedMove) {
+            linkedMove.linkAnchor = currMove;          
+
+            if(linkedMove === first)
+              break;
+
+            linkedMove = linkedMove.prev;
+          }
+          currMove.linkAnchor = premove.linkedMove;
+          premove.linkedMove.linkPremove = false;
+        }        
+        else
           game.premoves.splice(premoveIndex, 0, premove);
 
         if(!game.premoves.length) {
@@ -4950,12 +4961,13 @@ export function gotoLinkedMove(to: HEntry) {
 
   const premoves = [];
   curr = to;
-  while(curr?.linkPremove) {
-    premoves.push(curr);
+  while(curr) {
+    if(curr.linkPremove)
+      premoves.push(curr);
     curr = curr.prev;
   }
   for(let i = premoves.length - 1; i >= 0; i--)
-    addPremove(linkedGame, premoves[i].move, ChessHelper.swapColor(premoves[i].turnColor));
+    addPremove(linkedGame, premoves[i].move, premoves[i]);
 }
 
 function findEquivalentLinkedMove(origFen: string, linkedFen: string, move: any): any { 
