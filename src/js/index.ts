@@ -3563,7 +3563,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
     piece: isSourcePieceName ? pieceRole : undefined,
   };
 
-  if(linkedMove) {
+  /*if(linkedMove) {
     const orig = game.linkedGame.history.current();
     const origIsCapture = !!orig.move?.flags?.includes('c'); 
     const turnColor = ChessHelper.swapColor(orig.turnColor);
@@ -3579,7 +3579,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
       }
       return;
     }
-  }
+  }*/
 
   const parsedMove = parseGameMove(game, prevHEntry.fen, inMove);
   const fen = parsedMove ? parsedMove.fen : null;
@@ -8630,10 +8630,7 @@ function unlinkGame(game: Game) {
 }
 
 function canLinkGames(game: Game) {
-  console.log(SupportedCategories.includes(game.category));
-  console.log(games.getFreeGame(false, game, game.category));
-
-  return !game.linkedGame && SupportedCategories.includes(game.category) && !!games.getFreeGame(false, game, game.category);
+  return game.linkedGame || SupportedCategories.includes(game.category) && !!games.getFreeGame(false, game, game.category);
 }
 
 /**
