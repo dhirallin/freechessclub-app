@@ -3679,7 +3679,8 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
           const linkedPremove = findFirstLinkedPremove(game);
           if(linkedPremove)
             linkedPremove.linkAnchor = game.linkedGame.history.current();
-          game.history.current().linkAnchor = game.linkedGame.history.current();
+          else
+            game.history.current().linkAnchor = game.linkedGame.history.current();
 
           if(pieceMoved) 
             game.linkedGame.history.current().linkAnchor = linkedPremove || game.history.current();
@@ -3827,10 +3828,11 @@ function playPremove(game: Game) {
             const first = findFirstLinkedPremove(game.linkedGame);
 
             linkedMove = game.linkedGame.history.current();
-            while(linkedMove !== first) {
-              linkedMove.linkAnchor = currMove;          
+            /*while(linkedMove !== first) {
+              if(linkedMove.linkedPremove)
+                linkedMove.linkAnchor = currMove;          
               linkedMove = linkedMove.prev;
-            }
+            }*/
             currMove.linkAnchor = first;
             premove.linkedMove.linkPremove = false;
           }        
