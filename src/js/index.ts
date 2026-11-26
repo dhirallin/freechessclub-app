@@ -3313,7 +3313,7 @@ export function updateBoard(game: Game, playMove = false, setBoard = true, anima
 
   if(setBoard && !game.setupBoard) {   
     // Display premoves (when multiple premoves setting enabled)
-    if(game.premoves.length && ((!game.isPlaying() || game.history.current() === game.history.last())
+    if(game.premoves.length && ((/*!game.isPlaying() ||*/ game.history.current() === game.history.last())
         /*|| game.linkedGame?.history.current().linkPremove*/ )) {
       fen = game.premoves[game.premoves.length - 1].fen;
 
@@ -3822,7 +3822,7 @@ function playPremove(game: Game) {
                     
             let first: HEntry;
             while(linkedMove) {
-              if(linkedMove.premove)
+              if(linkedMove.linkPremove)
                 first = linkedMove; 
               linkedMove = linkedMove.prev;
             }
