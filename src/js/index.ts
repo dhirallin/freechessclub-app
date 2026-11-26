@@ -3677,13 +3677,12 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
         if(equivLinkedMove) {
           const pieceMoved = movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, game.linkedGame, true);
           const linkedPremove = findFirstLinkedPremove(game);
-          game.history.current().linkAnchor = linkedPremove || game.linkedGame.history.current();
-          if(pieceMoved) {
-            if(linkedPremove)
-              linkedPremove.linkAnchor = linkedPremove;
-            else
-              game.linkedGame.history.current().linkAnchor = game.history.current();
-          }
+          if(linkedPremove)
+            linkedPremove.linkAnchor = game.linkedGame.history.current();
+          game.history.current().linkAnchor = game.linkedGame.history.current();
+
+          if(pieceMoved) 
+            game.linkedGame.history.current().linkAnchor = linkedPremove || game.history.current();
           else 
             game.history.current().linkPremove = true;
         }
