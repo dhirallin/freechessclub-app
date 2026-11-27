@@ -3672,14 +3672,21 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
       game.pendingMoves.push(game.history.current());
 
     if(game.linkedGame) {
-      if(!linkedMove) {   
-        const equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, currentGameMove(game.linkedGame).fen, parsedMove.move);
-        if(equivLinkedMove) {
-          const pieceMoved = movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, game.linkedGame, true);
-          game.history.current().linkAnchor = game.linkedGame.history.current();
+      if(!linkedMove) {
+        const linkedGame = game.linkedGame;
+        let equivLinkedMove: any;
+        if(linkedGame.premoves.length) 
+          equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, linkedGame.premoves[linkedGame.premoves.length - 1].fen, parsedMove.move, false);
+        if(!equivLinkedMove)
+          equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, linkedGame.history.current().fen, parsedMove.move, true);
+        if(equivLinkedMove) {          
+          const pieceMoved = movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, linkedGame, true);
 
           let currMove = game.history.current();
           let currLinkedMove = game.linkedGame.history.current();
+          currMove.linkAnchor = currLinkedMove;
+
+
 
           if(pieceMoved) {
             const first = findFirstLinkedUnassignedPremove(game);
@@ -5000,7 +5007,7 @@ export function gotoLinkedMove(to: HEntry) {
     addPremove(linkedGame, premoves[i].move, premoves[i]);
 }
 
-function findEquivalentLinkedMove(origFen: string, linkedFen: string, move: any): any { 
+function findEquivalentLinkedMove(origFen: string, linkedFen: string, move: any, anyReachableFrom: boolean = true): any { 
   const origPos = new ChessHelper.Position(origFen);
   const from = move.from;
   const to = move.to;
@@ -5011,19 +5018,21 @@ function findEquivalentLinkedMove(origFen: string, linkedFen: string, move: any)
   if(linkedPiece && linkedPiece.type === origPiece.type && linkedPiece.color === origPiece.color)
     return move;
 
-  for(const sq of ChessHelper.Position.SQUARES) {
-    const piece = linkedPos.get(sq);
-    if(!piece || piece.type !== origPiece.type || piece.color !== origPiece.color)
-      continue;
+  if(anyReachableFrom) {
+    for(const sq of ChessHelper.Position.SQUARES) {
+      const piece = linkedPos.get(sq);
+      if(!piece || piece.type !== origPiece.type || piece.color !== origPiece.color)
+        continue;
 
-    const op = origPos.get(sq);
-    if(op && op.type == piece.type && op.color === piece.color)
-      continue;
+      const op = origPos.get(sq);
+      if(op && op.type == piece.type && op.color === piece.color)
+        continue;
 
-    if(ChessHelper.isReachable(sq, to, piece.type, piece.color)) {
-      const equivMove = { ...move };
-      equivMove.from = sq;
-      return equivMove;
+      if(ChessHelper.isReachable(sq, to, piece.type, piece.color)) {
+        const equivMove = { ...move };
+        equivMove.from = sq;
+        return equivMove;
+      }
     }
   }
 
