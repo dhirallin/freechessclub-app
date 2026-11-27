@@ -3679,11 +3679,14 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
           game.history.current().linkAnchor = game.linkedGame.history.current();
 
           if(pieceMoved) {
-            const linkedPremove = findFirstLinkedPremove(game);
-            linkedPremove.linkAnchor = game.linkedGame.history.current();
+            const linkedPremove = findFirstLinkedUnassignedPremove(game);
+            if(linkedPremove) {
+              linkedPremove.linkPremoveAssigned = true;
+              linkedPremove.linkAnchor = game.linkedGame.history.current();
+            }
             game.linkedGame.history.current().linkAnchor = linkedPremove || game.history.current();   
           }
-          else 
+          else
             game.history.current().linkPremove = true;
         }
       }
@@ -3824,7 +3827,7 @@ function playPremove(game: Game) {
             const currMove = game.history.current();
             let linkedMove = game.linkedGame.history.current();
                     
-            const first = findFirstLinkedPremove(game.linkedGame);
+            const first = findFirstLinkedUnassignedPremove(game.linkedGame);
 
             linkedMove = game.linkedGame.history.current();
             /*while(linkedMove !== first) {
@@ -3832,9 +3835,15 @@ function playPremove(game: Game) {
                 linkedMove.linkAnchor = currMove;          
               linkedMove = linkedMove.prev;
             }*/
-            currMove.linkAnchor = first;
-            first.linkAnchor = currMove;
+            linkedMove.linkAnchor = currMove;
+            if(first) {
+              first.linkAnchor = currMove;
+              first.linkPremoveAssigned = true;
+            }
+            currMove.linkAnchor = first || linkedMove;  
+
             premove.linkedMove.linkPremove = false;
+            premove.linkedMove.linkPremoveAssigned = false;
           }        
           else
             game.premoves.splice(premoveIndex, 0, premove);
@@ -5005,16 +5014,17 @@ function removeLinkedPremoves(game: Game) {
     let linked = game.linkedGame.history.current();
     while(linked.linkPremove) {
       linked.linkPremove = false;
+      linked.linkPremoveAssigned = false;
       linked = linked.prev;
     }
   }
 }
 
-function findFirstLinkedPremove(game: Game) {
+function findFirstLinkedUnassignedPremove(game: Game) {
   let linkedMove = game.history.current();
-  let first = linkedMove;
+  let first: HEntry;
   while(linkedMove) {
-    if(linkedMove.linkPremove && (!first || linkedMove.linkAnchor.ply <= first.linkAnchor.ply))
+    if(linkedMove.linkPremove && !linkedMove.linkPremoveAssigned)
       first = linkedMove; 
     linkedMove = linkedMove.prev;
   }
@@ -8643,10 +8653,12 @@ function unlinkGame(game: Game) {
     game.history.traverse((entry: HEntry) => {
       entry.linkAnchor = null;
       entry.linkPremove = false;
+      entry.linkPremoveAssigned = false;
     });
     game.linkedGame.history.traverse((entry: HEntry) => {
       entry.linkAnchor = null;
       entry.linkPremove = false;
+      entry.linkPremoveAssigned = false;
     });
 
     game.linkedGame.linkedGame = null;

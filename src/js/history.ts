@@ -29,6 +29,7 @@ export class HEntry {
   public variantData: Partial<VariantData> = {};
   public linkAnchor: HEntry | null;
   public linkPremove: boolean = false;
+  public linkPremoveAssigned: boolean = false;
   private _next: HEntry;
   private _prev: HEntry;
   private _parent: HEntry;
