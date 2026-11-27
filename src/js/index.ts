@@ -3313,8 +3313,6 @@ export function updateBoard(game: Game, playMove = false, setBoard = true, anima
 
   if(setBoard && !game.setupBoard) {   
     // Display premoves (when multiple premoves setting enabled)
-    console.log('next:', game.history.next());
-    console.log('hasLinked:', hasLinkedPremove(game));
     if(game.premoves.length && !game.history.next()
         && (game.isPlaying() || hasLinkedPremove(game))) {
       fen = game.premoves[game.premoves.length - 1].fen;
@@ -3592,10 +3590,9 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
 
   if(!parsedMove && SupportedCategories.includes(game.category)) {
     if(linkedMove) {
-      if(premove)
-        return;
-
-      addPremove(game, inMove, currentGameMove(game.linkedGame)); 
+      if(!premove)
+        addPremove(game, inMove, currentGameMove(game.linkedGame)); 
+      return;
     }
     
     if(premove)
@@ -3688,8 +3685,6 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
           let currLinkedMove = game.linkedGame.history.current();
           currMove.linkAnchor = currLinkedMove;
 
-
-
           if(pieceMoved) {
             const first = findFirstLinkedUnassignedPremove(game);
             if(first) {             
@@ -3714,6 +3709,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
           else {
             game.history.current().linkPremove = true;
             game.history.current().linkPremoveUnassigned = true;
+            updateBoard(linkedGame, false, true, true);
           }
         }
       }
@@ -3874,6 +3870,8 @@ function playPremove(game: Game) {
             currMove.linkAnchor = first || currLinkedMove;  
 
             premove.linkedMove.linkPremove = false;
+
+            updateBoard(game, false, true, true);
           }        
           else
             game.premoves.splice(premoveIndex, 0, premove);
@@ -4822,9 +4820,6 @@ export function gotoMove(to: HEntry, playSound = false, game = games.focused, li
   if(!to && to !== game.history.current())
     return;
 
-  if(!linked)
-    gotoLinkedMove(to);
-
   if(game.isExamining() && !game.setupBoard) {
     let from = game.history.current();
 
@@ -4881,6 +4876,9 @@ export function gotoMove(to: HEntry, playSound = false, game = games.focused, li
     updateEngine();
   if(game.setupBoard)
     updateSetupBoard(game);
+
+  if(!linked)
+    gotoLinkedMove(to);
 }
 
 export function gotoLinkedMove(to: HEntry) {
@@ -4995,8 +4993,6 @@ export function gotoLinkedMove(to: HEntry) {
   
   cancelMultiplePremoves(linkedGame);
 
-  gotoMove(linkedCurr, false, linkedGame, true);
-
   const premoves = [];
   curr = to;
   while(curr) {
@@ -5008,9 +5004,7 @@ export function gotoLinkedMove(to: HEntry) {
   for(let i = premoves.length - 1; i >= 0; i--)
     addPremove(linkedGame, premoves[i].move, premoves[i]);
 
-  console.log('test 1');
-  updateBoard(linkedGame, false, true, false);   
-  console.log('test 2');
+  gotoMove(linkedCurr, false, linkedGame, true);   
 }
 
 function findEquivalentLinkedMove(origFen: string, linkedFen: string, move: any, anyReachableFrom: boolean = true): any { 
@@ -5069,13 +5063,10 @@ function findFirstLinkedUnassignedPremove(game: Game) {
 }
 
 function hasLinkedPremove(game: Game) {
-  console.log('checking');
-  
   if(!game.linkedGame)
     return false;
 
   let linkedMove = game.linkedGame.history.current();
-  console.log(linkedMove);
   while(linkedMove) {
     if(linkedMove.linkPremove) 
       return true;
