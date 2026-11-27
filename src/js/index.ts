@@ -3679,7 +3679,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
           game.history.current().linkAnchor = game.linkedGame.history.current();
 
           if(pieceMoved) {
-            const linkedPremove = findFirstLinkedUnassignedPremove(game);
+            const linkedPremove = findFirstLinkedUnassignedPremove(game, game.history.current().turnColor);
             if(linkedPremove) {
               linkedPremove.linkPremoveUnassigned = false;
               linkedPremove.linkAnchor = game.linkedGame.history.current();
@@ -3829,26 +3829,36 @@ function playPremove(game: Game) {
             const currMove = game.history.current();
             let linkedMove = game.linkedGame.history.current();
                     
-            const first = findFirstLinkedUnassignedPremove(game.linkedGame);
+            console.log('currMove:', currMove);
+            console.log('currMove.turnColor:', currMove?.turnColor);
+            const first = findFirstLinkedUnassignedPremove(game.linkedGame, currMove.turnColor);
+            console.log('first:', first);
+            console.log('first turnColor:', first?.turnColor);
 
             const currLinkedMove = game.linkedGame.history.current();
 
             if(first) {
               let linked = currLinkedMove;
-              while(linked !== first) {
-                if(!linked.linkedPremoveUnassigned)
-                  linked.linkAnchor = currMove;          
+              while(linked) {
+                if(linked.linkPremoveUnassigned)
+                  linked.linkAnchor = currMove;   
+                
+                if(linked === first) 
+                  break;
+
                 linked = linked.prev;
               }
-            }
-            currLinkedMove.linkAnchor = currMove;
-            if(first) {
-              first.linkAnchor = currMove;
               first.linkPremoveUnassigned = false;
             }
+
+            console.log('first linkAnchor:', first?.linkAnchor);
+
+            currLinkedMove.linkAnchor = currMove;
             currMove.linkAnchor = first || currLinkedMove;  
 
             premove.linkedMove.linkPremove = false;
+
+            console.log('first linkAnchor 2:', first?.linkAnchor);
           }        
           else
             game.premoves.splice(premoveIndex, 0, premove);
@@ -5025,11 +5035,11 @@ function removeLinkedPremoves(game: Game) {
   }
 }
 
-function findFirstLinkedUnassignedPremove(game: Game) {
+function findFirstLinkedUnassignedPremove(game: Game, turnColor: string) {
   let linkedMove = game.history.current();
   let first: HEntry;
   while(linkedMove) {
-    if(linkedMove.linkPremoveUnassigned)
+    if(linkedMove.linkPremoveUnassigned && turnColor === linkedMove.turnColor)
       first = linkedMove; 
     linkedMove = linkedMove.prev;
   }
