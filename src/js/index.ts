@@ -3676,14 +3676,13 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
         const equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, currentGameMove(game.linkedGame).fen, parsedMove.move);
         if(equivLinkedMove) {
           const pieceMoved = movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, game.linkedGame, true);
-          const linkedPremove = findFirstLinkedPremove(game);
-          if(linkedPremove)
-            linkedPremove.linkAnchor = game.linkedGame.history.current();
-          else
-            game.history.current().linkAnchor = game.linkedGame.history.current();
+          game.history.current().linkAnchor = game.linkedGame.history.current();
 
-          if(pieceMoved) 
-            game.linkedGame.history.current().linkAnchor = linkedPremove || game.history.current();
+          if(pieceMoved) {
+            const linkedPremove = findFirstLinkedPremove(game);
+            linkedPremove.linkAnchor = game.linkedGame.history.current();
+            game.linkedGame.history.current().linkAnchor = linkedPremove || game.history.current();   
+          }
           else 
             game.history.current().linkPremove = true;
         }
@@ -3834,6 +3833,7 @@ function playPremove(game: Game) {
               linkedMove = linkedMove.prev;
             }*/
             currMove.linkAnchor = first;
+            first.linkAnchor = currMove;
             premove.linkedMove.linkPremove = false;
           }        
           else
@@ -5012,10 +5012,9 @@ function removeLinkedPremoves(game: Game) {
 
 function findFirstLinkedPremove(game: Game) {
   let linkedMove = game.history.current();
-
-  let first: HEntry;
+  let first = linkedMove;
   while(linkedMove) {
-    if(linkedMove.linkPremove)
+    if(linkedMove.linkPremove && (!first || linkedMove.linkAnchor.ply <= first.linkAnchor.ply))
       first = linkedMove; 
     linkedMove = linkedMove.prev;
   }
