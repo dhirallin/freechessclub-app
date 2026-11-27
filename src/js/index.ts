@@ -3682,7 +3682,7 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
           let currLinkedMove = game.linkedGame.history.current();
 
           if(pieceMoved) {
-            const first = findFirstLinkedUnassignedPremove(game, game.history.current().turnColor);
+            const first = findFirstLinkedUnassignedPremove(game);
             if(first) {             
               let mv = currMove;
               while(mv) {
@@ -3844,7 +3844,7 @@ function playPremove(game: Game) {
           if(pieceMoved) {
             const currMove = game.history.current();
             let linkedMove = game.linkedGame.history.current();
-            const first = findFirstLinkedUnassignedPremove(game.linkedGame, currMove.turnColor);
+            const first = findFirstLinkedUnassignedPremove(game.linkedGame);
             const currLinkedMove = game.linkedGame.history.current();
 
             if(first) {
@@ -5041,11 +5041,11 @@ function removeLinkedPremoves(game: Game) {
   }
 }
 
-function findFirstLinkedUnassignedPremove(game: Game, turnColor: string) {
+function findFirstLinkedUnassignedPremove(game: Game) {
   let linkedMove = game.history.current();
   let first: HEntry;
   while(linkedMove) {
-    if(linkedMove.linkPremoveUnassigned) // && turnColor === linkedMove.turnColor);
+    if(linkedMove.linkPremoveUnassigned)
       first = linkedMove; 
     linkedMove = linkedMove.prev;
   }
