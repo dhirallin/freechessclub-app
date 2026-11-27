@@ -3829,18 +3829,22 @@ function playPremove(game: Game) {
                     
             const first = findFirstLinkedUnassignedPremove(game.linkedGame);
 
-            linkedMove = game.linkedGame.history.current();
-            /*while(linkedMove !== first) {
-              if(linkedMove.linkedPremove)
-                linkedMove.linkAnchor = currMove;          
-              linkedMove = linkedMove.prev;
-            }*/
-            linkedMove.linkAnchor = currMove;
+            const currLinkedMove = game.linkedGame.history.current();
+
+            if(first) {
+              let linked = currLinkedMove;
+              while(linked !== first) {
+                if(linked.linkedPremove && !linked.linkedPremoveAssigned)
+                  linked.linkAnchor = currMove;          
+                linked = linked.prev;
+              }
+            }
+            currLinkedMove.linkAnchor = currMove;
             if(first) {
               first.linkAnchor = currMove;
               first.linkPremoveAssigned = true;
             }
-            currMove.linkAnchor = first || linkedMove;  
+            currMove.linkAnchor = first || currLinkedMove;  
 
             premove.linkedMove.linkPremove = false;
             premove.linkedMove.linkPremoveAssigned = false;
