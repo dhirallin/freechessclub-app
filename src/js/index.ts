@@ -3678,14 +3678,29 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
           const pieceMoved = movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, game.linkedGame, true);
           game.history.current().linkAnchor = game.linkedGame.history.current();
 
+          let currMove = game.history.current();
+          let currLinkedMove = game.linkedGame.history.current();
+
           if(pieceMoved) {
-            const linkedPremove = findFirstLinkedUnassignedPremove(game, game.history.current().turnColor);
-            if(linkedPremove) {
+            const first = findFirstLinkedUnassignedPremove(game, game.history.current().turnColor);
+            if(first) {             
+              let mv = currMove;
+              while(mv) {
+                if(mv.linkPremoveUnassigned)
+                  mv.linkAnchor = currLinkedMove;   
+                
+                if(mv === first) 
+                  break;
+
+                mv = mv.prev;
+              }
+
+              first.linkPremoveUnassigned = false;
+              first.linkAnchor = currLinkedMove;
+
               game.history.current().linkPremoveUnassigned = true;
-              linkedPremove.linkPremoveUnassigned = false;
-              linkedPremove.linkAnchor = game.linkedGame.history.current();
             }
-            game.linkedGame.history.current().linkAnchor = linkedPremove || game.history.current();   
+            currLinkedMove.linkAnchor = first || game.history.current();   
           }
           else {
             game.history.current().linkPremove = true;
