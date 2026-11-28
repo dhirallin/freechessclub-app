@@ -3823,38 +3823,43 @@ function playPremove(game: Game) {
         const premove = game.premoves.splice(premoveIndex, 1)[0];
         const move = premove.move;
 
-        const pieceMoved = movePiece(move.from || ChessHelper.shortToLongPieceName(move.piece), move.to, null, move.piece, move.promotion, game, !!game.linkedGame, true);
         if(game.linkedGame) {
-          if(pieceMoved) {
-            const currMove = game.history.current();
-            let linkedMove = game.linkedGame.history.current();
-            const first = findFirstLinkedUnassignedPremove(game.linkedGame);
-            const currLinkedMove = game.linkedGame.history.current();
+          let pieceMoved = false;
+          if(ChessHelper.isMatchingFenSquares(game.history.current().fen, premove.linkedMove.prev.fen, move.to)) {         
+            pieceMoved = movePiece(move.from || ChessHelper.shortToLongPieceName(move.piece), move.to, null, move.piece, move.promotion, game, !!game.linkedGame, true);
+            if(pieceMoved) {
+              const currMove = game.history.current();
+              let linkedMove = game.linkedGame.history.current();
+              const first = findFirstLinkedUnassignedPremove(game.linkedGame);
+              const currLinkedMove = game.linkedGame.history.current();
 
-            if(first) {
-              let linked = currLinkedMove;
-              while(linked) {
-                if(linked.linkPremoveUnassigned)
-                  linked.linkAnchor = currMove;   
-                
-                if(linked === first) 
-                  break;
+              if(first) {
+                let linked = currLinkedMove;
+                while(linked) {
+                  if(linked.linkPremoveUnassigned)
+                    linked.linkAnchor = currMove;   
+                  
+                  if(linked === first) 
+                    break;
 
-                linked = linked.prev;
+                  linked = linked.prev;
+                }
+                first.linkPremoveUnassigned = false;
               }
-              first.linkPremoveUnassigned = false;
-            }
 
-            currLinkedMove.linkAnchor = currMove;
-            currMove.linkAnchor = first || currLinkedMove;  
+              currLinkedMove.linkAnchor = currMove;
+              currMove.linkAnchor = first || currLinkedMove;  
 
-            premove.linkedMove.linkPremove = false;
+              premove.linkedMove.linkPremove = false;
 
-            updateBoard(game, false, true, true);
-          }        
-          else
+              updateBoard(game, false, true, true);
+            }        
+          }
+          if(!pieceMoved)
             game.premoves.splice(premoveIndex, 0, premove);
         }
+        else 
+          movePiece(move.from || ChessHelper.shortToLongPieceName(move.piece), move.to, null, move.piece, move.promotion, game, !!game.linkedGame, true);
 
         if(!game.premoves.length) {
           const unfinishedPromotion = game.element.find('.promotion-panel').length;
