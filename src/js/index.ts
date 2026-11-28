@@ -3690,11 +3690,6 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
             }
             currLinkedMove.linkAnchor = first || game.history.current();   
           }
-          else {
-            game.history.current().linkPremove = true;
-            game.history.current().linkPremoveUnassigned = true;
-            addPremove(linkedGame, equivLinkedMove, currMove);
-          }
         }
         if(!pieceMoved) {
           game.history.current().linkPremove = true;
