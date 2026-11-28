@@ -4804,6 +4804,9 @@ export function gotoMove(to: HEntry, playSound = false, game = games.focused, li
   if(!to && to !== game.history.current())
     return;
 
+  if(!linked)
+    gotoLinkedMove(to);
+
   if(game.isExamining() && !game.setupBoard) {
     let from = game.history.current();
 
@@ -4860,9 +4863,6 @@ export function gotoMove(to: HEntry, playSound = false, game = games.focused, li
     updateEngine();
   if(game.setupBoard)
     updateSetupBoard(game);
-
-  if(!linked)
-    gotoLinkedMove(to);
 }
 
 export function gotoLinkedMove(to: HEntry) {
