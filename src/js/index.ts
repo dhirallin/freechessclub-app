@@ -3566,34 +3566,13 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
     piece: isSourcePieceName ? pieceRole : undefined,
   };
 
-  /*if(linkedMove) {
-    const orig = game.linkedGame.history.current();
-    const origIsCapture = !!orig.move?.flags?.includes('c'); 
-    const turnColor = ChessHelper.swapColor(orig.turnColor);
-
-    const linkedPos = new ChessHelper.Position(prevHEntry.fen);
-    const linkedToPiece = linkedPos.get(inMove.to);
-    const linkedIsCapture = !!linkedToPiece && linkedToPiece.color !== turnColor;
-
-    if(origIsCapture !== linkedIsCapture) {
-      if(!premove) {
-        addPremove(game, inMove, turnColor); 
-        updateBoard(game, false, true, false);
-      }
-      return;
-    }
-  }*/
-
   const parsedMove = parseGameMove(game, prevHEntry.fen, inMove);
   const fen = parsedMove ? parsedMove.fen : null;
   const move = parsedMove ? parsedMove.move : inMove;
 
   if(!parsedMove && SupportedCategories.includes(game.category)) {
-    if(linkedMove) {
-      if(!premove)
-        addPremove(game, inMove, currentGameMove(game.linkedGame)); 
-      return;
-    }
+    if(linkedMove) 
+      return false;
     
     if(premove)
       cancelMultiplePremoves(game);
@@ -3670,19 +3649,24 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
     if(game.isExamining()) 
       game.pendingMoves.push(game.history.current());
 
-    if(game.linkedGame) {
-      if(!linkedMove) {
-        const linkedGame = game.linkedGame;
-        let equivLinkedMove: any;
-        if(linkedGame.premoves.length) 
-          equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, linkedGame.premoves[linkedGame.premoves.length - 1].fen, parsedMove.move, false);
-        if(!equivLinkedMove)
-          equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, linkedGame.history.current().fen, parsedMove.move, true);
-        if(equivLinkedMove) {          
-          const pieceMoved = movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, linkedGame, true);
+    if(game.role === Role.PLAYING_COMPUTER) // Send move to engine in Play Computer mode
+      getComputerMove(game);
 
-          let currMove = game.history.current();
-          let currLinkedMove = game.linkedGame.history.current();
+    showExplorerOrGameTab();
+
+    if(game.linkedGame && !linkedMove) {
+      const linkedGame = game.linkedGame;
+      const currMove = game.history.current();
+      let equivLinkedMove: any;
+      if(linkedGame.premoves.length) 
+        equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, linkedGame.premoves[linkedGame.premoves.length - 1].fen, parsedMove.move, false);
+      if(!equivLinkedMove)
+        equivLinkedMove = findEquivalentLinkedMove(prevHEntry.fen, linkedGame.history.current().fen, parsedMove.move, true);
+      if(equivLinkedMove) { 
+        let pieceMoved = false;
+        if(ChessHelper.isMatchingFenSquares(prevHEntry.fen, linkedGame.history.current().fen, equivLinkedMove.to)) {         
+          pieceMoved = movePiece(equivLinkedMove.from, equivLinkedMove.to, null, equivLinkedMove.piece, equivLinkedMove.promotion, linkedGame, true);
+          const currLinkedMove = game.linkedGame.history.current();
           currMove.linkAnchor = currLinkedMove;
 
           if(pieceMoved) {
@@ -3702,24 +3686,24 @@ export function movePiece(source: any, target: any, metadata: any, pieceRole?: s
               first.linkPremoveUnassigned = false;
               first.linkAnchor = currLinkedMove;
 
-              game.history.current().linkPremoveUnassigned = true;
+              currMove.linkPremoveUnassigned = true;
             }
             currLinkedMove.linkAnchor = first || game.history.current();   
           }
           else {
             game.history.current().linkPremove = true;
             game.history.current().linkPremoveUnassigned = true;
-            updateBoard(linkedGame, false, true, true);
+            addPremove(linkedGame, equivLinkedMove, currMove);
           }
+        }
+        if(!pieceMoved) {
+          game.history.current().linkPremove = true;
+          game.history.current().linkPremoveUnassigned = true;
+          addPremove(linkedGame, equivLinkedMove, currMove);
         }
       }
     }
   }
-
-  if(game.role === Role.PLAYING_COMPUTER) // Send move to engine in Play Computer mode
-    getComputerMove(game);
-
-  showExplorerOrGameTab();
 
   return true;
 }

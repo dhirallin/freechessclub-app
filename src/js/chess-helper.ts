@@ -1109,6 +1109,26 @@ export function isReachable(source: string, dest: string, pieceType: string, pie
   return false;
 }
 
+/** 
+ * Returns true if the given square contains the same piece (type and color) in both fens, or if 
+ * both squares are empty, otherwise returns false.
+ */
+export function isMatchingFenSquares(fen1: string, fen2: string, square: string) {
+  const pos1 = new Position(fen1);
+  const piece1 = pos1.get(square);
+  
+  const pos2 = new Position(fen2);
+  const piece2 = pos2.get(square);
+  
+  if(!piece1 && !piece2)
+    return true;
+
+  if(!piece1 || !piece2)
+    return false;
+
+  return piece1.color === piece2.color && piece1.type === piece2.type;
+}
+
 export function generateChess960FEN(idn?: number): string {
   // Generate random Chess960 starting position using Scharnagl's method.
 
